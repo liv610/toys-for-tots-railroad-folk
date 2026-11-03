@@ -1,0 +1,26 @@
+Toys for Tots Railroad — migration verification, 2 November 2026
+Environment: Python 3.13.17, numpy 2.5.3, opencv 5.0.0.93, Pillow 12.3.0, matplotlib 3.11.2 (Linux x86-64)
+
+Method: the packaged folder was copied to a temporary location; the original working folders were moved aside so
+no file outside the package could be loaded; each image was re-rendered from the package and compared with the
+committed lossless PNG.
+
+scripts/verify.py (PYTHONHASHSEED=0)
+  usmap2           IDENTICAL  differing pixels: 0  max channel diff: 0   U.S. map, pass 2 (current)
+  usmap1           IDENTICAL  differing pixels: 0  max channel diff: 0   U.S. map, pass 1
+  village          IDENTICAL  differing pixels: 0  max channel diff: 0   Moonlit Village (village_benchmark/ vs styles2/out/A_original.png)
+  village_refined  IDENTICAL  differing pixels: 0  max channel diff: 0   Moonlit Village, refined
+  county           IDENTICAL  differing pixels: 0  max channel diff: 0   County expansion
+Also: U.S. map pass 2 and pass 1 rendered with PYTHONHASHSEED=1 and =2 -> identical.
+
+Other experiments re-rendered from the package (default hashing):
+  styles2/region.py   regional scale test       IDENTICAL (0 pixels)
+  folk2/scene.py      Folk Art Exploration V2   IDENTICAL (0 pixels)
+  styles2/b.py        Storybook World           differs on buildings only (66,226 px)   — hash-seeded building painter
+  styles2/c.py        Adventure Map             differs on buildings only (53,269 px)   — hash-seeded building painter
+  styles2/story.py    Storybook valley          differs on buildings only (123,805 px)  — hash-seeded building painter
+  styles2/a.py        Moonlit Village with today's styles2/kit.py differs on track/viaduct only (67,991 px);
+                      village_benchmark/ (kit.py rails() as at render time) reproduces it exactly.
+
+Coastline: tools/extract_coastline.py regenerated usmap/coast.npy and usmap/lakes.npy byte-identical.
+Copy integrity: every file in the package and the archive was compared byte for byte with its original (cmp): no differences.

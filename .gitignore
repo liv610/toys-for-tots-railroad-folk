@@ -1,0 +1,60 @@
+# Toys for Tots Railroad: what Git tracks.
+# Tracked: source code, page sources, small inputs (coastlines, masks, reference images), the scene file pass 5
+# reads, docs and the JSON results of tests. Everything generated is ignored and can be rebuilt from the tracked
+# code. Approved renders are kept as release bundles outside Git (docs/VERSION_CONTROL.md).
+
+# --- only the project's own folders (this also keeps anything else in the parent folder out) ---
+/*
+!/.gitignore
+!/folk2/
+!/styles2/
+!/usmap/
+!/toy-town.html
+!/README.md
+!/requirements.txt
+!/docs/
+!/scripts/
+!/tools/
+!/references/
+!/village_benchmark/
+!/county/
+
+# --- never ---
+__pycache__/
+*.pyc
+.DS_Store
+*.log
+*.zip
+.jobs/
+
+# --- renders, bundles and caches (rebuilt from code) ---
+/usmap/out/
+/usmap/out4/*
+!/usmap/out4/scene4.json
+/usmap/out4_6400/
+/usmap/out5/
+/usmap/out5_6400/
+/usmap/preview5/
+/usmap/page/
+/usmap/page2/
+/usmap/page3/
+/usmap/viewer4/
+/usmap/viewer4_test/
+/usmap/viewer5/
+/usmap/viewer10/
+/usmap/engine10/cache/
+/usmap/engine10/out/*
+!/usmap/engine10/out/*.json
+/usmap/lab8/out/
+/usmap/lab9/out/
+/usmap/checkpoints/
+/usmap/approved/
+/folk2/out/
+/folk2/page/
+/styles2/out/
+/styles2/gallery/
+/styles2/phase/
+/styles2/site/
+/village_benchmark/out/
+/county/out*/
+/references/conversation-attachments/

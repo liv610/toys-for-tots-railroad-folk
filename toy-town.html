@@ -1,0 +1,1311 @@
+<title>Toy Town</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+<style>
+/* Layout: one framed watercolor plate on a dark map-table; animated + glow layers stacked in the same 1920×1080 box; editor drawer floats at the right. */
+:root{
+  --table:#262b33; --table-2:#30363f;
+  --paper:#f3ead6; --paper-2:#e7dbbf; --ink:#3b2f2b; --ink-soft:#6a5a52;
+  --rust:#9e3d31; --brass:#b08a46; --gilt:#c9a45c; --mat:#efe4cc;
+  --f-display:"IM Fell English SC","Iowan Old Style",Georgia,serif;
+  --f-italic:"IM Fell English","Iowan Old Style",Georgia,serif;
+  --f-body:"Cormorant Garamond","Iowan Old Style",Georgia,serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--table);color:var(--mat);font-family:var(--f-body);font-size:16px}
+#root{min-height:100%}
+.page{min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  padding-block:18px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:radial-gradient(ellipse at 50% 40%,var(--table-2),var(--table) 70%)}
+.frame{width:min(100%,calc((100dvh - 96px) * 16 / 9));max-width:100%;padding:clamp(4px,.7vw,10px);box-sizing:border-box;
+  background:linear-gradient(135deg,#d8b873,#a9813f 45%,#d9bb7a 70%,#9c7638);box-shadow:0 30px 70px -25px rgba(0,0,0,.75),0 2px 0 rgba(255,255,255,.06) inset}
+.plate{position:relative;width:100%;aspect-ratio:16/9;max-width:100%;background:var(--paper);overflow:hidden;outline:1px solid rgba(59,47,43,.55);outline-offset:-3px}
+.plate > svg,.plate > .layer{position:absolute;inset:0;width:100%;height:100%;display:block}
+.fx,.lights,.layer{pointer-events:none}
+.lights{mix-blend-mode:screen;transition:opacity 1.4s ease}
+.grain{mix-blend-mode:multiply;opacity:.55;background-size:360px 360px;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='360'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .42  0 0 0 0 .34  0 0 0 0 .25  0 0 0 .55 -.16'/></filter><rect width='360' height='360' filter='url(%23n)'/></svg>")}
+.vignette{background:radial-gradient(ellipse at 50% 48%,transparent 62%,rgba(120,84,40,.16) 100%);mix-blend-mode:multiply}
+
+/* Scene interaction */
+.bldg{cursor:pointer;outline:none}
+.bldg .halo{fill:#ffe2a2;fill-opacity:.25;stroke:#ffcf73;stroke-width:16;opacity:0;transition:opacity .45s ease;pointer-events:none}
+.bldg .lift{fill:#fff1d2;opacity:0;mix-blend-mode:screen;transition:opacity .45s ease;pointer-events:none}
+.bldg:hover .halo,.bldg:focus-visible .halo,.bldg.active .halo{opacity:.95}
+.bldg:hover .lift,.bldg:focus-visible .lift,.bldg.active .lift{opacity:.13}
+.bldg .hit{fill:transparent}
+.sign{font-family:var(--f-display);letter-spacing:.07em}
+.chalk{font-family:var(--f-italic);font-style:italic}
+.tstop{transition:stop-color 1.4s ease}
+.dusk{mix-blend-mode:multiply;transition:opacity 1.4s ease;pointer-events:none}
+
+/* Restrained motion */
+.flake{animation:fall var(--d) linear infinite;animation-delay:var(--dl)}
+.sway{animation:sway var(--s) ease-in-out infinite alternate;animation-delay:var(--dl)}
+@keyframes fall{from{transform:translate(0,-40px)}to{transform:translate(var(--dx),1140px)}}
+@keyframes sway{from{transform:translateX(-7px)}to{transform:translateX(7px)}}
+.puff{transform-box:fill-box;transform-origin:center;animation:rise 11s linear infinite;opacity:0}
+@keyframes rise{0%{transform:translate(0,0) scale(.5);opacity:0}12%{opacity:.5}100%{transform:translate(70px,-170px) scale(2.6);opacity:0}}
+.breathe{animation:breathe 6s ease-in-out infinite alternate}
+@keyframes breathe{from{opacity:.82}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.flake,.sway,.puff,.breathe{animation:none}.puff{opacity:.3}}
+
+/* Caption bar */
+.caption{width:min(100%,calc((100dvh - 96px) * 16 / 9));display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.caption h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(20px,2.2vw,28px);letter-spacing:.04em;color:var(--mat)}
+.caption p{margin:0;font-family:var(--f-italic);font-style:italic;color:#b9ae99;font-size:15px}
+.cap-l{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;min-width:0}
+.btn-ghost{font:inherit;font-family:var(--f-display);font-size:15px;letter-spacing:.08em;color:var(--mat);background:transparent;border:1px solid rgba(239,228,204,.35);padding:6px 14px;cursor:pointer}
+.btn-ghost:hover{border-color:var(--gilt);color:#fff3d8}
+.btn-ghost:focus-visible,.editor button:focus-visible,.editor input:focus-visible,.card button:focus-visible{outline:2px solid var(--gilt);outline-offset:2px}
+
+/* Railroad information card */
+.card{position:absolute;z-index:5;width:340px;max-width:calc(100% - 24px);box-sizing:border-box;color:var(--ink);
+  background:var(--paper);background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3'/><feColorMatrix values='0 0 0 0 .5  0 0 0 0 .4  0 0 0 0 .28  0 0 0 .35 -.1'/></filter><rect width='300' height='300' filter='url(%23n)'/></svg>");
+  padding:20px 22px 18px;border:1px solid var(--ink);box-shadow:0 0 0 4px var(--paper),0 0 0 5px var(--ink),0 18px 36px -12px rgba(30,20,10,.55);
+  transform:translate(-50%,calc(-100% - 18px));animation:cardIn .35s ease-out}
+.card.sheet{position:fixed;left:50%!important;top:auto!important;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(400px,calc(100% - 32px))}
+@keyframes cardIn{from{opacity:0;margin-top:6px}to{opacity:1;margin-top:0}}
+@media (prefers-reduced-motion:reduce){.card{animation:none}}
+.card .eyebrow{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-size:13px;letter-spacing:.16em;color:var(--rust)}
+.card .eyebrow::after{content:"";flex:1;height:0;border-top:1px solid var(--rust);border-bottom:1px solid var(--rust);padding-top:2px}
+.card h2{margin:8px 0 6px;font-family:var(--f-display);font-weight:400;font-size:30px;line-height:1.05;text-wrap:balance;color:var(--ink)}
+.card p{margin:0 0 12px;font-size:18px;line-height:1.35;color:#4a3d36}
+.card dl{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:2px 10px;margin:0 0 14px;padding:7px 0;border-top:1px dashed rgba(59,47,43,.45);border-bottom:1px dashed rgba(59,47,43,.45);font-size:14px}
+.card dt{font-family:var(--f-display);letter-spacing:.1em;color:var(--ink-soft);font-size:12px;align-self:center}
+.card dd{margin:0;font-family:var(--f-italic);font-style:italic}
+.ticket{position:relative;display:block;width:100%;font:inherit;font-family:var(--f-display);font-size:16px;letter-spacing:.06em;color:#f6ecd6;background:var(--rust);border:0;padding:11px 18px 11px 30px;cursor:pointer;text-align:left;
+  -webkit-mask:radial-gradient(circle 7px at 0 50%,transparent 6.5px,#000 7px) left/51% 100% no-repeat,radial-gradient(circle 7px at 100% 50%,transparent 6.5px,#000 7px) right/51% 100% no-repeat;
+          mask:radial-gradient(circle 7px at 0 50%,transparent 6.5px,#000 7px) left/51% 100% no-repeat,radial-gradient(circle 7px at 100% 50%,transparent 6.5px,#000 7px) right/51% 100% no-repeat}
+.ticket::before{content:"";position:absolute;left:18px;top:6px;bottom:6px;border-left:2px dotted rgba(246,236,214,.6)}
+.ticket::after{content:"→";position:absolute;right:16px}
+.ticket:hover{background:#8a3328}
+.close{position:absolute;top:6px;right:8px;width:32px;height:32px;border:0;background:transparent;color:var(--ink-soft);font-size:22px;line-height:1;cursor:pointer;font-family:var(--f-body)}
+.close:hover{color:var(--ink)}
+.stamp{margin-top:12px;display:flex;align-items:center;gap:12px;font-size:15px;line-height:1.3;color:#4a3d36}
+.stamp b{flex:none;display:grid;place-items:center;width:58px;height:58px;border:2px solid var(--rust);border-radius:50%;color:var(--rust);font-family:var(--f-display);font-weight:400;font-size:11px;letter-spacing:.08em;text-align:center;transform:rotate(-12deg);box-shadow:inset 0 0 0 3px var(--paper),inset 0 0 0 4px var(--rust)}
+
+/* Editor drawer */
+.editor{position:fixed;z-index:20;top:calc(14px + env(safe-area-inset-top,0px));right:max(14px,env(safe-area-inset-right,0px));width:300px;max-height:calc(100dvh - 28px);overflow:auto;box-sizing:border-box;
+  background:#f1e7d1;color:var(--ink);border:1px solid var(--ink);box-shadow:0 0 0 3px #f1e7d1,0 0 0 4px rgba(59,47,43,.6),0 20px 40px -15px rgba(0,0,0,.6);padding:14px 16px 16px;font-size:15px}
+.editor header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid rgba(59,47,43,.35);padding-bottom:8px;margin-bottom:6px}
+.editor header h3{margin:0;font-family:var(--f-display);font-weight:400;font-size:20px;letter-spacing:.06em}
+.editor header span{font-family:var(--f-italic);font-style:italic;font-size:13px;color:var(--ink-soft)}
+.row{display:grid;gap:5px;padding:9px 0;border-bottom:1px dotted rgba(59,47,43,.3)}
+.row:last-of-type{border-bottom:0}
+.row > label,.row > .lbl{font-family:var(--f-display);font-size:12.5px;letter-spacing:.12em;color:var(--ink-soft)}
+.seg{display:flex;border:1px solid rgba(59,47,43,.55)}
+.seg button{flex:1;font:inherit;font-size:15px;padding:5px 4px;background:transparent;border:0;border-right:1px solid rgba(59,47,43,.35);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#f1e7d1}
+.swatch{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.35)}
+.editor input[type=text]{font:inherit;font-family:var(--f-display);letter-spacing:.06em;font-size:16px;padding:6px 8px;border:1px solid rgba(59,47,43,.55);background:#fbf6ea;color:var(--ink);width:100%;box-sizing:border-box}
+.editor input[type=range]{width:100%;accent-color:var(--rust)}
+.rangeline{display:flex;justify-content:space-between;font-family:var(--f-italic);font-style:italic;font-size:13px;color:var(--ink-soft)}
+.reset{margin-top:10px;width:100%;font:inherit;font-family:var(--f-display);letter-spacing:.08em;padding:7px;background:transparent;border:1px solid rgba(59,47,43,.55);color:var(--ink);cursor:pointer}
+.reset:hover{background:rgba(59,47,43,.08)}
+@media (max-width:700px){.editor{top:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px));left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));width:auto;max-height:55dvh}}
+.loading{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--f-italic);font-style:italic;color:var(--ink-soft)}
+</style>
+
+<div id="root"><div class="page"><div class="frame"><div class="plate"><div class="loading">Mixing the paints…</div></div></div></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+/* ================================================================
+   TOY TOWN — an editable watercolor village for the Toys for Tots Railroad
+
+   How it is organized
+   • DEFAULT_SCENE (below) is the single source of truth. Every building,
+     tree, lamp, the railroad, sky and snow are entries you can edit.
+   • BUILDING_TYPES is a registry: to add a storefront, write a component
+     plus a geometry function and register it under a new type key.
+   • Painting = shapes grouped under <Paint> (watercolor wash filter) and
+     <Ink> (wobbly pen filter). Hand-drawn irregularity comes from seeded
+     random jitter, so every redraw is identical and nothing "regenerates".
+   • Animated things (snow, smoke, flag, glow) live in separate overlay
+     SVGs so the heavy watercolor filters never repaint each frame.
+   ================================================================ */
+const { useState, useEffect, useMemo, useRef, useContext, createContext, memo } = React;
+
+const W = 1920, H = 1080, G = 760;     // canvas + ground line where storefronts stand
+const D = [56, -26];                    // shared oblique depth vector: one perspective for every building
+
+const PAL = {
+  ink:'#3b2f2b', inkSoft:'#6a5a52', cream:'#efe2c2', creamShade:'#cfc0a0',
+  snow:'#fbfaf5', snowShade:'#c3cce3', snowDeep:'#9aa7c8',
+  wood:'#b08d63', woodDark:'#75593f', woodLight:'#d6bd93', woodRaw:'#cfb184',
+  slate:'#6f6b78', brick:'#9a5849', greenDeep:'#33503f', green:'#4f6f58',
+  stone:'#a59e95', shadow:'#5c669b', butter:'#e3c983', rust:'#a6463a', brass:'#b38a45',
+};
+const TOY_COLORS = { red:'#b44a3b', green:'#58795b', blue:'#53708f' };
+
+const DEFAULT_SCENE = {
+  time:'morning',
+  snowfall:true,
+  snowDepth:1,
+  sky:{
+    morning:['#9dbad8','#c9d9e7','#f1efe6'],
+    evening:['#8a9bc8','#c8b5cf','#f7d0ae'],
+  },
+  railroad:{ visible:true, y:968 },
+  buildings:[
+    { id:'toy',  type:'toy',          x:250,  w:420, color:'red', sign:'TOY STORE', visible:true,
+      panel:{ stop:'Stop No. 1', title:'Toy Stores for Tots',
+        desc:'Help bring joy to children through a dedicated virtual toy storefront. Explore how a sponsorship can support the Toys for Tots mission.',
+        cta:'Explore Sponsorship Opportunities', track:'No. 1', status:'Open' } },
+    { id:'book', type:'book',         x:800,  w:330, sign:'BOOK STORE', visible:true,
+      panel:{ stop:'Stop No. 2', title:'Book Stores for Tots',
+        desc:'Support the gift of reading by helping connect children and families with books through the Toys for Tots mission.',
+        cta:'Explore Sponsorship Opportunities', track:'No. 2', status:'Open' } },
+    { id:'site', type:'construction', x:1265, w:330, sign:'UNDER CONSTRUCTION', visible:true,
+      panel:{ stop:'Stop No. 3', title:'Coming Soon',
+        desc:'Toy Town is growing. New storefronts and sponsorship opportunities are on the horizon.',
+        cta:'Learn More', track:'No. 3', status:'Building' } },
+  ],
+  trees:[
+    { id:'fir-big',     kind:'fir',  x:74,   base:804, h:450, w:220, seed:5,  layer:'front', visible:true, label:'Big fir (left)' },
+    { id:'fir-small',   kind:'fir',  x:196,  base:810, h:250, w:118, seed:9,  layer:'front', visible:true },
+    { id:'elm-back',    kind:'bare', x:770,  base:754, h:470, seed:21, layer:'back', tone:'far', visible:true },
+    { id:'fir-back',    kind:'fir',  x:1226, base:752, h:320, w:120, seed:13, layer:'back', tone:'far', visible:true },
+    { id:'maple-right', kind:'bare', x:1872, base:812, h:520, seed:34, layer:'front', visible:true },
+  ],
+  lamps:[ { id:'lamp-1', x:742 }, { id:'lamp-2', x:1226 }, { id:'lamp-3', x:1748 } ],
+  shrubs:[ { id:'sh1', x:1140, y:772, w:64, h:40, seed:3 }, { id:'sh2', x:120, y:1036, w:90, h:52, seed:8 }, { id:'sh3', x:1826, y:1040, w:80, h:46, seed:12 } ],
+};
+
+/* ---------- tiny math + hand-drawn path helpers ---------- */
+function rng(seed){ let a=(Math.imul(seed|0,2654435761)>>>0)||1; return ()=>{ a=(a+0x6D2B79F5)|0; let t=Math.imul(a^(a>>>15),1|a); t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; }; }
+const J = (r,a) => (r()-0.5)*2*a;
+const n1 = v => Math.round(v*10)/10;
+const fmt = p => n1(p[0])+','+n1(p[1]);
+const poly = a => 'M'+a.map(fmt).join('L')+'Z';
+const lerp = (a,b,t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
+const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+function hex(h){ h=h.replace('#',''); return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16)); }
+function mix(a,b,t){ const A=hex(a),B=hex(b); return '#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join(''); }
+const shade = (c,t=.35) => mix(c,'#383a63',t);   // watercolor shadows go cool, not black
+const tint  = (c,t=.3)  => mix(c,'#fff6e2',t);
+
+function resample(pts, step){ const out=[pts[0]]; for(let i=0;i<pts.length-1;i++){ const [x1,y1]=pts[i],[x2,y2]=pts[i+1]; const n=Math.max(1,Math.round(Math.hypot(x2-x1,y2-y1)/step)); for(let k=1;k<=n;k++) out.push([x1+(x2-x1)*k/n, y1+(y2-y1)*k/n]); } return out; }
+// hand-ruled polygon / polyline: subdivided and jittered
+function wob(pts, seed=1, amp=1.2, closed=true, step=40){
+  const r=rng(seed), P=closed?[...pts,pts[0]]:pts, out=[];
+  for(let i=0;i<P.length-1;i++){ const [x1,y1]=P[i],[x2,y2]=P[i+1]; const n=Math.max(1,Math.round(Math.hypot(x2-x1,y2-y1)/step));
+    for(let k=0;k<n;k++){ const t=k/n; out.push([x1+(x2-x1)*t+J(r,amp), y1+(y2-y1)*t+J(r,amp)]); } }
+  if(!closed){ const l=P[P.length-1]; out.push([l[0]+J(r,amp*.6), l[1]+J(r,amp*.6)]); }
+  return 'M'+out.map(fmt).join('L')+(closed?'Z':'');
+}
+const rough = (x,y,w,h,seed=1,amp=1.2) => wob([[x,y],[x+w,y],[x+w,y+h],[x,y+h]], seed, amp, true);
+// Catmull-Rom → cubic Bézier for organic shapes
+function smooth(pts, closed=true){
+  const n=pts.length; const g=i=> closed? pts[(i+n)%n] : pts[clamp(i,0,n-1)];
+  let d='M'+fmt(pts[0]); const m=closed?n:n-1;
+  for(let i=0;i<m;i++){ const p0=g(i-1),p1=g(i),p2=g(i+1),p3=g(i+2);
+    d+='C'+fmt([p1[0]+(p2[0]-p0[0])/6, p1[1]+(p2[1]-p0[1])/6])+' '+fmt([p2[0]-(p3[0]-p1[0])/6, p2[1]-(p3[1]-p1[1])/6])+' '+fmt(p2); }
+  return d+(closed?'Z':'');
+}
+function blob(cx,cy,rx,ry,r,n=8,irr=.16){ const p=[]; const o=r()*6.28; for(let i=0;i<n;i++){ const a=o+i/n*Math.PI*2; const k=1+J(r,irr); p.push([cx+Math.cos(a)*rx*k, cy+Math.sin(a)*ry*k]); } return smooth(p,true); }
+// lumpy snow resting on any edge (normal always points up)
+function snowCap(pts, t, seed, over=.6){
+  const r=rng(seed), S=resample(pts,15), top=[], bot=[];
+  S.forEach((p,i)=>{ const a=S[Math.max(0,i-1)], b=S[Math.min(S.length-1,i+1)];
+    let nx=(b[1]-a[1]), ny=-(b[0]-a[0]); const L=Math.hypot(nx,ny)||1; nx/=L; ny/=L; if(ny>0){nx=-nx;ny=-ny;}
+    const e=Math.min(i,S.length-1-i), taper=Math.min(1,.5+e*.3), th=t*taper*(.78+.44*r());
+    top.push([p[0]+nx*th, p[1]+ny*th]);
+    bot.push([p[0]-nx*t*.2, p[1]-ny*t*.2 + (r()<.14 && e>0 ? t*.42 : 0)]); });
+  const a=S[0], b=S[S.length-1];
+  return smooth([...top,[b[0]+t*over*.5,b[1]+t*.22],...bot.reverse(),[a[0]-t*over*.5,a[1]+t*.22]], true);
+}
+
+/* ---------- painting primitives ---------- */
+const SceneCtx = createContext({ snow:1, time:'morning' });
+const useScene = () => useContext(SceneCtx);
+const Paint = ({children, f='wash', ...p}) => <g filter={`url(#${f})`} {...p}>{children}</g>;
+const Ink = ({children, w=1.5, c=PAL.ink, o=1}) => <g filter="url(#ink)" fill="none" stroke={c} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" opacity={o}>{children}</g>;
+
+function Snow({pts, t=12, seed=1, over=.6}){
+  const { snow } = useScene(); const tt=t*snow; if(tt<1.2) return null;
+  const d=snowCap(pts,tt,seed,over);
+  return <g><path d={d} transform={`translate(${n1(tt*.06)},${n1(tt*.3)})`} fill={PAL.snowShade}/><path d={d} fill={PAL.snow}/></g>;
+}
+function Boards({clip, x1, x2, y1, y2, color, gap=13, slope=0}){
+  const rows=[]; for(let y=y1+gap; y<y2; y+=gap) rows.push(y);
+  return <g clipPath={`url(#${clip})`}>
+    {rows.map((y,i)=><path key={i} d={`M${x1},${y-4}L${x2},${y-4+slope}L${x2},${y+slope}L${x1},${y}Z`} fill={color} opacity=".22"/>)}
+    {rows.map((y,i)=><path key={'l'+i} d={`M${x1},${y-4}L${x2},${y-4+slope}`} stroke={PAL.ink} strokeWidth=".9" opacity=".28"/>)}
+  </g>;
+}
+function Icicles({x1,x2,y,seed}){
+  const { snow } = useScene(); const r=rng(seed); const out=[];
+  for(let x=x1; x<x2; x+=14+r()*16){ const L=(3+r()*13)*snow; if(L<3) continue; out.push(`M${n1(x-2.2)},${y}L${n1(x+J(r,1))},${n1(y+L)}L${n1(x+2.2)},${y}Z`); }
+  return <path d={out.join('')} fill="#eef3f8" stroke="#a9b6cf" strokeWidth=".7" opacity=".95"/>;
+}
+function GroundShadow({x,w,seed,k=1}){
+  return <Paint>
+    <path d={smooth([[x+w-6,G+1],[x+w+D[0]-4,G+D[1]+2],[x+w+D[0]+70,G+D[1]+10],[x+w+96,G+12],[x+w+30,G+14]],true)} fill={PAL.shadow} opacity={.26*k}/>
+    <path d={rough(x-8,G-3,w+16,11,seed,1.4)} fill={PAL.shadow} opacity={.3*k}/>
+  </Paint>;
+}
+function fitFont(text, maxW, base, ratio=.72){ return Math.min(base, maxW/(Math.max(1,text.length)*ratio)); }
+function SignBoard({x,y,w,h,text,ink,trim,board=PAL.cream,seed=5,tilt=0}){
+  const base=fitFont(text||' ', w-30, h*.6);
+  const tref=useRef(null); const [k,setK]=useState(1);
+  // measure the real lettering after fonts load, so any sponsor name fits the board
+  React.useLayoutEffect(()=>{ const fit=()=>{ const el=tref.current; if(!el) return; let tw=0; try{ tw=el.getComputedTextLength(); }catch(e){} if(tw>0) setK(Math.min(1,(w-30)/(tw/k))); };
+    fit(); document.fonts && document.fonts.ready.then(fit); },[text,w]);
+  const fs=base*k;
+  return <g transform={tilt?`rotate(${tilt} ${x+w/2} ${y+h/2})`:undefined}>
+    <Paint>
+      <path d={rough(x+4,y+6,w,h,seed+9,1)} fill={PAL.shadow} opacity=".3"/>
+      <path d={rough(x,y,w,h,seed,1.2)} fill={trim}/>
+      <path d={rough(x+6,y+6,w-12,h-12,seed+1,1)} fill={board}/>
+    </Paint>
+    <Ink w={1.3}><path d={rough(x,y,w,h,seed,1.2)}/><path d={rough(x+6,y+6,w-12,h-12,seed+1,1)} opacity=".55"/></Ink>
+    <text ref={tref} className="sign" x={x+w/2} y={y+h/2+fs*.34} fontSize={n1(fs)} fill={ink} textAnchor="middle">{text}</text>
+    <Paint f="washSoft"><Snow pts={[[x-2,y+1],[x+w+2,y+1]]} t={5} seed={seed+30}/></Paint>
+  </g>;
+}
+function Wreath({cx,cy,r=16,seed=1}){
+  const rr=rng(seed); const leaves=[];
+  for(let i=0;i<20;i++){ const a=i/20*Math.PI*2+J(rr,.12), rad=r*(.82+rr()*.22);
+    leaves.push(<path key={i} d={blob(cx+Math.cos(a)*rad, cy+Math.sin(a)*rad, r*.34, r*.24, rr, 6, .2)} fill={i%3?PAL.greenDeep:'#5e8263'}/>); }
+  const berries=[0,1,2,3,4,5].map(i=>{ const a=.4+i*1.05; return <circle key={i} cx={cx+Math.cos(a)*r*.86} cy={cy+Math.sin(a)*r*.86} r={r*.11} fill="#c23b30"/>; });
+  return <g>
+    <Paint f="washSoft">{leaves}{berries}
+      <path d={`M${cx},${cy+r*.75}l${-r*.62},${-r*.34}l${r*.05},${r*.6}Z M${cx},${cy+r*.75}l${r*.62},${-r*.34}l${-r*.05},${r*.6}Z`} fill="#b8392f"/>
+      <path d={`M${cx-2},${cy+r*.8}l${-r*.3},${r*.8}l${r*.18},${-r*.05}Z M${cx+2},${cy+r*.8}l${r*.3},${r*.8}l${-r*.18},${-r*.05}Z`} fill="#9e2f27"/>
+      <path d={`M${cx-r*.9},${cy-r*.45}Q${cx},${cy-r*1.35} ${cx+r*.9},${cy-r*.45}`} stroke={PAL.snow} strokeWidth={r*.22} fill="none" strokeLinecap="round" opacity=".9"/>
+    </Paint>
+  </g>;
+}
+
+/* ---------- windows + interiors ---------- */
+function ShopWindow({id,x,y,w,h,seed=1,cols=3,rows=2,children,frame=PAL.cream,lit=true}){
+  const mx=[]; for(let i=1;i<cols;i++) mx.push(x+w*i/cols); const my=[]; for(let i=1;i<rows;i++) my.push(y+h*i/rows);
+  return <g>
+    <defs><clipPath id={`${id}-glass`}><rect x={x} y={y} width={w} height={h}/></clipPath></defs>
+    <Paint><path d={rough(x-8,y-8,w+16,h+16,seed,1)} fill={frame}/><rect x={x} y={y} width={w} height={h} fill={lit?'url(#glassWarm)':'url(#glassCool)'}/></Paint>
+    <g clipPath={`url(#${id}-glass)`}>
+      <Paint f="washSoft">{children}</Paint>
+      <rect x={x} y={y} width={w} height={h} fill="url(#sheen)"/>
+      <rect x={x} y={y} width={w} height={14} fill="url(#shadeDown)" opacity=".7"/>
+    </g>
+    <Paint f="washSoft">
+      {mx.map((v,i)=><rect key={i} x={v-2} y={y} width={4} height={h} fill={frame}/>)}
+      {my.map((v,i)=><rect key={'h'+i} x={x} y={v-2} width={w} height={4} fill={frame}/>)}
+      <path d={rough(x-13,y+h+6,w+26,8,seed+4,.6)} fill={PAL.creamShade}/>
+    </Paint>
+    <Ink w={1.3}><path d={rough(x-8,y-8,w+16,h+16,seed,1)}/><path d={rough(x,y,w,h,seed+2,.7)} opacity=".6"/><path d={rough(x-13,y+h+6,w+26,8,seed+4,.6)} opacity=".7"/></Ink>
+    <Paint f="washSoft"><Snow pts={[[x-14,y+h+7],[x+w+14,y+h+7]]} t={6} seed={seed+7}/></Paint>
+  </g>;
+}
+function ToyDisplay({x,y,w,h}){
+  return <g>
+    <path d={`M${x},${y+10}Q${x+w*.25},${y+24} ${x+w*.5},${y+10}Q${x+w*.75},${y+24} ${x+w},${y+10}`} stroke="#4f7a52" strokeWidth="5" fill="none"/>
+    {[.12,.37,.62,.88].map((t,i)=><circle key={i} cx={x+w*t} cy={y+17+(i%2)*2} r="2.6" fill={i%2?'#d6463a':'#e8c15b'}/>)}
+    <rect x={x} y={y+48} width={w} height={5} fill={PAL.woodDark}/>
+    {/* blocks */}
+    <rect x={x+80} y={y+33} width={15} height={15} fill="#4f6f99"/><rect x={x+95} y={y+33} width={15} height={15} fill="#e2b54d"/><rect x={x+87} y={y+18} width={15} height={15} fill="#c0453a"/>
+    <text x={x+87.5} y={y+44.5} fontSize="10" fill="#f6ead0" fontFamily="Georgia,serif" textAnchor="middle">A</text>
+    <text x={x+102.5} y={y+44.5} fontSize="10" fill="#6b3d1e" fontFamily="Georgia,serif" textAnchor="middle">B</text>
+    <text x={x+94.5} y={y+29.5} fontSize="10" fill="#f6ead0" fontFamily="Georgia,serif" textAnchor="middle">C</text>
+    {/* doll */}
+    <path d={`M${x+150},${y+26}L${x+139},${y+48}L${x+161},${y+48}Z`} fill="#7e97bb"/>
+    <circle cx={x+150} cy={y+21} r="6.5" fill="#f1d2b2"/><path d={`M${x+143},${y+21}Q${x+150},${y+10} ${x+157},${y+21}L${x+158},${y+30}L${x+155},${y+20}Q${x+150},${y+16} ${x+145},${y+20}L${x+142},${y+30}Z`} fill="#8b5a35"/>
+    <path d={`M${x+141},${y+31}L${x+136},${y+40}M${x+159},${y+31}L${x+164},${y+40}`} stroke="#f1d2b2" strokeWidth="2.4"/>
+    {/* little sailboat on shelf */}
+    <path d={`M${x+178},${y+46}L${x+202},${y+46}L${x+197},${y+40}L${x+182},${y+40}Z`} fill="#b5523f"/><path d={`M${x+190},${y+40}L${x+190},${y+20}L${x+200},${y+38}Z`} fill="#f4ecd8"/>
+    <path d={`M${x+189},${y+38}L${x+189},${y+22}L${x+181},${y+38}Z`} fill="#e8dcc3"/>
+    {/* teddy bear */}
+    <ellipse cx={x+36} cy={y+80} rx="17" ry="19" fill="#93623f"/>
+    <circle cx={x+26} cy={y+46} r="6" fill="#93623f"/><circle cx={x+46} cy={y+46} r="6" fill="#93623f"/>
+    <circle cx={x+36} cy={y+56} r="13.5" fill="#9c6a45"/>
+    <ellipse cx={x+36} cy={y+61} rx="6.5" ry="4.6" fill="#d2a57a"/><circle cx={x+36} cy={y+59} r="1.8" fill="#3b2a22"/>
+    <circle cx={x+31} cy={y+53} r="1.5" fill="#2b1f1a"/><circle cx={x+41} cy={y+53} r="1.5" fill="#2b1f1a"/>
+    <ellipse cx={x+20} cy={y+80} rx="5.5" ry="10" fill="#83563a"/><ellipse cx={x+52} cy={y+80} rx="5.5" ry="10" fill="#83563a"/>
+    <ellipse cx={x+36} cy={y+82} rx="9" ry="10" fill="#c7996e" opacity=".75"/>
+    <path d={`M${x+28},${y+68}L${x+36},${y+72}L${x+44},${y+68}L${x+40},${y+76}L${x+36},${y+72}L${x+32},${y+76}Z`} fill="#c23b30"/>
+    {/* wooden train */}
+    <path d={`M${x+60},${y+96}L${x+196},${y+96}`} stroke={PAL.woodDark} strokeWidth="2"/>
+    <rect x={x+66} y={y+76} width={36} height={15} fill="#b2493c"/><rect x={x+96} y={y+66} width={17} height={25} fill="#3f5b78"/>
+    <rect x={x+94} y={y+63} width={21} height={4} fill="#2e3c4f"/><rect x={x+71} y={y+64} width={7} height={12} fill="#2e2a2a"/>
+    <circle cx={x+66} cy={y+83} r="4" fill="#e2b54d"/>
+    <rect x={x+120} y={y+79} width={30} height={12} fill="#d9a24a"/><rect x={x+154} y={y+79} width={30} height={12} fill="#5c7d5a"/>
+    {[x+74,x+90,x+106,x+127,x+143,x+161,x+177].map((cx,i)=><circle key={i} cx={cx} cy={y+92} r="4.4" fill="#3a2f2a"/>)}
+    {/* presents */}
+    <rect x={x+170} y={y+58} width={22} height={18} fill="#c0453a"/><rect x={x+179} y={y+58} width={4} height={18} fill="#f1e2bd"/>
+    <path d={`M${x+181},${y+58}q-7,-7 -9,-1M${x+181},${y+58}q7,-7 9,-1`} stroke="#f1e2bd" strokeWidth="2" fill="none"/>
+    <rect x={x+196} y={y+64} width={16} height={12} fill="#4f6f99"/><rect x={x+196} y={y+68} width={16} height={3} fill="#e2b54d"/>
+  </g>;
+}
+function Bookshelves({x,y,w,h,seed}){
+  const r=rng(seed); const cols=['#7d3b34','#3f5a72','#6b7d4f','#a8793b','#5a4a6a','#c99a5a','#8a4f3d','#2f4a45','#b7614a']; const sw=w*.6;
+  const spines=[]; [y+36,y+76,y+116].forEach((sy,si)=>{ let bx=x+3; while(bx<x+sw-5){ const bw=4+r()*5, bh=19+r()*14; const lean=r()<.08;
+    spines.push(<rect key={si+'-'+n1(bx)} x={n1(bx)} y={n1(sy-bh)} width={n1(bw)} height={n1(bh)} fill={cols[Math.floor(r()*cols.length)]} transform={lean?`rotate(9 ${n1(bx)} ${sy})`:undefined}/>); bx+=bw+.9+(lean?4:0); } });
+  const gx=x+w*.8, gy=y+h-40;
+  return <g>
+    <rect x={x} y={y} width={sw+4} height={h} fill="#6e4a33" opacity=".28"/>
+    {spines}
+    {[y+36,y+76,y+116].map(sy=><rect key={sy} x={x} y={sy} width={sw} height={4} fill={PAL.woodDark}/>)}
+    <rect x={x+sw} y={y} width={5} height={h} fill={PAL.woodDark}/>
+    <rect x={x+w*.63} y={y+h-14} width={w*.37} height={4} fill={PAL.woodDark}/><rect x={x+w*.66} y={y+h-11} width={3} height={14} fill={PAL.woodDark}/>
+    <path d={`M${gx-8},${y+h-14}L${gx},${gy+16}L${gx+8},${y+h-14}Z`} fill={PAL.brass}/>
+    <circle cx={gx} cy={gy} r="15" fill="#7ea3b6"/>
+    <path d={`M${gx-10},${gy-6}q6,-6 10,-2q4,4 -2,7q-6,2 -8,-5ZM${gx+3},${gy+3}q6,-1 7,5q-4,5 -8,1Z`} fill="#c2ae6c"/>
+    <path d={`M${gx-17},${gy+4}A17,17 0 0 0 ${gx+13},${gy+11}`} stroke={PAL.brass} strokeWidth="2" fill="none"/>
+  </g>;
+}
+function ReadingNook({x,y,w,h}){
+  const lx=x+w*.72;
+  return <g>
+    <path d={`M${lx-18},${y+36}L${lx+18},${y+36}L${lx+40},${y+h}L${lx-40},${y+h}Z`} fill="#fff3c8" opacity=".35"/>
+    <path d={`M${lx},${y+36}L${lx},${y+h-8}`} stroke="#4a3b2e" strokeWidth="2.5"/><ellipse cx={lx} cy={y+h-6} rx="8" ry="3" fill="#4a3b2e"/>
+    <path d={`M${lx-18},${y+36}L${lx+18},${y+36}L${lx+12},${y+18}L${lx-12},${y+18}Z`} fill="#e3b866"/><path d={`M${lx-18},${y+36}L${lx+18},${y+36}`} stroke="#a77a33" strokeWidth="2"/>
+    {/* armchair with a sleeping cat */}
+    <path d={`M${x+6},${y+h}L${x+6},${y+70}Q${x+8},${y+58} ${x+26},${y+58}Q${x+46},${y+58} ${x+48},${y+72}L${x+48},${y+h}Z`} fill="#8e4a3c"/>
+    <path d={`M${x+2},${y+h}L${x+2},${y+92}Q${x+4},${y+84} ${x+14},${y+86}L${x+14},${y+h}Z M${x+40},${y+h}L${x+40},${y+88}Q${x+50},${y+84} ${x+54},${y+92}L${x+54},${y+h}Z`} fill="#7a3d33"/>
+    <rect x={x+12} y={y+96} width={30} height={10} fill="#a35a49"/>
+    <ellipse cx={x+28} cy={y+93} rx="12" ry="5.5" fill="#8d8a92"/><circle cx={x+19} cy={y+90} r="4.5" fill="#8d8a92"/>
+    <path d={`M${x+16},${y+87}l1.5,-4l2,3.2M${x+20},${y+86}l2,-3.6l1.2,3.8`} fill="#8d8a92" stroke="#8d8a92"/>
+    {/* side table with a stack of books */}
+    <rect x={x+56} y={y+100} width={30} height={4} fill={PAL.woodDark}/><rect x={x+60} y={y+104} width={3} height={22} fill={PAL.woodDark}/><rect x={x+79} y={y+104} width={3} height={22} fill={PAL.woodDark}/>
+    <rect x={x+58} y={y+94} width={26} height={6} fill="#3f5a72"/><rect x={x+60} y={y+88} width={22} height={6} fill="#a8793b"/><rect x={x+57} y={y+82} width={25} height={6} fill="#7d3b34"/><rect x={x+61} y={y+77} width={19} height={5} fill="#6b7d4f"/>
+    <rect x={x+4} y={y+6} width={30} height={5} fill={PAL.woodDark}/>
+    <rect x={x+6} y={y-10} width={5} height={16} fill="#3f5a72"/><rect x={x+12} y={y-8} width={6} height={14} fill="#b7614a"/><rect x={x+19} y={y-12} width={4} height={18} fill="#6b7d4f"/><rect x={x+24} y={y-9} width={6} height={15} fill="#c99a5a"/>
+  </g>;
+}
+
+/* ---------- small props ---------- */
+function WallLantern({x,y}){
+  return <g>
+    <Ink w={2}><path d={`M${x-16},${y+4}L${x},${y+4}M${x-16},${y-4}L${x-16},${y+12}`}/></Ink>
+    <Paint f="washSoft">
+      <path d={`M${x-9},${y+10}L${x+9},${y+10}L${x+5},${y+2}L${x-5},${y+2}Z`} fill="#2f2e35"/><circle cx={x} cy={y} r="2.4" fill="#2f2e35"/>
+      <rect x={x-7} y={y+10} width={14} height={20} fill="url(#lampGlass)"/>
+      <path d={`M${x-9},${y+30}L${x+9},${y+30}L${x+4},${y+36}L${x-4},${y+36}Z`} fill="#2f2e35"/>
+      <Snow pts={[[x-10,y+4],[x+10,y+4]]} t={4} seed={x|0}/>
+    </Paint>
+    <Ink w={1}><path d={`M${x-7},${y+10}h14v20h-14ZM${x},${y+10}v20`}/></Ink>
+  </g>;
+}
+function RockingHorse({x,y}){
+  return <g>
+    <Paint f="washSoft">
+      <path d={`M${x-8},${y-8}Q${x+46},${y+10} ${x+100},${y-8}`} stroke={PAL.woodDark} strokeWidth="5" fill="none" strokeLinecap="round"/>
+      <path d={`M${x+22},${y-38}L${x+14},${y-4}M${x+34},${y-38}L${x+32},${y}M${x+60},${y-38}L${x+64},${y}M${x+70},${y-38}L${x+80},${y-4}`} stroke="#a77b52" strokeWidth="5" strokeLinecap="round"/>
+      <path d={`M${x+18},${y-48}Q${x+14},${y-32} ${x+6},${y-24}Q${x+14},${y-36} ${x+20},${y-40}Z`} fill="#6b4a35"/>
+      <ellipse cx={x+46} cy={y-42} rx="31" ry="12.5" fill="#e5dccb"/>
+      <path d={`M${x+64},${y-50}L${x+76},${y-74}Q${x+82},${y-80} ${x+92},${y-74}L${x+100},${y-60}Q${x+98},${y-54} ${x+90},${y-56}L${x+80},${y-60}L${x+76},${y-40}Z`} fill="#e5dccb"/>
+      <path d={`M${x+64},${y-52}L${x+74},${y-76}Q${x+78},${y-80} ${x+82},${y-78}L${x+70},${y-50}Z`} fill="#6b4a35"/>
+      <path d={`M${x+83},${y-80}l2,-8l4,7Z`} fill="#e5dccb"/>
+      <ellipse cx={x+46} cy={y-52} rx="13" ry="5" fill="#a33c33"/><path d={`M${x+46},${y-48}L${x+46},${y-32}`} stroke="#7a2b25" strokeWidth="2"/>
+      {[[30,-42],[40,-38],[54,-44],[60,-38],[36,-46]].map(([a,b],i)=><circle key={i} cx={x+a} cy={y+b} r="2.2" fill="#b9b3ad"/>)}
+      <circle cx={x+88} cy={y-70} r="1.6" fill="#2b1f1a"/>
+      <path d={`M${x+80},${y-64}L${x+96},${y-62}`} stroke="#a33c33" strokeWidth="1.6"/>
+      <Snow pts={[[x+24,y-52],[x+40,y-56]]} t={4} seed={71}/>
+    </Paint>
+    <Ink w={1.1} o={.7}><ellipse cx={x+46} cy={y-42} rx="31" ry="12.5"/><path d={`M${x+64},${y-50}L${x+76},${y-74}Q${x+82},${y-80} ${x+92},${y-74}L${x+100},${y-60}Q${x+98},${y-54} ${x+90},${y-56}L${x+80},${y-60}L${x+76},${y-40}`}/></Ink>
+  </g>;
+}
+function BookCart({x,y}){
+  const r=rng(44); const cols=['#7d3b34','#3f5a72','#6b7d4f','#a8793b','#5a4a6a','#c99a5a'];
+  const books=[]; let bx=x+6; while(bx<x+90){ const bw=7+r()*5, bh=18+r()*8; books.push(<rect key={bx} x={n1(bx)} y={n1(y-42-bh)} width={n1(bw)} height={n1(bh)} fill={cols[Math.floor(r()*cols.length)]} transform={`rotate(${n1(-12+J(r,4))} ${n1(bx)} ${y-42})`}/>); bx+=bw+2; }
+  return <g>
+    <Paint>
+      <path d={`M${x+2},${y}L${x+2},${y-86}M${x+94},${y}L${x+94},${y-86}`} stroke={PAL.woodDark} strokeWidth="5"/>
+      {books}
+      <path d={rough(x-2,y-44,100,24,7,.8)} fill={PAL.wood}/><path d={rough(x-2,y-18,100,6,8,.6)} fill={PAL.woodDark}/>
+      <path d={poly([[x-12,y-82],[x+48,y-108],[x+108,y-82],[x+102,y-76],[x+48,y-100],[x-6,y-76]])} fill="#7a3f35"/>
+      <rect x={x+26} y={y-74} width={44} height={20} fill="#3d4440"/>
+      <Snow pts={[[x-12,y-82],[x+48,y-108],[x+108,y-82]]} t={9} seed={45}/>
+    </Paint>
+    <text className="chalk" x={x+48} y={y-60} fontSize="11" fill="#eee8da" textAnchor="middle">story hour</text>
+    <Ink w={1.1} o={.75}><path d={rough(x-2,y-44,100,24,7,.8)}/><path d={poly([[x-12,y-82],[x+48,y-108],[x+108,y-82]])}/></Ink>
+  </g>;
+}
+function WindowBox({x,y,w,seed}){
+  const r=rng(seed); const leaves=[]; for(let i=0;i<9;i++) leaves.push(<path key={i} d={blob(x+6+i*(w-12)/8, y-4+J(r,2), 9, 7, r, 6, .25)} fill={i%2?PAL.greenDeep:'#5c7f60'}/>);
+  return <g><Paint>{leaves}<path d={rough(x,y,w,14,seed,.7)} fill={PAL.woodDark}/>
+    {[.2,.45,.7,.85].map((t,i)=><circle key={i} cx={x+w*t} cy={y-6-(i%2)*3} r="2.4" fill="#c23b30"/>)}
+    <Snow pts={[[x+2,y-8],[x+w-2,y-9]]} t={6} seed={seed+3}/></Paint>
+    <Ink w={1} o={.7}><path d={rough(x,y,w,14,seed,.7)}/></Ink></g>;
+}
+
+/* ================================================================
+   BUILDINGS — each has a geometry function (shared with hover outline,
+   window glow positions and the info-card anchor) and a component.
+   ================================================================ */
+function toyGeom({x,w}){
+  const eave=G-300, rise=128, oh=18, hx=D[0]/2, hy=D[1]/2, ridgeY=eave-rise;
+  const roof=[[x-oh,eave],[x+w+oh,eave],[x+w+oh+hx,ridgeY+hy],[x-oh+hx,ridgeY+hy]];
+  const chim={x:x+w*.72, y:ridgeY+hy-56, w:36, h:110};
+  const dorm={cx:x+w*.32, top:eave-96, base:eave-12, hw:44};
+  const win={x:x+40,y:616,w:212,h:100}, door={x:x+292,y:596,w:80};
+  const outline=[[x-oh-4,eave+8],[x-oh+hx-6,ridgeY+hy-10],[chim.x-6,ridgeY+hy-10],[chim.x-6,chim.y-14],[chim.x+chim.w+18,chim.y-18],[chim.x+chim.w+18,ridgeY+hy-10],[x+w+oh+hx+8,ridgeY+hy-10],[x+w+D[0]+8,eave+D[1]],[x+w+D[0]+8,G+D[1]],[x+w+8,G+8],[x-8,G+8]];
+  return { eave, rise, oh, ridgeY, roof, chim, dorm, win, door, outline,
+    anchor:[x+w/2, eave-20],
+    smoke:[chim.x+chim.w/2+6, chim.y-10],
+    lights:[ {x:win.x+win.w/2,y:win.y+win.h/2,rx:150,ry:90}, {x:door.x+door.w/2,y:door.y+12,rx:60,ry:32}, {x:door.x+door.w/2,y:654,rx:46,ry:40},
+             {x:dorm.cx,y:dorm.top+44,rx:52,ry:44}, {x:x+402,y:624,rx:34,ry:34},
+             {x:win.x+win.w/2,y:G+26,rx:140,ry:16,kind:'spill'}, {x:door.x+40,y:G+22,rx:60,ry:12,kind:'spill'} ] };
+}
+function ToyStore({cfg,g}){
+  const {x,w,id}=cfg; const {eave,ridgeY,oh,roof,chim,dorm,win,door}=g;
+  const base=TOY_COLORS[cfg.color]||cfg.color, side=shade(base,.42), deep=shade(base,.56);
+  const hx=D[0]/2, hy=D[1]/2;
+  const front=[[x,eave],[x+w,eave],[x+w,G],[x,G]];
+  const sideWall=[[x+w,eave],[x+w+D[0],eave+D[1]],[x+w+D[0],G+D[1]],[x+w,G]];
+  const sideGable=[[x+w,eave+1],[x+w+hx,ridgeY+hy],[x+w+D[0],eave+D[1]]];
+  const doorCol = cfg.color==='green' ? '#7a3f35' : '#3f5446';
+  const dl=dorm.cx-dorm.hw, dr=dorm.cx+dorm.hw, dApex=dorm.top-40;
+  const shingles=[]; for(let k=1;k<10;k++){ const t=k/10; const a=lerp(roof[0],roof[3],t), b=lerp(roof[1],roof[2],t); shingles.push(`M${fmt(a)}L${fmt(b)}`); }
+  return <g>
+    <defs>
+      <clipPath id={`${id}-front`}><path d={poly(front)}/></clipPath>
+      <clipPath id={`${id}-side`}><path d={poly(sideWall)}/></clipPath>
+    </defs>
+    <GroundShadow x={x} w={w} seed={3}/>
+    {/* side wall in shade */}
+    <Paint>
+      <path d={wob(sideWall,11,1)} fill={side}/><path d={wob(sideGable,12,1)} fill={deep}/>
+      <Boards clip={`${id}-side`} x1={x+w} x2={x+w+D[0]} y1={eave} y2={G} color={deep} slope={D[1]}/>
+    </Paint>
+    {/* front wall */}
+    <Paint>
+      <path d={wob(front,13,1)} fill={base}/>
+      <Boards clip={`${id}-front`} x1={x} x2={x+w} y1={eave+14} y2={G-14} color={deep}/>
+      <rect x={x} y={eave+12} width={w} height={36} fill="url(#shadeDown)"/>
+      <path d={rough(x-3,eave,15,G-eave,21,.7)} fill={PAL.cream}/><path d={rough(x+w-12,eave,15,G-eave,22,.7)} fill={PAL.cream}/>
+      <path d={rough(x-4,eave-2,w+8,16,23,.8)} fill={PAL.cream}/><path d={rough(x-4,G-15,w+8,15,24,.8)} fill={PAL.creamShade}/>
+    </Paint>
+    <Ink w={1.6}><path d={wob(front,13,1)}/><path d={wob(sideWall,11,1)} opacity=".8"/><path d={rough(x-4,eave-2,w+8,16,23,.8)} opacity=".6"/><path d={rough(x-4,G-15,w+8,15,24,.8)} opacity=".6"/></Ink>
+    {/* roof */}
+    <Paint>
+      <path d={wob(roof,14,1)} fill={PAL.slate}/>
+      <path d={shingles.join('')} stroke="#4e4a58" strokeWidth="1.2" opacity=".5"/>
+      <RoofSnow quad={roof} seed={15}/>
+      <path d={rough(x-oh-2,eave-4,w+oh*2+4,9,16,.6)} fill={shade(PAL.cream,.3)}/>
+    </Paint>
+    <Ink w={1.4}><path d={wob(roof,14,1)}/></Ink>
+    {/* dormer */}
+    <Paint>
+      <path d={poly([[dr,dorm.top],[dr+hx*.6,dorm.top+hy*.6],[dr+hx*.6,dorm.base+hy*.6],[dr,dorm.base]])} fill={side}/>
+      <path d={poly([[dorm.cx,dApex],[dorm.cx+hx*.7,dApex+hy*.7],[dr+10+hx*.7,dorm.top+2+hy*.7],[dr+10,dorm.top+2]])} fill="url(#roofSnow)"/>
+      <path d={rough(dl,dorm.top,dorm.hw*2,dorm.base-dorm.top,31,.8)} fill={base}/>
+      <path d={wob([[dl-8,dorm.top+2],[dorm.cx,dApex],[dr+8,dorm.top+2]],32,.8)} fill={base}/>
+      <path d={wob([[dl-10,dorm.top+3],[dorm.cx,dApex-2],[dr+10,dorm.top+3],[dr+4,dorm.top+9],[dorm.cx,dApex+7],[dl-4,dorm.top+9]],33,.6)} fill={PAL.cream}/>
+    </Paint>
+    <ShopWindow id={`${id}-dw`} x={dorm.cx-22} y={dorm.top+12} w={44} h={dorm.base-dorm.top-30} cols={2} rows={2} seed={34}/>
+    <Paint>
+      <Snow pts={[[dl-12,dorm.top+2],[dorm.cx,dApex-3]]} t={9} seed={35}/><Snow pts={[[dorm.cx,dApex-3],[dr+12,dorm.top+2]]} t={9} seed={36}/>
+      <Snow pts={[[dl-10,dorm.base+3],[dr+18,dorm.base-4]]} t={13} seed={37}/>
+    </Paint>
+    <Ink w={1.3}><path d={rough(dl,dorm.top,dorm.hw*2,dorm.base-dorm.top,31,.8)}/><path d={wob([[dl-8,dorm.top+2],[dorm.cx,dApex],[dr+8,dorm.top+2]],32,.8,false)}/></Ink>
+    {/* chimney */}
+    <Paint>
+      <path d={poly([[chim.x+chim.w,chim.y],[chim.x+chim.w+12,chim.y-6],[chim.x+chim.w+12,chim.y+chim.h-6],[chim.x+chim.w,chim.y+chim.h]])} fill={shade(PAL.brick,.45)}/>
+      <path d={rough(chim.x,chim.y,chim.w,chim.h,41,.8)} fill={PAL.brick}/>
+      <path d={rough(chim.x-4,chim.y-9,chim.w+18,10,42,.6)} fill="#5a4240"/>
+      <Snow pts={[[chim.x-5,chim.y-9],[chim.x+chim.w+14,chim.y-14]]} t={8} seed={43}/>
+    </Paint>
+    <Ink w={1} o={.5}>{[14,28,42,56,70].map(dy=><path key={dy} d={`M${chim.x+2},${chim.y+dy}L${chim.x+chim.w-2},${chim.y+dy}`}/>)}<path d={rough(chim.x,chim.y,chim.w,chim.h,41,.8)} opacity="1.6"/></Ink>
+    <Paint><Snow pts={[[chim.x-14,chim.y+86],[chim.x+chim.w+18,chim.y+80]]} t={16} seed={44}/></Paint>
+    {/* eave snow, ridge and rake */}
+    <Paint>
+      <Snow pts={[[x-oh-3,eave+5],[x+w+oh+3,eave+5]]} t={15} seed={17}/>
+      <Snow pts={[roof[3],roof[2]]} t={10} seed={18}/>
+      <Snow pts={[roof[2],[x+w+oh+D[0],eave+D[1]+3]]} t={9} seed={19}/>
+    </Paint>
+    <Paint f="washSoft"><Icicles x1={x-oh+10} x2={x+w+oh-10} y={eave+9} seed={20}/></Paint>
+    {/* sign, awning, window, door */}
+    <SignBoard x={x+56} y={eave+28} w={w-112} h={46} text={cfg.sign} ink="#7a2b24" trim={PAL.woodDark} seed={51}/>
+    <Awning x={x+26} y={eave+90} w={240} h={48} color={base} seed={52}/>
+    <ShopWindow id={`${id}-win`} x={win.x} y={win.y} w={win.w} h={win.h} cols={3} rows={1} seed={53}><ToyDisplay x={win.x} y={win.y} w={win.w} h={win.h}/></ShopWindow>
+    <Paint>
+      <path d={rough(win.x-6,win.y+win.h+16,win.w+12,G-win.y-win.h-30,54,.7)} fill={PAL.cream}/>
+      <path d={rough(win.x+4,win.y+win.h+22,win.w/2-10,G-win.y-win.h-42,55,.6)} fill={PAL.creamShade}/>
+      <path d={rough(win.x+win.w/2+6,win.y+win.h+22,win.w/2-10,G-win.y-win.h-42,56,.6)} fill={PAL.creamShade}/>
+    </Paint>
+    <Paint>
+      <path d={rough(door.x-10,door.y-10,door.w+20,G-door.y+10,61,.8)} fill={PAL.cream}/>
+      <rect x={door.x} y={door.y} width={door.w} height={22} fill="url(#glassWarm)"/>
+      <path d={rough(door.x+2,door.y+28,door.w-4,G-door.y-28,62,.7)} fill={doorCol}/>
+      <rect x={door.x+12} y={door.y+38} width={door.w-24} height={48} fill="url(#glassWarm)"/>
+      <path d={rough(door.x+12,door.y+98,door.w/2-16,48,63,.5)} fill={shade(doorCol,.3)}/><path d={rough(door.x+door.w/2+4,door.y+98,door.w/2-16,48,64,.5)} fill={shade(doorCol,.3)}/>
+      <circle cx={door.x+door.w-12} cy={door.y+102} r="3" fill={PAL.brass}/>
+      <rect x={door.x} y={door.y+24} width={door.w} height={4} fill={PAL.cream}/>
+    </Paint>
+    <Ink w={1.3}><path d={rough(door.x-10,door.y-10,door.w+20,G-door.y+10,61,.8)}/><path d={rough(door.x+2,door.y+28,door.w-4,G-door.y-28,62,.7)}/><path d={`M${door.x+door.w/2},${door.y}v22M${door.x+door.w/4},${door.y}v22M${door.x+door.w*.75},${door.y}v22`} opacity=".6"/></Ink>
+    <Wreath cx={door.x+door.w/2} cy={door.y+60} r={17} seed={65}/>
+    <WallLantern x={x+402} y={600}/>
+    <Paint>
+      <Snow pts={[[x-12,G+4],[door.x-14,G+4]]} t={10} seed={66}/><Snow pts={[[door.x+door.w+12,G+4],[x+w+14,G+4]]} t={9} seed={67}/>
+    </Paint>
+    <RockingHorse x={x+64} y={G+42}/>
+  </g>;
+}
+function RoofSnow({quad, seed=1}){
+  const { snow } = useScene(); if(snow<.06) return null;
+  const f=Math.min(1,.2+snow*.8), [b0,b1,t1,t0]=quad, r=rng(seed), top=[];
+  for(let i=0;i<=12;i++){ const t=i/12; const p=lerp(lerp(b1,b0,t), lerp(t1,t0,t), f); top.push([p[0], p[1]-(f>=1? 2+r()*5 : J(r,7))]); }
+  return <path d={'M'+fmt(b0)+'L'+fmt(b1)+'L'+top.map(fmt).join('L')+'Z'} fill="url(#roofSnow)"/>;
+}
+function Awning({x,y,w,h,color,seed}){
+  const n=9, t0=[x+8,x+w-8], b0=[x-4,x+w+4], S=[];
+  for(let i=0;i<n;i++){ const a=i/n, b=(i+1)/n; S.push({p:[[t0[0]+(t0[1]-t0[0])*a,y],[t0[0]+(t0[1]-t0[0])*b,y],[b0[0]+(b0[1]-b0[0])*b,y+h],[b0[0]+(b0[1]-b0[0])*a,y+h]], c:i%2?PAL.cream:color}); }
+  const outline=[[x+8,y],[x+w-8,y],[x+w+4,y+h],[x-4,y+h]];
+  return <g>
+    <Paint><rect x={x} y={y+h+6} width={w} height={26} fill="url(#shadeDown)"/></Paint>
+    <Paint>
+      {S.map((s,i)=><path key={i} d={poly(s.p)} fill={s.c}/>)}
+      {S.map((s,i)=>{ const L=s.p[3], R=s.p[2], rw=(R[0]-L[0])/2; return <path key={'s'+i} d={`M${n1(L[0])},${y+h}A${n1(rw)},${n1(rw*.6)} 0 0 0 ${n1(R[0])},${y+h}Z`} fill={s.c}/>; })}
+      <path d={poly(outline)} fill="url(#awnShade)"/>
+    </Paint>
+    <Ink w={1.2}><path d={wob(outline,seed,.8)}/>{S.map((s,i)=><path key={i} d={`M${fmt(s.p[0])}L${fmt(s.p[3])}`} opacity=".35"/>)}</Ink>
+    <Paint><Snow pts={[[x+2,y+3],[x+w-2,y+3]]} t={11} seed={seed+1}/></Paint>
+  </g>;
+}
+
+function bookGeom({x,w}){
+  const eave=G-300, apex=eave-150, oh=14, cx=x+w/2;
+  const wl={x:x+24,y:574,w:96,h:124}, wr={x:x+w-120,y:574,w:96,h:124}, door={x:cx-33,y:586,w:66};
+  const outline=[[x-oh-6,eave+10],[cx-4,apex-14],[cx+D[0]+4,apex+D[1]-14],[x+w+oh+D[0]+8,eave+D[1]],[x+w+D[0]+8,G+D[1]],[x+w+8,G+8],[cx+60,G+32],[cx-60,G+32],[x-8,G+8]];
+  return { eave, apex, oh, cx, wl, wr, door, outline, anchor:[cx, eave-30],
+    lights:[ {x:wl.x+48,y:wl.y+62,rx:86,ry:96},{x:wr.x+48,y:wr.y+62,rx:86,ry:96},{x:cx,y:eave-38,rx:48,ry:34},{x:cx,y:door.y+40,rx:40,ry:46},
+             {x:wl.x+48,y:G+24,rx:80,ry:13,kind:'spill'},{x:wr.x+48,y:G+24,rx:80,ry:13,kind:'spill'} ] };
+}
+function BookStore({cfg,g}){
+  const {x,w,id}=cfg; const {eave,apex,oh,cx,wl,wr,door}=g;
+  const base=cfg.color && cfg.color!=='blue' ? (TOY_COLORS[cfg.color]||cfg.color) : '#7f99ae';
+  const side=shade(base,.42), deep=shade(base,.56);
+  const front=[[x,eave],[x+w,eave],[x+w,G],[x,G]], gableWall=[[x,eave+1],[cx,apex+12],[x+w,eave+1]];
+  const sideWall=[[x+w,eave],[x+w+D[0],eave+D[1]],[x+w+D[0],G+D[1]],[x+w,G]];
+  const planeR=[[cx,apex],[cx+D[0],apex+D[1]],[x+w+oh+D[0],eave+4+D[1]],[x+w+oh,eave+4]];
+  const planeL=[[x-oh,eave+4],[cx,apex],[cx+D[0],apex+D[1]],[x-oh+D[0],eave+4+D[1]]];
+  const rake=[[x-oh,eave+4],[cx,apex],[x+w+oh,eave+4],[x+w+oh-7,eave+15],[cx,apex+13],[x-oh+7,eave+15]];
+  const fan={cx, cy:eave-30, r:30};
+  return <g>
+    <defs>
+      <clipPath id={`${id}-front`}><path d={poly(front)+poly(gableWall)}/></clipPath>
+      <clipPath id={`${id}-side`}><path d={poly(sideWall)}/></clipPath>
+    </defs>
+    <GroundShadow x={x} w={w} seed={7}/>
+    <Paint>
+      <path d={wob(planeL,71,1)} fill={PAL.slate}/><path d={wob(planeL,71,1)} fill="url(#roofSnow)" opacity={Math.min(1,cfgSnow())}/>
+      <path d={wob(sideWall,72,1)} fill={side}/>
+      <Boards clip={`${id}-side`} x1={x+w} x2={x+w+D[0]} y1={eave} y2={G} color={deep} slope={D[1]}/>
+      <path d={wob(planeR,73,1)} fill={PAL.slate}/>
+      <RoofSnow quad={[planeR[3],planeR[2],planeR[1],planeR[0]]} seed={74}/>
+    </Paint>
+    <Ink w={1.4}><path d={wob(planeR,73,1)}/><path d={wob(sideWall,72,1)} opacity=".8"/></Ink>
+    <Paint>
+      <path d={wob(front,75,1)} fill={base}/><path d={wob(gableWall,76,1)} fill={base}/>
+      <Boards clip={`${id}-front`} x1={x} x2={x+w} y1={apex} y2={G-14} color={deep}/>
+      <rect x={x} y={eave+16} width={w} height={34} fill="url(#shadeDown)"/>
+      <path d={wob(rake,77,.8)} fill={PAL.cream}/>
+      <path d={rough(x-4,eave-2,w+8,18,78,.7)} fill={PAL.cream}/>
+      {Array.from({length:Math.floor((w+4)/11)},(_,i)=><rect key={i} x={x+i*11} y={eave+16} width={6} height={6} fill={PAL.creamShade}/>)}
+      <path d={rough(x-6,eave,18,G-eave,79,.6)} fill={PAL.cream}/><path d={rough(x+w-12,eave,18,G-eave,80,.6)} fill={PAL.cream}/>
+      <path d={rough(x-9,eave+20,24,8,81,.5)} fill={PAL.creamShade}/><path d={rough(x+w-15,eave+20,24,8,82,.5)} fill={PAL.creamShade}/>
+      <path d={rough(x-4,G-14,w+8,14,83,.7)} fill={PAL.creamShade}/>
+    </Paint>
+    <Ink w={1.6}><path d={wob(front,75,1)}/><path d={wob(rake,77,.8)}/><path d={rough(x-4,eave-2,w+8,18,78,.7)} opacity=".6"/></Ink>
+    {/* fanlight */}
+    <Paint>
+      <path d={`M${fan.cx-fan.r-7},${fan.cy}A${fan.r+7},${fan.r+7} 0 0 1 ${fan.cx+fan.r+7},${fan.cy}Z`} fill={PAL.cream}/>
+      <path d={`M${fan.cx-fan.r},${fan.cy}A${fan.r},${fan.r} 0 0 1 ${fan.cx+fan.r},${fan.cy}Z`} fill="url(#glassWarm)"/>
+      {[.15,.33,.5,.67,.85].map((t,i)=>{ const a=Math.PI*(1-t); return <path key={i} d={`M${fan.cx},${fan.cy}L${n1(fan.cx+Math.cos(a)*fan.r)},${n1(fan.cy-Math.sin(a)*fan.r)}`} stroke={PAL.cream} strokeWidth="2.5"/>; })}
+      <path d={rough(fan.cx-fan.r-12,fan.cy,2*fan.r+24,6,84,.5)} fill={PAL.creamShade}/>
+      <path d={poly([[fan.cx-5,fan.cy-fan.r-8],[fan.cx+5,fan.cy-fan.r-8],[fan.cx+4,fan.cy-fan.r+3],[fan.cx-4,fan.cy-fan.r+3]])} fill={PAL.creamShade}/>
+    </Paint>
+    <Ink w={1.2}><path d={`M${fan.cx-fan.r-7},${fan.cy}A${fan.r+7},${fan.r+7} 0 0 1 ${fan.cx+fan.r+7},${fan.cy}Z`}/></Ink>
+    {/* rake + ridge snow */}
+    <Paint>
+      <Snow pts={[[x-oh-3,eave+3],[cx,apex-2]]} t={13} seed={85}/><Snow pts={[[cx,apex-2],[x+w+oh+3,eave+3]]} t={13} seed={86}/>
+      <Snow pts={[[cx,apex-1],[cx+D[0],apex+D[1]-1]]} t={8} seed={87}/>
+    </Paint>
+    <Paint f="washSoft"><Icicles x1={x+w*.55} x2={x+w+oh-6} y={eave+12} seed={88}/></Paint>
+    <SignBoard x={x+38} y={eave+30} w={w-76} h={44} text={cfg.sign} ink="#2f4157" trim="#4c5f73" seed={89}/>
+    {/* storefront entablature */}
+    <Paint>
+      <path d={rough(x+6,546,w-12,16,90,.6)} fill={PAL.cream}/><path d={rough(x+2,542,w-4,6,91,.5)} fill={PAL.creamShade}/>
+      <rect x={x+8} y={562} width={w-16} height={18} fill="url(#shadeDown)"/>
+    </Paint>
+    <Ink w={1.2}><path d={rough(x+6,546,w-12,16,90,.6)}/></Ink>
+    <ShopWindow id={`${id}-wl`} x={wl.x} y={wl.y} w={wl.w} h={wl.h} cols={2} rows={3} seed={92}><Bookshelves x={wl.x} y={wl.y} w={wl.w} h={wl.h} seed={93}/></ShopWindow>
+    <ShopWindow id={`${id}-wr`} x={wr.x} y={wr.y} w={wr.w} h={wr.h} cols={2} rows={3} seed={94}><ReadingNook x={wr.x} y={wr.y} w={wr.w} h={wr.h}/></ShopWindow>
+    <Paint>
+      <path d={rough(wl.x-6,712,wl.w+12,34,95,.6)} fill={PAL.cream}/><path d={rough(wl.x+4,718,wl.w-8,22,96,.5)} fill={PAL.creamShade}/>
+      <path d={rough(wr.x-6,712,wr.w+12,34,97,.6)} fill={PAL.cream}/><path d={rough(wr.x+4,718,wr.w-8,22,98,.5)} fill={PAL.creamShade}/>
+    </Paint>
+    {/* door with garland swag */}
+    <Paint>
+      <path d={rough(door.x-9,door.y-10,door.w+18,G-door.y+10,101,.8)} fill={PAL.cream}/>
+      <rect x={door.x} y={door.y} width={door.w} height={18} fill="url(#glassWarm)"/>
+      <path d={rough(door.x+2,door.y+22,door.w-4,G-door.y-22,102,.7)} fill="#74413a"/>
+      <rect x={door.x+10} y={door.y+32} width={door.w-20} height={62} fill="url(#glassWarm)"/>
+      <path d={rough(door.x+10,door.y+104,door.w-20,50,103,.5)} fill="#5d342e"/>
+      <circle cx={door.x+door.w-10} cy={door.y+102} r="3" fill={PAL.brass}/>
+    </Paint>
+    <Ink w={1.3}><path d={rough(door.x-9,door.y-10,door.w+18,G-door.y+10,101,.8)}/><path d={rough(door.x+2,door.y+22,door.w-4,G-door.y-22,102,.7)}/><path d={`M${door.x+door.w/2},${door.y+32}v62M${door.x+10},${door.y+63}h${door.w-20}`} opacity=".7"/></Ink>
+    <Garland x1={door.x-14} x2={door.x+door.w+14} y={door.y-12} seed={104}/>
+    {/* steps */}
+    <Paint>
+      <path d={rough(cx-48,G-3,96,9,105,.6)} fill="#c9c2b7"/><path d={rough(cx-48,G+6,96,7,106,.5)} fill="#a29a90"/>
+      <path d={rough(cx-58,G+12,116,9,107,.6)} fill="#cfc8bd"/><path d={rough(cx-58,G+21,116,8,108,.5)} fill="#9d958b"/>
+      <Snow pts={[[cx-62,G+13],[cx-30,G+12]]} t={6} seed={109}/><Snow pts={[[cx+30,G+12],[cx+62,G+13]]} t={6} seed={110}/>
+      <Snow pts={[[x-12,G+4],[door.x-12,G+4]]} t={9} seed={111}/><Snow pts={[[door.x+door.w+12,G+4],[x+w+12,G+4]]} t={9} seed={112}/>
+    </Paint>
+    <Ink w={1.1} o={.7}><path d={rough(cx-48,G-3,96,16,105,.6)}/><path d={rough(cx-58,G+12,116,17,107,.6)}/></Ink>
+    <WindowBox x={wl.x-8} y={wl.y+wl.h+16} w={wl.w+16} seed={113}/>
+    <WindowBox x={wr.x-8} y={wr.y+wr.h+16} w={wr.w+16} seed={114}/>
+    <BookCart x={x-30} y={G+46}/>
+  </g>;
+}
+// snow depth used for the hidden-left-plane wash (kept as a function so components stay pure)
+let __snow=1; const cfgSnow=()=>__snow;
+function Garland({x1,x2,y,seed}){
+  const r=rng(seed), pts=[]; for(let i=0;i<=12;i++){ const t=i/12; pts.push([x1+(x2-x1)*t, y+Math.sin(t*Math.PI*2)**2*10+J(r,1)]); }
+  return <Paint f="washSoft">
+    {pts.map((p,i)=><path key={i} d={blob(p[0],p[1],7,5,r,6,.25)} fill={i%2?PAL.greenDeep:'#5c7f60'}/>)}
+    {[.25,.75].map((t,i)=><circle key={i} cx={x1+(x2-x1)*t} cy={y+11} r="3.4" fill="#c23b30"/>)}
+    <path d={`M${x1+(x2-x1)/2},${y+2}l-9,-6l1,10Zm0,0l9,-6l-1,10Z`} fill="#b8392f"/>
+  </Paint>;
+}
+
+function siteGeom({x,w}){
+  const eave=G-290, apex=eave-140, cx=x+w/2, oh=12;
+  const outline=[[x-oh-6,eave+10],[cx-6,apex-74],[cx+30,apex-74],[cx+D[0]+6,apex+D[1]-10],[x+w+oh+D[0]+8,eave+D[1]-4],[x+w+96,eave-30],[x+w+104,G+48],[x-36,G+48],[x-oh-6,eave+10]];
+  return { eave, apex, cx, oh, outline, anchor:[cx, eave-40],
+    flag:[cx+12, apex-62],
+    lights:[ {x:x+w+40,y:624,rx:46,ry:46}, {x:x+w+40,y:G+24,rx:60,ry:12,kind:'spill'} ] };
+}
+function Timber({a,b,wd=8,color=PAL.woodLight,seed=1}){
+  const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1, nx=-dy/L*wd/2, ny=dx/L*wd/2;
+  const p=[[a[0]+nx,a[1]+ny],[b[0]+nx,b[1]+ny],[b[0]-nx,b[1]-ny],[a[0]-nx,a[1]-ny]];
+  return <path d={wob(p,seed,.6,true,60)} fill={color}/>;
+}
+function ConstructionSite({cfg,g}){
+  const {x,w,id}=cfg; const {eave,apex,cx,oh}=g; const [dx,dy]=D;
+  const studs=[]; for(let sx=x+48; sx<x+w-30; sx+=48) studs.push(sx);
+  const tL=[x-oh,eave+6], tR=[x+w+oh,eave+6], tA=[cx,apex];
+  const plane=[[cx,apex],[cx+dx,apex+dy],[x+w+oh+dx,eave+6+dy],[x+w+oh,eave+6]];
+  const sheath=[lerp(plane[3],plane[0],.0),lerp(plane[2],plane[1],.0),lerp(plane[2],plane[1],.42),lerp(plane[3],plane[0],.42)];
+  const sx1=x+w-26, sx2=x+w+70;
+  return <g>
+    <GroundShadow x={x} w={w} seed={11} k={.7}/>
+    {/* back wall already sheathed, seen through the open frame */}
+    <Paint>
+      <path d={poly([[x+dx,eave+dy],[x+w+dx,eave+dy],[x+w+dx,G+dy],[x+dx,G+dy]])} fill="#a68b69"/>
+      {Array.from({length:14},(_,i)=><rect key={i} x={x+dx+i*(w/14)} y={eave+dy} width="1.2" height={G-eave} fill="#7f6649" opacity=".6"/>)}
+      <path d={poly([[x+dx,eave+dy],[cx+dx,apex+dy],[x+w+dx,eave+dy]])} fill="#b49975"/>
+      <path d={poly([[x,G],[x+w,G],[x+w+dx,G+dy],[x+dx,G+dy]])} fill={PAL.woodRaw}/>
+      <rect x={x+dx} y={eave+dy} width={w} height={G-eave} fill={PAL.shadow} opacity=".22"/>
+      <Snow pts={[[x+20,G+1],[x+w*.45,G-2]]} t={5} seed={121}/>
+    </Paint>
+    {/* scaffolding behind-right */}
+    <Paint>
+      <Timber a={[sx2,450]} b={[sx2,G+30]} wd={7} color="#9b8a76" seed={122}/>
+      <Timber a={[sx1+dx*.5,445+dy*.5]} b={[sx1+dx*.5,G+dy*.5]} wd={6} color="#8a7a68" seed={123}/>
+    </Paint>
+    {/* roof framing: rafters receding along the right plane, partial sheathing */}
+    <Paint>
+      {[.0,.33,.66,1].map((t,i)=><Timber key={i} a={[cx+dx*t,apex+dy*t]} b={[x+w+oh+dx*t,eave+6+dy*t]} wd={6} color={i?'#c2a57d':PAL.woodLight} seed={130+i}/>)}
+      <Timber a={[cx,apex]} b={[cx+dx,apex+dy]} wd={7} seed={135}/>
+      <path d={wob(sheath,136,.8)} fill={PAL.woodRaw}/>
+      {[.1,.2,.3].map((t,i)=><path key={i} d={`M${fmt(lerp(sheath[0],sheath[3],t/.42))}L${fmt(lerp(sheath[1],sheath[2],t/.42))}`} stroke="#9e8360" strokeWidth="1.2"/>)}
+      <Timber a={[x+dx,eave+6+dy]} b={[cx+dx,apex+dy]} wd={6} color="#b8a07c" seed={137}/>
+    </Paint>
+    <Paint><Snow pts={[sheath[3],sheath[2]]} t={9} seed={138}/><Snow pts={[sheath[0],sheath[1]]} t={8} seed={139}/>
+      <Snow pts={[[cx+dx*.33,apex+dy*.33],[x+w+oh+dx*.33,eave+6+dy*.33]]} t={5} seed={140}/><Snow pts={[[cx+dx*.66,apex+dy*.66],[x+w+oh+dx*.66,eave+6+dy*.66]]} t={5} seed={141}/>
+      <Snow pts={[[cx,apex-2],[cx+dx,apex+dy-2]]} t={6} seed={142}/></Paint>
+    <Ink w={1.2} o={.8}><path d={wob(sheath,136,.8)}/></Ink>
+    {/* finished lower-left wall: the future storefront peeks through */}
+    <Paint>
+      {[0,1,2,3,4,5,6].map(i=>{ const len=[150,150,150,146,128,104,70][i]; const y=G-14-(i+1)*14; return <path key={i} d={rough(x,y,len,14,150+i,.5)} fill={i%2?PAL.butter:tint(PAL.butter,.08)}/>; })}
+      {[0,1,2,3,4,5,6].map(i=><rect key={'l'+i} x={x} y={G-14-(i+1)*14+10} width={[150,150,150,146,128,104,70][i]} height={4} fill={shade(PAL.butter,.4)} opacity=".35"/>)}
+      <path d={rough(x+w-118,G-104,108,90,158,.7)} fill={PAL.woodRaw}/>
+      {[0,1,2,3,4,5,6].map(i=><rect key={'v'+i} x={x+w-118+i*15.4} y={G-104} width="1.2" height={90} fill="#94784f"/>)}
+    </Paint>
+    {/* front framing */}
+    <Paint>
+      <Timber a={[x,G-7]} b={[x+w,G-7]} wd={12} color={PAL.wood} seed={160}/>
+      {studs.map((sx,i)=><Timber key={i} a={[sx,eave+10]} b={[sx,G-12]} wd={8} seed={161+i}/>)}
+      <Timber a={[x+5,eave+4]} b={[x+5,G-6]} wd={13} color={PAL.wood} seed={170}/><Timber a={[x+w-5,eave+4]} b={[x+w-5,G-6]} wd={13} color={PAL.wood} seed={171}/>
+      <Timber a={[x-4,eave+6]} b={[x+w+4,eave+6]} wd={12} color={PAL.wood} seed={172}/>
+      <Timber a={[x+w,eave+6]} b={[x+w+dx,eave+6+dy]} wd={8} color="#a88e6a" seed={173}/>
+      <Timber a={[x+w+dx,eave+dy]} b={[x+w+dx,G+dy]} wd={9} color="#a88e6a" seed={174}/>
+      <Timber a={[x+56,600]} b={[x+138,600]} wd={10} color={PAL.wood} seed={175}/>
+      <Timber a={[cx-40,594]} b={[cx+40,594]} wd={10} color={PAL.wood} seed={176}/>
+      <Timber a={[x+12,G-16]} b={[x+92,eave+18]} wd={6} color="#c9ad84" seed={177}/>
+      <Timber a={[x+w-26,600]} b={[x+w-104,eave+18]} wd={6} color="#c9ad84" seed={178}/>
+      <Timber a={tL} b={tA} wd={13} color={PAL.wood} seed={179}/><Timber a={tA} b={tR} wd={13} color={PAL.wood} seed={180}/>
+      <Timber a={[cx-82,apex+70]} b={[cx+82,apex+70]} wd={8} seed={181}/><Timber a={[cx,apex+4]} b={[cx,eave+2]} wd={8} seed={182}/>
+    </Paint>
+    <Ink w={1.1} o={.75}>
+      {studs.map((sx,i)=><path key={i} d={wob([[sx-4,eave+12],[sx-4,G-12]],190+i,.5,false,60)}/>)}
+      <path d={wob([tL,tA,tR],196,.8,false)}/><path d={wob([[x-4,eave],[x+w+4,eave]],197,.6,false)}/>
+    </Ink>
+    {/* an installed window, glass reflecting the sky */}
+    <ShopWindow id={`${id}-w`} x={x+20} y={612} w={70} h={60} cols={2} rows={2} seed={198} lit={false}/>
+    <Paint>
+      <Snow pts={[[x-oh-3,eave+4],[cx,apex-4]]} t={9} seed={200}/><Snow pts={[[cx,apex-4],[x+w+oh+3,eave+4]]} t={9} seed={201}/>
+      <Snow pts={[[x-6,eave-1],[x+w+6,eave-1]]} t={7} seed={202}/><Snow pts={[[cx-84,apex+64],[cx+84,apex+64]]} t={5} seed={203}/>
+      <Snow pts={[[x,G-14-7*14],[x+70,G-14-7*14]]} t={5} seed={204}/><Snow pts={[[x+70,G-14-6*14],[x+104,G-14-6*14]]} t={4} seed={205}/>
+    </Paint>
+    {/* topping-out tree and flag pole */}
+    <MiniFir x={cx-14} base={apex+2} h={46}/>
+    <Paint f="washSoft"><path d={`M${cx+12},${apex+6}L${cx+12},${apex-64}`} stroke="#5b4a3e" strokeWidth="3"/><circle cx={cx+12} cy={apex-65} r="3" fill={PAL.brass}/></Paint>
+    {/* scaffolding front */}
+    <Paint>
+      <Timber a={[sx1,452]} b={[sx1,G+16]} wd={7} color="#a39380" seed={211}/>
+      {[[sx1,560,sx2,560],[sx1,452,sx2,600],[sx1,600,sx2,452],[sx1,660,sx2,G],[sx1,G,sx2,660]].map(([a,b,c,d],i)=><Timber key={i} a={[a,b]} b={[c,d]} wd={3.5} color="#8f806e" seed={212+i}/>)}
+      <path d={rough(sx1-30,600,sx2-sx1+52,11,217,.6)} fill={PAL.wood}/><path d={rough(sx1-30,611,sx2-sx1+52,4,218,.5)} fill={PAL.woodDark}/>
+      <path d={rough(sx1-20,690,sx2-sx1+36,11,219,.6)} fill={PAL.wood}/>
+      <Snow pts={[[sx1-30,601],[sx2+22,601]]} t={8} seed={220}/><Snow pts={[[sx1-20,691],[sx2+16,691]]} t={7} seed={221}/>
+      <path d={`M${sx2-20},${612}L${sx2-20},${624}`} stroke="#3a3a3f" strokeWidth="1.5"/>
+      <path d={`M${sx2-27},${624}h14l-3,-4h-8Z`} fill="#2f2e35"/><rect x={sx2-26} y={624} width={12} height={16} fill="url(#lampGlass)"/><path d={`M${sx2-27},${640}h14l-3,4h-8Z`} fill="#2f2e35"/>
+    </Paint>
+    <Ink w={1} o={.7}><path d={rough(sx1-30,600,sx2-sx1+52,15,217,.6)}/><path d={rough(sx1-20,690,sx2-sx1+36,11,219,.6)}/></Ink>
+    {/* ladder */}
+    <Paint>
+      <Timber a={[x+140,G+2]} b={[x+178,eave+16]} wd={5} color="#b8996c" seed={230}/><Timber a={[x+170,G+2]} b={[x+204,eave+16]} wd={5} color="#b8996c" seed={231}/>
+      {Array.from({length:11},(_,i)=>{ const t=(i+.6)/11.5; const a=lerp([x+140,G],[x+178,eave+16],t), b=lerp([x+170,G],[x+204,eave+16],t); return <Timber key={i} a={a} b={b} wd={3.5} color="#a88a5e" seed={232+i}/>; })}
+    </Paint>
+    {/* sign nailed across the studs, slightly askew */}
+    <SignBoard x={x+24} y={eave+34} w={w-48} h={42} text={cfg.sign} ink="#6b4a1e" trim={PAL.woodDark} board="#f0dfae" seed={210} tilt={-1.4}/>
+    {/* yard: lumber, wheelbarrow, barrier, tools */}
+    <Lumber x={x-20} y={G+44}/>
+    <Barrier x1={x+128} x2={x+262} y={G+46}/>
+    <Wheelbarrow x={x+w+6} y={G+48}/>
+    <Paint><Snow pts={[[sx1-12,G+16],[sx2+20,G+18]]} t={10} seed={250}/><Snow pts={[[x-8,G+3],[x+w+8,G+3]]} t={7} seed={251}/></Paint>
+  </g>;
+}
+function MiniFir({x,base,h}){
+  return <Paint f="washSoft">
+    <path d={`M${x},${base-h}L${x-h*.32},${base-h*.35}L${x-h*.16},${base-h*.38}L${x-h*.42},${base}L${x+h*.42},${base}L${x+h*.16},${base-h*.38}L${x+h*.32},${base-h*.35}Z`} fill={PAL.green}/>
+    <Snow pts={[[x-h*.3,base-h*.36],[x,base-h-1],[x+h*.3,base-h*.36]]} t={4} seed={260}/>
+    <circle cx={x-4} cy={base-h*.25} r="2.2" fill="#c23b30"/><circle cx={x+6} cy={base-h*.55} r="2" fill="#e2b54d"/>
+  </Paint>;
+}
+function Lumber({x,y}){
+  const rows=[0,1,2,3]; const L=136;
+  return <g>
+    <Paint>
+      {rows.map(i=><g key={i}><path d={rough(x+i*3,y-12-i*12,L-i*6,11,270+i,.5)} fill={i%2?PAL.woodRaw:'#d8bd8f'}/>
+        {[0,1,2,3,4].map(k=><rect key={k} x={x+i*3+2} y={y-11-i*12+k*2} width="0" height="0"/>)}
+        <path d={rough(x+i*3-2,y-12-i*12,8,11,280+i,.4)} fill="#e8d3a8"/></g>)}
+      {[20,100].map(sx=><rect key={sx} x={x+sx} y={y-6} width="10" height="6" fill={PAL.woodDark}/>)}
+      <path d={`M${x+40},${y-62}L${x+86},${y-56}`} stroke="#6b4a32" strokeWidth="4" strokeLinecap="round"/><path d={rough(x+82,y-63,8,14,285,.3)} fill="#4a4850"/>
+      <Snow pts={[[x+9,y-58],[x+L-9,y-58]]} t={8} seed={286}/>
+    </Paint>
+    <Ink w={1} o={.7}>{rows.map(i=><path key={i} d={rough(x+i*3,y-12-i*12,L-i*6,11,270+i,.5)}/>)}</Ink>
+  </g>;
+}
+function Barrier({x1,x2,y}){
+  const id='bar'+x1; const stripes=[]; for(let s=x1-20; s<x2+10; s+=16) stripes.push(<path key={s} d={`M${s},${y-34}l8,0l12,14l-8,0Z`} fill="#b14a3c"/>);
+  return <g>
+    <defs><clipPath id={id}><rect x={x1} y={y-34} width={x2-x1} height={14}/></clipPath></defs>
+    <Paint>
+      {[x1+14,x2-14].map((sx,i)=><path key={i} d={`M${sx-12},${y}L${sx},${y-30}L${sx+12},${y}`} stroke={PAL.woodDark} strokeWidth="4.5" fill="none" strokeLinecap="round"/>)}
+      <rect x={x1} y={y-34} width={x2-x1} height={14} fill={PAL.cream}/>
+      <g clipPath={`url(#${id})`}>{stripes}</g>
+      <path d={rough(x1+6,y-16,x2-x1-12,6,290,.4)} fill={PAL.woodLight}/>
+      <path d={`M${x2-50},${y-20}L${x2-14},${y-6}L${x2-12},${y-12}L${x2-48},${y-25}Z`} fill="#b8bcc4"/><path d={`M${x2-54},${y-27}l-12,-4l2,10l12,2Z`} fill="#6b4a32"/>
+      <Snow pts={[[x1,y-34],[x2,y-34]]} t={5} seed={291}/>
+    </Paint>
+    <Ink w={1.1} o={.8}><path d={rough(x1,y-34,x2-x1,14,292,.5)}/></Ink>
+  </g>;
+}
+function Wheelbarrow({x,y}){
+  return <g>
+    <Paint>
+      <path d={`M${x+60},${y-28}L${x+106},${y-38}M${x+56},${y-18}L${x+60},${y}`} stroke={PAL.woodDark} strokeWidth="4" strokeLinecap="round"/>
+      <path d={poly([[x+6,y-40],[x+72,y-44],[x+64,y-20],[x+20,y-18]])} fill="#6f8a72"/>
+      <circle cx={x+18} cy={y-12} r="12" fill="#5c4f48"/><circle cx={x+18} cy={y-12} r="4" fill="#9a8a78"/>
+      <Snow pts={[[x+8,y-41],[x+70,y-45]]} t={8} seed={295}/>
+    </Paint>
+    <Ink w={1.1} o={.8}><path d={poly([[x+6,y-40],[x+72,y-44],[x+64,y-20],[x+20,y-18]])}/><circle cx={x+18} cy={y-12} r="12"/></Ink>
+  </g>;
+}
+
+const BUILDING_TYPES = {
+  toy:          { Component:ToyStore,         geom:toyGeom },
+  book:         { Component:BookStore,        geom:bookGeom },
+  construction: { Component:ConstructionSite, geom:siteGeom },
+};
+
+function Building({cfg, active, onSelect}){
+  const T=BUILDING_TYPES[cfg.type]; const g=T.geom(cfg); const C=T.Component; const d=poly(g.outline);
+  return <g className={'bldg'+(active?' active':'')} role="button" tabIndex={0} aria-label={`${cfg.panel.title}. Open details`}
+    data-building={cfg.id}
+    onClick={e=>{ e.stopPropagation(); onSelect(cfg.id); }}
+    onKeyDown={e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); onSelect(cfg.id); } }}>
+    <path className="halo" d={d} filter="url(#halo)"/>
+    <C cfg={cfg} g={g}/>
+    <path className="lift" d={d}/>
+    <path className="hit" d={d}/>
+  </g>;
+}
+
+/* ================================================================
+   SCENERY
+   ================================================================ */
+function Fir({x,base,h,w,seed,tone='near'}){
+  const tiers=useMemo(()=>{ const r=rng(seed); const n=Math.max(5,Math.round(h/56)); const out=[];
+    for(let k=0;k<n;k++){ const yb=base-h*.1-k*(h*.8/n), th=h*.3*(1-k/n*.3), yt=Math.max(base-h, yb-th), hw=(w/2)*Math.pow(1-k/n,.85)+6;
+      const P=[[x+J(r,2),yt],[x+hw*.42,yt+(yb-yt)*.5],[x+hw,yb+J(r,3)]];
+      for(let s=1;s<6;s++){ const xx=x+hw-s*(2*hw/6); P.push([xx+J(r,3), yb-(s%2?(yb-yt)*.12:-3)+J(r,2)]); }
+      P.push([x-hw,yb+J(r,3)],[x-hw*.42,yt+(yb-yt)*.5]);
+      const ly=yb-(yb-yt)*.2;
+      out.push({ d:smooth(P,true), ledge:[[x-hw+3,yb-2],[x-hw*.5,ly],[x,ly-(yb-yt)*.25],[x+hw*.5,ly],[x+hw-3,yb-2]], t:5+hw*.05, s:seed*20+k, yt }); }
+    return out; },[x,base,h,w,seed]);
+  const far=tone==='far';
+  return <g>
+    <Paint>
+      <path d={rough(x-6,base-h*.14,12,h*.14+4,seed,1)} fill={far?'#7a6e6c':'#5a4740'}/>
+      {tiers.map((t,i)=><g key={i}><path d={t.d} fill={far?'url(#firFar)':'url(#firNear)'}/><Snow pts={t.ledge} t={t.t} seed={t.s} over={.3}/></g>)}
+      <Snow pts={[[x-8,tiers[tiers.length-1].yt+12],[x,tiers[tiers.length-1].yt-2],[x+8,tiers[tiers.length-1].yt+12]]} t={6} seed={seed+99}/>
+    </Paint>
+    {!far && <Ink w={1} o={.32}>{tiers.map((t,i)=><path key={i} d={t.d}/>)}</Ink>}
+    <Paint><Snow pts={[[x-w*.42,base+3],[x+w*.42,base+3]]} t={11} seed={seed+77}/></Paint>
+  </g>;
+}
+function bareTree(x, base, h, seed){
+  const r=rng(seed), segs=[];
+  (function grow(x1,y1,ang,len,wd,depth){
+    const x2=x1+Math.cos(ang)*len, y2=y1+Math.sin(ang)*len;
+    segs.push({x1,y1,x2,y2,w1:wd,w2:depth===0?.5:wd*.68,bend:J(r,.3),depth});
+    if(depth===0) return;
+    const n= depth>=5 ? 2 : (r()<.55?2:3);
+    for(let i=0;i<n;i++){ let a=ang+(i-(n-1)/2)*(.5+r()*.3)+J(r,.18); a+=(-Math.PI/2-a)*.12;
+      grow(x2,y2,a,len*(.7+r()*.14),wd*.68,depth-1); }
+  })(x,base,-Math.PI/2+J(r,.05),h*.3,h*.046,7);
+  return segs;
+}
+function segPath(s){
+  const dx=s.x2-s.x1, dy=s.y2-s.y1, L=Math.hypot(dx,dy)||1, nx=-dy/L, ny=dx/L;
+  const mx=(s.x1+s.x2)/2+nx*s.bend*L*.2, my=(s.y1+s.y2)/2+ny*s.bend*L*.2, wm=(s.w1+s.w2)/4;
+  return `M${fmt([s.x1+nx*s.w1/2,s.y1+ny*s.w1/2])}Q${fmt([mx+nx*wm,my+ny*wm])} ${fmt([s.x2+nx*s.w2/2,s.y2+ny*s.w2/2])}L${fmt([s.x2-nx*s.w2/2,s.y2-ny*s.w2/2])}Q${fmt([mx-nx*wm,my-ny*wm])} ${fmt([s.x1-nx*s.w1/2,s.y1-ny*s.w1/2])}Z`;
+}
+function BareTree({x,base,h,seed,tone='near'}){
+  const { snow } = useScene();
+  const { body, snowD } = useMemo(()=>{ const segs=bareTree(x,base,h,seed);
+    const body=segs.map(segPath).join('');
+    const snowD=segs.filter(s=>s.depth>=1 && s.depth<=5 && Math.abs(s.y2-s.y1)<Math.abs(s.x2-s.x1)*1.1).map(s=>{
+      const dx=s.x2-s.x1, dy=s.y2-s.y1, L=Math.hypot(dx,dy)||1; let nx=-dy/L, ny=dx/L; if(ny>0){nx=-nx;ny=-ny;}
+      const o1=s.w1*.42, o2=s.w2*.42; return `M${fmt([s.x1+nx*o1+dx*.15,s.y1+ny*o1+dy*.15])}L${fmt([s.x2+nx*o2-dx*.1,s.y2+ny*o2-dy*.1])}`; }).join('');
+    return { body, snowD }; },[x,base,h,seed]);
+  const far=tone==='far';
+  return <g>
+    <Paint f="washSoft">
+      <path d={body} fill={far?'#8b8290':'#5e4e49'}/>
+      {snow>.15 && <path d={snowD} stroke={PAL.snow} strokeWidth={n1(2.2*snow)} strokeLinecap="round" fill="none" opacity=".95"/>}
+    </Paint>
+    <Paint><Snow pts={[[x-h*.07,base+2],[x+h*.07,base+2]]} t={10} seed={seed+5}/></Paint>
+  </g>;
+}
+function Tree({cfg}){ return cfg.kind==='fir' ? <Fir {...cfg}/> : <BareTree {...cfg}/>; }
+
+function Shrub({x,y,w,h,seed}){
+  const r=rng(seed); const blobs=[]; for(let i=0;i<7;i++){ const t=i/6; blobs.push(<path key={i} d={blob(x-w/2+w*t*.9+w*.05, y-h*.42-Math.sin(t*Math.PI)*h*.18+J(r,3), w*(.17+r()*.07), h*(.36+r()*.1), r)} fill={i%2?PAL.greenDeep:PAL.green}/>); }
+  return <g><Paint>{blobs}<Snow pts={[[x-w/2+4,y-h*.5],[x-w*.18,y-h*.88],[x+w*.18,y-h*.9],[x+w/2-4,y-h*.48]]} t={9} seed={seed+1}/></Paint></g>;
+}
+function StreetLamp({x, base=812, h=240, seed=1}){
+  const top=base-h;
+  return <g>
+    <Paint>
+      <path d={poly([[x-5,base-16],[x+5,base-16],[x+3.5,top],[x-3.5,top]])} fill="#34333a"/>
+      <path d={rough(x-12,base-22,24,22,seed,.6)} fill="#3d3c43"/><path d={rough(x-8,base-34,16,12,seed+1,.5)} fill="#3d3c43"/>
+      <rect x={x-7} y={top+40} width={14} height={5} fill="#3d3c43"/>
+      <path d={`M${x-18},${top+14}L${x+18},${top+14}`} stroke="#34333a" strokeWidth="3"/>
+      <path d={poly([[x-8,top+6],[x+8,top+6],[x+5,top]])} fill="#34333a"/>
+      <path d={poly([[x-15,top-40],[x+15,top-40],[x+10,top+2],[x-10,top+2]])} fill="url(#lampGlass)"/>
+      <path d={poly([[x-21,top-40],[x+21,top-40],[x+8,top-56],[x-8,top-56]])} fill="#2f2e35"/>
+      <circle cx={x} cy={top-60} r="4" fill="#2f2e35"/>
+      <Snow pts={[[x-23,top-40],[x,top-58],[x+23,top-40]]} t={7} seed={seed+2}/>
+      <Snow pts={[[x-20,top+12],[x+20,top+12]]} t={3} seed={seed+3}/>
+    </Paint>
+    <Ink w={1.2}><path d={poly([[x-15,top-40],[x+15,top-40],[x+10,top+2],[x-10,top+2]])}/><path d={`M${x},${top-40}L${x},${top+2}`} opacity=".7"/><path d={poly([[x-21,top-40],[x+21,top-40],[x+8,top-56],[x-8,top-56]])}/></Ink>
+    <Wreath cx={x} cy={base-128} r={12} seed={seed+4}/>
+    <Paint><Snow pts={[[x-18,base-1],[x+18,base-1]]} t={8} seed={seed+5}/></Paint>
+  </g>;
+}
+
+const Sky = memo(function Sky(){
+  return <g>
+    <rect x="-20" y="-20" width="1960" height="1120" fill="url(#sky)"/>
+    <ellipse cx="300" cy="120" rx="620" ry="420" fill="url(#sunGlow)"/>
+    <Cloud x={430} y={150} s={1} seed={1}/><Cloud x={1150} y={110} s={1.25} seed={2}/><Cloud x={1690} y={190} s={.8} seed={3}/><Cloud x={820} y={260} s={.55} seed={4}/>
+  </g>;
+});
+function Cloud({x,y,s,seed}){
+  const r=rng(seed); const P=[]; for(let i=0;i<7;i++) P.push([x+(i-3)*46*s+J(r,10), y-Math.sin((i+.5)/7*Math.PI)*30*s+J(r,6), (30+r()*22)*s]);
+  return <g filter="url(#cloud)">
+    <g opacity=".5">{P.map((p,i)=><circle key={i} cx={p[0]+4} cy={p[1]+14*s} r={p[2]} fill="#c4c9de"/>)}</g>
+    <g opacity=".88">{P.map((p,i)=><circle key={i} cx={p[0]-4} cy={p[1]} r={p[2]*.95} fill="#fdfbf5"/>)}</g>
+  </g>;
+}
+const Landscape = memo(function Landscape(){
+  const far=[[-20,560],[200,508],[470,536],[760,482],[1060,522],[1350,488],[1620,516],[1940,476]];
+  const mid=[[-20,606],[280,580],[620,610],[960,588],[1290,604],[1560,584],[1940,604]];
+  const r=rng(901); const farTrees=[];
+  for(let x=-10;x<1940;x+=7+r()*10){ const i=far.findIndex(p=>p[0]>x); const a=far[Math.max(0,i-1)], b=far[i]||far[far.length-1]; const t=(x-a[0])/((b[0]-a[0])||1); const y=a[1]+(b[1]-a[1])*(t*t*(3-2*t))+16+r()*18;
+    if(r()<.55){ const hh=10+r()*16, ww=3+r()*3; farTrees.push(`M${n1(x-ww)},${n1(y)}L${n1(x)},${n1(y-hh)}L${n1(x+ww)},${n1(y)}Z`); } }
+  return <g>
+    <Paint f="cloud"><path d={smooth(far,false)+'L1940,760L-20,760Z'} fill="#c3cede"/></Paint>
+    <Paint f="washSoft"><path d={farTrees.join('')} fill="#93a2ba" opacity=".85"/></Paint>
+    <Paint><path d={smooth(far.map(p=>[p[0],p[1]+3]),false)+'L1940,'+(far[far.length-1][1]+20)+'L-20,'+(far[0][1]+20)+'Z'} fill="#e6ecf3" opacity=".8"/></Paint>
+    {/* frozen harbor on the right */}
+    <Paint>
+      <path d={smooth([[1260,624],[1450,612],[1700,616],[1940,606]],false)+'L1940,646L1260,646Z'} fill="#d4e1ec"/>
+      <path d="M1300,634L1520,630M1560,626L1820,622M1640,636L1900,630" stroke="#a9bfd2" strokeWidth="1.4"/>
+      <path d="M1340,628L1420,626M1700,628L1760,627" stroke="#ffffff" strokeWidth="2"/>
+    </Paint>
+    <Paint><path d={smooth(mid,false)+'L1940,780L-20,780Z'} fill="url(#snowField)"/></Paint>
+    <Paint f="washSoft"><path d={smooth(mid.map(p=>[p[0],p[1]+8]),false)+'L1940,640L-20,640Z'} fill={PAL.snowShade} opacity=".35"/></Paint>
+    <Church x={1796} y={606}/>
+    <FarHouse x={1660} y={606} c="#b1695a" seed={1}/><FarHouse x={1888} y={600} c="#d8c07e" seed={2}/><FarHouse x={40} y={604} c="#e9e4d8" seed={3}/>
+    {/* split-rail fence, visible in the open stretches */}
+    <Ink w={1.3} c="#6b5e57" o={.75}><path d={wob([[1640,690],[1940,682]],5,.8,false,60)+wob([[1640,700],[1940,692]],6,.8,false,60)+Array.from({length:8},(_,i)=>`M${1650+i*40},${686-i*.9}l0,22`).join('')}/></Ink>
+  </g>;
+});
+function Church({x,y}){
+  return <g>
+    <Paint>
+      <path d={poly([[x-26,y],[x+46,y],[x+46,y-36],[x-26,y-36]])} fill="#f4f2ec"/>
+      <path d={poly([[x+46,y],[x+56,y-5],[x+56,y-40],[x+46,y-36]])} fill="#c9cfe0"/>
+      <path d={poly([[x-30,y-36],[x+48,y-36],[x+58,y-41],[x+12,y-62],[x-12,y-58]])} fill="#f6f6f6"/>
+      <path d={poly([[x-16,y-36],[x+4,y-36],[x+4,y-98],[x-16,y-98]])} fill="#f7f5ef"/><path d={poly([[x+4,y-36],[x+9,y-38],[x+9,y-100],[x+4,y-98]])} fill="#c9cfe0"/>
+      <path d={poly([[x-19,y-98],[x+7,y-98],[x+7,y-118],[x-19,y-118]])} fill="#f7f5ef"/>
+      <path d={poly([[x-19,y-118],[x+9,y-118],[x-5,y-168]])} fill="#e7eaf2"/><path d={poly([[x+9,y-118],[x+12,y-120],[x-5,y-168]])} fill="#b9c0d6"/>
+      <rect x={x-9} y={y-112} width="6" height="9" fill="#6b6f80"/>
+      {[0,1,2].map(i=><rect key={i} x={x+12+i*11} y={y-28} width="4" height="10" fill="#e8b462"/>)}
+    </Paint>
+    <Ink w={.9} o={.6}><path d={poly([[x-26,y],[x+46,y],[x+46,y-36],[x-26,y-36]])}/><path d={poly([[x-19,y-118],[x+9,y-118],[x-5,y-168]])}/><path d={`M${x-5},${y-168}l0,-8M${x-9},${y-173}l8,0`}/></Ink>
+  </g>;
+}
+function FarHouse({x,y,c,seed}){
+  return <g><Paint>
+    <path d={poly([[x-18,y],[x+18,y],[x+18,y-20],[x-18,y-20]])} fill={c}/><path d={poly([[x+18,y],[x+24,y-3],[x+24,y-22],[x+18,y-20]])} fill={shade(c,.4)}/>
+    <path d={poly([[x-21,y-20],[x+21,y-20],[x+26,y-23],[x+4,y-36],[x-4,y-34]])} fill="#fbfbf8"/>
+    <rect x={x+8} y={y-36} width="5" height="9" fill="#8a5a4a"/>
+    <rect x={x-10} y={y-14} width="5" height="6" fill="#e9b765"/><rect x={x+4} y={y-14} width="5" height="6" fill="#e9b765"/>
+  </Paint><Ink w={.8} o={.55}><path d={poly([[x-18,y],[x+18,y],[x+18,y-20],[x-18,y-20]])}/></Ink></g>;
+}
+const Sidewalk = memo(function Sidewalk(){
+  const joints=[]; for(let x=10;x<1920;x+=86) joints.push(`M${x},${G+2}L${x+6},${G+54}`);
+  return <g>
+    <Paint>
+      <rect x="-20" y={G-2} width="1960" height="60" fill="#d3ccc2"/>
+      <path d={joints.join('')+`M-20,${G+28}L1940,${G+27}`} stroke="#9f978d" strokeWidth="1.3" opacity=".7"/>
+      <rect x="-20" y={G+55} width="1960" height="8" fill="#c9c3ba"/><rect x="-20" y={G+62} width="1960" height="9" fill="#9b958f"/>
+    </Paint>
+  </g>;
+});
+const COBBLES = (()=>{ const r=rng(77), b=['','','','']; let y=826;
+  while(y<1084){ const rh=9+(y-826)*.055, sw=rh*2.1; let x=-20-r()*sw;
+    while(x<1940){ const ww=sw*(.75+r()*.5); b[Math.floor(r()*4)]+=blob(x+ww/2,y+rh/2,ww/2-1.5,rh/2-1.3,r,7,.12); x+=ww; }
+    y+=rh; } return b; })();
+const Street = memo(function Street(){
+  return <Paint>
+    <rect x="-20" y="824" width="1960" height="270" fill="#857d77"/>
+    {COBBLES.map((d,i)=><path key={i} d={d} fill={['#a39c93','#958f8a','#aea69b','#8b8581'][i]}/>)}
+  </Paint>;
+});
+function Railroad({y}){
+  const ties=useMemo(()=>{ const r=rng(313); const out=[]; for(let x=-12;x<1940;x+=40){ const j=J(r,1.2), l=J(r,3);
+    out.push({d:poly([[x-7+j,y-34+l],[x+7+j,y-34+l],[x+8.5+j,y+36+l],[x-8.5+j,y+36+l]]), c:r()<.5?'#6b5444':'#5d4a3e', x:x+j, dust:r()<.6}); } return out; },[y]);
+  const joints=[]; for(let x=150;x<1940;x+=320) joints.push(x);
+  return <g>
+    <Paint><path d={smooth([[-20,y-38],[480,y-40],[980,y-37],[1480,y-40],[1940,y-38]],false)+`L1940,${y+42}L-20,${y+42}Z`} fill="#8e857a"/></Paint>
+    <Paint f="washSoft"><rect x="-20" y={y-38} width="1960" height="80" fill="url(#gravel)" opacity=".5"/></Paint>
+    <Paint>
+      {ties.map((t,i)=><path key={i} d={t.d} fill={t.c}/>)}
+      <path d={ties.filter(t=>t.dust).map(t=>`M${n1(t.x-4)},${y-30}l7,0M${n1(t.x-5)},${y+30}l8,0`).join('')} stroke={PAL.snow} strokeWidth="4" strokeLinecap="round" opacity=".85"/>
+    </Paint>
+    <Paint f="washSoft">
+      {[y-21,y+21].map((ry,i)=><g key={i}>
+        <rect x="-20" y={ry+3} width="1960" height="5" fill="#2f2c33" opacity=".45"/>
+        <rect x="-20" y={ry-3} width="1960" height="6" fill="#5b5961"/>
+        <rect x="-20" y={ry-3} width="1960" height="2" fill="#d4d7de"/>
+        {ties.map((t,k)=><rect key={k} x={n1(t.x-9)} y={ry+2} width="18" height="4" fill="#3d3a40"/>)}
+        {joints.map(jx=><rect key={jx} x={jx-12} y={ry-1} width="24" height="6" fill="#47454c"/>)}
+      </g>)}
+    </Paint>
+    <Ink w={1.1} o={.75}><path d={`M-20,${y-24}L1940,${y-24}M-20,${y+18}L1940,${y+18}`}/></Ink>
+  </g>;
+}
+function band(y1,y2,seed,amp=4,dips=true){
+  const r=rng(seed), top=[], bot=[];
+  for(let x=-40;x<=1960;x+=64){ top.push([x+J(r,8), y1+J(r,amp)+(dips&&r()<.15?amp*1.6:0)]); bot.push([x+J(r,8), y2+J(r,amp)]); }
+  return smooth([...top,...bot.reverse()],true);
+}
+function StreetSnow({ry}){
+  const { snow } = useScene(); const e=(snow-1)*8;
+  const bands=[[820,850+e*1.6,31],[ry-76-e,ry-38,32],[ry+40,ry+76+e,33],[1056-e*1.4,1100,34]];
+  const r=rng(55); const peeks=[]; for(let i=0;i<46;i++){ const b=bands[i%3+0]; const x=r()*1920, y=b[0]+6+r()*Math.max(4,(b[1]-b[0]-12)); peeks.push(`M${n1(x)},${n1(y)}m-6,0a6,2.4 0 1 0 12,0a6,2.4 0 1 0 -12,0`); }
+  if(snow<.08) return null;
+  return <g>
+    <Paint>
+      {bands.map(([a,b,s])=><path key={s} d={band(a,b,s)} transform="translate(0,5)" fill={PAL.snowShade}/>)}
+      {bands.map(([a,b,s])=><path key={'w'+s} d={band(a,b,s)} fill={PAL.snow}/>)}
+      <path d={peeks.join('')} fill="#a39c93" opacity={n1(.5/snow)}/>
+    </Paint>
+    <Ink w={1.4} c={PAL.snowDeep} o={.5}><path d={`M-20,${ry-58}C400,${ry-62} 800,${ry-50} 1300,${ry-58}S1800,${ry-55} 1940,${ry-60}M-20,${ry-50}C400,${ry-54} 800,${ry-42} 1300,${ry-50}S1800,${ry-47} 1940,${ry-52}`}/></Ink>
+  </g>;
+}
+function Snowbanks(){
+  const { snow } = useScene(); const k=clamp(snow,.2,1.8);
+  const left=[[-40,1100],[-40,1040-20*k],[60,1012-26*k],[170,1020-22*k],[270,1040-16*k],[380,1060-10*k],[470,1100]];
+  const right=[[1420,1100],[1510,1062-12*k],[1620,1040-20*k],[1740,1020-28*k],[1860,1008-30*k],[1960,1020-24*k],[1960,1100]];
+  const mounds=[40,560,1010,1440,1880];
+  return <g>
+    <Paint>
+      {[left,right].map((p,i)=><g key={i}><path d={smooth(p,true)} transform="translate(8,12)" fill={PAL.snowDeep} opacity=".55"/><path d={smooth(p,true)} transform="translate(4,6)" fill={PAL.snowShade}/><path d={smooth(p,true)} fill={PAL.snow}/>
+        <path d={smooth(p.slice(1,-1).map(q=>[q[0]+10,q[1]+16]),false)} stroke={PAL.snowShade} strokeWidth="10" fill="none" opacity=".7" strokeLinecap="round"/></g>)}
+      {mounds.map((mx,i)=><Snow key={i} pts={[[mx-60,G+66],[mx+60,G+66]]} t={13} seed={400+i}/>)}
+    </Paint>
+  </g>;
+}
+
+/* ---------- filters, gradients ---------- */
+function Defs({theme}){
+  return <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop className="tstop" offset="0" style={{stopColor:theme.sky[0]}}/><stop className="tstop" offset=".55" style={{stopColor:theme.sky[1]}}/><stop className="tstop" offset="1" style={{stopColor:theme.sky[2]}}/>
+    </linearGradient>
+    <radialGradient id="sunGlow"><stop offset="0" stopColor="#fff4d8" stopOpacity=".75"/><stop offset="1" stopColor="#fff4d8" stopOpacity="0"/></radialGradient>
+    <radialGradient id="glassWarm" cx=".5" cy=".62" r=".8"><stop offset="0" stopColor="#ffe9b2"/><stop offset=".55" stopColor="#f3c06c"/><stop offset="1" stopColor="#d48a48"/></radialGradient>
+    <linearGradient id="glassCool" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#dce8f1"/><stop offset=".6" stopColor="#a9c0d4"/><stop offset="1" stopColor="#8aa3bb"/></linearGradient>
+    <radialGradient id="lampGlass" cx=".5" cy=".6" r=".7"><stop offset="0" stopColor="#fff6d6"/><stop offset=".6" stopColor="#f6cf7d"/><stop offset="1" stopColor="#d8954a"/></radialGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1"><stop offset=".3" stopColor="#fff" stopOpacity="0"/><stop offset=".38" stopColor="#fff" stopOpacity=".22"/><stop offset=".46" stopColor="#fff" stopOpacity="0"/><stop offset=".6" stopColor="#fff" stopOpacity=".1"/><stop offset=".64" stopColor="#fff" stopOpacity="0"/></linearGradient>
+    <linearGradient id="shadeDown" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={PAL.shadow} stopOpacity=".42"/><stop offset="1" stopColor={PAL.shadow} stopOpacity="0"/></linearGradient>
+    <linearGradient id="awnShade" x1="0" y1="0" x2="0" y2="1"><stop offset=".3" stopColor={PAL.shadow} stopOpacity="0"/><stop offset="1" stopColor={PAL.shadow} stopOpacity=".3"/></linearGradient>
+    <linearGradient id="roofSnow" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#ffffff"/><stop offset=".7" stopColor="#eef0f6"/><stop offset="1" stopColor="#cdd5e7"/></linearGradient>
+    <linearGradient id="snowField" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f3f4f3"/><stop offset="1" stopColor="#dfe5ee"/></linearGradient>
+    <linearGradient id="firNear" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#6c8c6c"/><stop offset=".5" stopColor="#47664f"/><stop offset="1" stopColor="#2d4639"/></linearGradient>
+    <linearGradient id="firFar" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#8fa699"/><stop offset="1" stopColor="#62786f"/></linearGradient>
+    <pattern id="gravel" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="4" cy="5" r="1.6" fill="#5e574f"/><circle cx="15" cy="9" r="1.3" fill="#c2bab0"/><circle cx="9" cy="17" r="1.5" fill="#6d665e"/><circle cx="20" cy="20" r="1.2" fill="#b8b0a5"/></pattern>
+
+    <filter id="wash" x="-12%" y="-12%" width="124%" height="124%" colorInterpolationFilters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="3" seed="4" result="warp"/>
+      <feDisplacementMap in="SourceGraphic" in2="warp" scale="5" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.011 0.02" numOctaves="3" seed="9" result="blot"/>
+      <feColorMatrix in="blot" type="matrix" values="0.72 0 0 0 0.6  0.7 0 0 0 0.61  0.62 0 0 0 0.66  0 0 0 0 1" result="blotG"/>
+      <feComposite in="d" in2="blotG" operator="arithmetic" k1="1" k2="0" k3="0" k4="0" result="m1"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="2" result="gr"/>
+      <feColorMatrix in="gr" type="matrix" values="0.32 0 0 0 0.82  0.32 0 0 0 0.82  0.32 0 0 0 0.82  0 0 0 0 1" result="grG"/>
+      <feComposite in="m1" in2="grG" operator="arithmetic" k1="1" k2="0" k3="0" k4="0" result="m2"/>
+      <feMorphology in="d" operator="erode" radius="2" result="er"/>
+      <feComposite in="d" in2="er" operator="out" result="rim"/>
+      <feColorMatrix in="rim" type="matrix" values="0.62 0 0 0 0  0 0.6 0 0 0  0 0 0.72 0 0  0 0 0 0.55 0" result="rimD"/>
+      <feGaussianBlur in="rimD" stdDeviation="0.8" result="rimS"/>
+      <feMerge><feMergeNode in="m2"/><feMergeNode in="rimS"/></feMerge>
+    </filter>
+    <filter id="washSoft" x="-15%" y="-15%" width="130%" height="130%" colorInterpolationFilters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="6" result="warp"/>
+      <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.5" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="12" result="blot"/>
+      <feColorMatrix in="blot" type="matrix" values="0.4 0 0 0 0.76  0.4 0 0 0 0.76  0.4 0 0 0 0.76  0 0 0 0 1" result="blotG"/>
+      <feComposite in="d" in2="blotG" operator="arithmetic" k1="1" k2="0" k3="0" k4="0"/>
+    </filter>
+    <filter id="cloud" x="-20%" y="-30%" width="140%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="3" seed="21" result="warp"/>
+      <feDisplacementMap in="SourceGraphic" in2="warp" scale="22" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feGaussianBlur in="d" stdDeviation="3.4"/>
+    </filter>
+    <filter id="ink" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="11" result="w"/>
+      <feDisplacementMap in="SourceGraphic" in2="w" scale="2.6" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.3" numOctaves="2" seed="5" result="br"/>
+      <feColorMatrix in="br" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 3 -0.5" result="brA"/>
+      <feComposite in="d" in2="brA" operator="in"/>
+    </filter>
+    <filter id="halo" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter>
+  </defs>;
+}
+
+/* ================================================================
+   ANIMATION + LIGHT OVERLAYS (separate SVGs: cheap to animate)
+   ================================================================ */
+const FLAKES = (()=>{ const r=rng(2024); return Array.from({length:150},(_,i)=>{ const near=r()<.22;
+  return { x:r()*1960-20, y:r()*1080, rad:near? 2.6+r()*1.6 : 1.1+r()*1.5, d:(near?11:17)+r()*12, dl:-r()*30, dx:J(r,50), s:3+r()*4 }; }); })();
+function Snowfall({reduced}){
+  return <g>{FLAKES.map((f,i)=> reduced
+    ? <circle key={i} cx={n1(f.x)} cy={n1(f.y)} r={f.rad} fill="#fff" stroke="#a6b4cc" strokeWidth=".5" opacity=".9"/>
+    : <g key={i} className="sway" style={{'--s':`${n1(f.s)}s`,'--dl':`${n1(f.dl)}s`}}>
+        <circle className="flake" cx={n1(f.x)} cy="0" r={f.rad} fill="#fff" stroke="#a6b4cc" strokeWidth=".5" opacity=".92" style={{'--d':`${n1(f.d)}s`,'--dl':`${n1(f.dl)}s`,'--dx':`${n1(f.dx)}px`}}/>
+      </g>)}</g>;
+}
+function Smoke({at}){
+  return <g filter="url(#soft)">{[0,1,2,3,4].map(i=><circle key={i} className="puff" cx={at[0]} cy={at[1]} r="11" fill="#b4b1c0" style={{animationDelay:`${-i*2.2}s`}}/>)}</g>;
+}
+function Flag({at, reduced}){
+  const [px,py]=at; const A=`M${px},${py}C${px+11},${py-4} ${px+23},${py+4} ${px+36},${py+1}L${px+36},${py+20}C${px+23},${py+23} ${px+11},${py+15} ${px},${py+18}Z`;
+  const B=`M${px},${py}C${px+11},${py+4} ${px+23},${py-3} ${px+36},${py+3}L${px+36},${py+22}C${px+23},${py+16} ${px+11},${py+22} ${px},${py+18}Z`;
+  return <g>
+    <path d={A} fill="#b34a3c" stroke={PAL.ink} strokeWidth="1">{!reduced && <animate attributeName="d" dur="3.2s" repeatCount="indefinite" values={`${A};${B};${A}`} calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1"/>}</path>
+    <path d={`M${px+4},${py+8}l26,0`} stroke="#f2e6c9" strokeWidth="3" opacity=".9"/>
+  </g>;
+}
+function Lights({buildings, lamps, theme}){
+  const L=[]; buildings.forEach(b=>{ const g=BUILDING_TYPES[b.type].geom(b); g.lights.forEach((l,i)=>L.push({...l,key:b.id+i})); });
+  lamps.forEach(l=>{ L.push({x:l.x,y:G+52-240-20,rx:58,ry:58,kind:'lamp',key:l.id}); L.push({x:l.x,y:G+56,rx:70,ry:12,kind:'lampspill',key:l.id+'s'}); });
+  return <g>
+    <defs>
+      <radialGradient id="lg"><stop offset="0" stopColor="#ffd88a" stopOpacity=".9"/><stop offset=".45" stopColor="#f2a64e" stopOpacity=".35"/><stop offset="1" stopColor="#e88c3a" stopOpacity="0"/></radialGradient>
+    </defs>
+    {L.map((l,i)=>{ const o = l.kind==='lamp'||l.kind==='lampspill' ? theme.lamp : (l.kind==='spill' ? theme.spill : 1);
+      return o>0.01 && <ellipse key={l.key} className="breathe" style={{animationDelay:`${-(i*.7)%6}s`}} cx={l.x} cy={l.y} rx={l.rx} ry={l.ry} fill="url(#lg)" opacity={o}/>; })}
+  </g>;
+}
+
+const THEMES = {
+  morning:{ dusk:0,   lights:.38, lamp:.15, spill:0 },
+  evening:{ dusk:.62, lights:1,   lamp:1,   spill:.9 },
+};
+
+/* ================================================================
+   SCENE
+   ================================================================ */
+function Scene({scene, selected, onSelect}){
+  const theme = { ...THEMES[scene.time], sky: scene.sky[scene.time] };
+  __snow = scene.snowDepth;
+  const ctx = useMemo(()=>({ snow:scene.snowDepth, time:scene.time }),[scene.snowDepth,scene.time]);
+  const vis = scene.buildings.filter(b=>b.visible);
+  const trees = scene.trees.filter(t=>t.visible);
+  return <SceneCtx.Provider value={ctx}>
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" className="scene" onClick={()=>onSelect(null)} role="group" aria-label="Toy Town: a snowy village street with a toy store, a book store and a storefront under construction">
+      <Defs theme={theme}/>
+      <g id="layer-sky"><Sky/></g>
+      <g id="layer-landscape"><Landscape/></g>
+      <g id="layer-trees-back">{trees.filter(t=>t.layer==='back').map(t=><Tree key={t.id} cfg={t}/>)}</g>
+      <g id="layer-sidewalk"><Sidewalk/></g>
+      <g id="layer-buildings">{vis.map(b=><Building key={b.id} cfg={b} active={selected===b.id} onSelect={onSelect}/>)}</g>
+      <g id="layer-trees-front">{trees.filter(t=>t.layer==='front').map(t=><Tree key={t.id} cfg={t}/>)}</g>
+      <g id="layer-shrubs">{scene.shrubs.filter(s=>s.y<900).map(s=><Shrub key={s.id} {...s}/>)}</g>
+      <g id="layer-street"><Street/></g>
+      {scene.railroad.visible && <g id="layer-railroad"><Railroad y={scene.railroad.y}/></g>}
+      <g id="layer-snow-ground"><StreetSnow ry={scene.railroad.y}/></g>
+      <g id="layer-lamps">{scene.lamps.map((l,i)=><StreetLamp key={l.id} x={l.x} seed={500+i*10}/>)}</g>
+      <g id="layer-snowbanks"><Snowbanks/></g>
+      <g id="layer-shrubs-front">{scene.shrubs.filter(s=>s.y>=900).map(s=><Shrub key={s.id} {...s}/>)}</g>
+      <rect className="dusk" x="-20" y="-20" width="1960" height="1120" fill="#5d679e" style={{opacity:theme.dusk}}/>
+    </svg>
+  </SceneCtx.Provider>;
+}
+function PaperEdge(){
+  const inner=useMemo(()=>{ const r=rng(7), p=[]; const m=14;
+    for(let x=m;x<W-m;x+=40) p.push([x,m+J(r,4)]); for(let y=m;y<H-m;y+=40) p.push([W-m+J(r,4),y]);
+    for(let x=W-m;x>m;x-=40) p.push([x,H-m+J(r,4)]); for(let y=H-m;y>m;y-=40) p.push([m+J(r,4),y]); return smooth(p,true); },[]);
+  return <svg className="layer" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <defs><filter id="deckle" x="-2%" y="-2%" width="104%" height="104%"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="3" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="10"/><feGaussianBlur stdDeviation=".6"/></filter></defs>
+    <path d={`M-40,-40H${W+40}V${H+40}H-40Z`+inner} fillRule="evenodd" fill="#f3ead6" filter="url(#deckle)"/>
+    <path d={inner} fill="none" stroke="#8a6a44" strokeOpacity=".22" strokeWidth="3" filter="url(#deckle)"/>
+  </svg>;
+}
+
+/* ---------- info card ---------- */
+function InfoCard({b, sheet, onClose}){
+  const [punched,setPunched]=useState(false);
+  useEffect(()=>setPunched(false),[b.id]);
+  const g=BUILDING_TYPES[b.type].geom(b);
+  const onLeft = g.anchor[0] < W*0.42;   // card sits beside the building, never over it
+  const left = onLeft ? (b.x+b.w+D[0]+18)/W*100 : (b.x-30)/W*100;
+  const top = 46;
+  const ref=useRef(null); useEffect(()=>{ ref.current && ref.current.querySelector('.ticket').focus({preventScroll:true}); },[b.id]);
+  return <div ref={ref} className={'card'+(sheet?' sheet':'')} style={sheet?undefined:{left:left+'%',top:top+'%',transform:onLeft?'translate(0,-50%)':'translate(-100%,-50%)'}} role="dialog" aria-label={b.panel.title} onClick={e=>e.stopPropagation()}>
+    <button className="close" aria-label="Close" onClick={onClose}>×</button>
+    <div className="eyebrow">Toy Town Station · {b.panel.stop}</div>
+    <h2>{b.panel.title}</h2>
+    <p>{b.panel.desc}</p>
+    <dl><dt>Track</dt><dd>{b.panel.track}</dd><dt>Status</dt><dd>{b.panel.status}</dd></dl>
+    <button className="ticket" onClick={()=>setPunched(true)}>{b.panel.cta}</button>
+    {punched && <div className="stamp" role="status"><b>PUNCHED</b><span>Prototype stop. In the full experience this ticket opens the {b.panel.title} page.</span></div>}
+  </div>;
+}
+
+/* ---------- editor ---------- */
+function Seg({label, value, options, onChange, id}){
+  return <div className="row" role="group" aria-labelledby={id}><span className="lbl" id={id}>{label}</span>
+    <div className="seg">{options.map(o=><button key={o.v} type="button" aria-pressed={value===o.v} onClick={()=>onChange(o.v)}>{o.sw && <i className="swatch" style={{background:o.sw}}/>}{o.l}</button>)}</div></div>;
+}
+function Editor({scene, set, onClose, onReset}){
+  const book=scene.buildings.find(b=>b.id==='book'), toy=scene.buildings.find(b=>b.id==='toy'), site=scene.buildings.find(b=>b.id==='site');
+  const fir=scene.trees.find(t=>t.id==='fir-big');
+  const upB=(id,patch)=>set(s=>({...s,buildings:s.buildings.map(b=>b.id===id?{...b,...patch}:b)}));
+  return <aside className="editor" aria-label="Scene editor">
+    <header><h3>Scene Editor</h3><button className="close" style={{position:'static'}} aria-label="Close editor" onClick={onClose}>×</button></header>
+    <Seg id="ed-toy" label="TOY STORE COLOR" value={toy.color} onChange={v=>upB('toy',{color:v})} options={[{v:'red',l:'Red',sw:TOY_COLORS.red},{v:'green',l:'Green',sw:TOY_COLORS.green},{v:'blue',l:'Blue',sw:TOY_COLORS.blue}]}/>
+    <div className="row"><label htmlFor="ed-booksign">BOOK STORE SIGN</label>
+      <input id="ed-booksign" type="text" maxLength={28} value={book.sign} onChange={e=>upB('book',{sign:e.target.value.toUpperCase()})}/></div>
+    <Seg id="ed-site" label="CONSTRUCTION SITE" value={site.visible?'show':'hide'} onChange={v=>upB('site',{visible:v==='show'})} options={[{v:'show',l:'Show'},{v:'hide',l:'Hide'}]}/>
+    <div className="row"><label htmlFor="ed-sitex">CONSTRUCTION POSITION</label>
+      <input id="ed-sitex" type="range" min={1225} max={1330} step={1} value={site.x} onChange={e=>upB('site',{x:+e.target.value})}/>
+      <div className="rangeline"><span>left</span><span>right</span></div></div>
+    <Seg id="ed-fall" label="SNOWFALL" value={scene.snowfall?'on':'off'} onChange={v=>set(s=>({...s,snowfall:v==='on'}))} options={[{v:'on',l:'On'},{v:'off',l:'Off'}]}/>
+    <div className="row"><label htmlFor="ed-depth">SNOW DEPTH</label>
+      <input id="ed-depth" type="range" min={0} max={1.8} step={.05} value={scene.snowDepth} onChange={e=>set(s=>({...s,snowDepth:+e.target.value}))}/>
+      <div className="rangeline"><span>a dusting</span><span>a blizzard</span></div></div>
+    <Seg id="ed-time" label="TIME OF DAY" value={scene.time} onChange={v=>set(s=>({...s,time:v}))} options={[{v:'morning',l:'Morning'},{v:'evening',l:'Evening'}]}/>
+    <Seg id="ed-rail" label="RAILROAD" value={scene.railroad.visible?'show':'hide'} onChange={v=>set(s=>({...s,railroad:{...s.railroad,visible:v==='show'}}))} options={[{v:'show',l:'Show'},{v:'hide',l:'Hide'}]}/>
+    <div className="row"><label htmlFor="ed-raily">RAILROAD POSITION</label>
+      <input id="ed-raily" type="range" min={935} max={1000} step={1} value={scene.railroad.y} onChange={e=>set(s=>({...s,railroad:{...s.railroad,y:+e.target.value}}))}/>
+      <div className="rangeline"><span>farther</span><span>nearer</span></div></div>
+    <Seg id="ed-fir" label={fir.label.toUpperCase()} value={fir.visible?'show':'hide'} onChange={v=>set(s=>({...s,trees:s.trees.map(t=>t.id==='fir-big'?{...t,visible:v==='show'}:t)}))} options={[{v:'show',l:'Show'},{v:'hide',l:'Hide'}]}/>
+    <button className="reset" type="button" onClick={onReset}>Reset scene</button>
+  </aside>;
+}
+
+/* ---------- app ---------- */
+function App(){
+  const [scene,setScene]=useState(()=>JSON.parse(JSON.stringify(DEFAULT_SCENE)));
+  const [selected,setSelected]=useState(null);
+  const [editor,setEditor]=useState(()=>{ try{ return localStorage.getItem('tt-editor')!=='0'; }catch(e){ return true; } });
+  const [reduced,setReduced]=useState(()=>window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [plateW,setPlateW]=useState(1200); const plateRef=useRef(null);
+  useEffect(()=>{ try{ localStorage.setItem('tt-editor',editor?'1':'0'); }catch(e){} },[editor]);
+  useEffect(()=>{ if(!window.matchMedia) return; const m=matchMedia('(prefers-reduced-motion: reduce)'); const f=()=>setReduced(m.matches); m.addEventListener('change',f); return ()=>m.removeEventListener('change',f); },[]);
+  useEffect(()=>{ const ro=new ResizeObserver(e=>setPlateW(e[0].contentRect.width)); plateRef.current && ro.observe(plateRef.current); return ()=>ro.disconnect(); },[]);
+  useEffect(()=>{ const k=e=>{ if(e.key==='Escape') setSelected(null); }; addEventListener('keydown',k); return ()=>removeEventListener('keydown',k); },[]);
+  const theme={...THEMES[scene.time]};
+  const vis=scene.buildings.filter(b=>b.visible);
+  const toy=vis.find(b=>b.type==='toy'), site=vis.find(b=>b.type==='construction');
+  const sel=vis.find(b=>b.id===selected);
+  return <div className="page">
+    <div className="frame">
+      <div className="plate" ref={plateRef}>
+        <Scene scene={scene} selected={selected} onSelect={setSelected}/>
+        <svg className="lights" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" style={{opacity:theme.lights}} aria-hidden="true">
+          <Lights buildings={vis} lamps={scene.lamps} theme={theme}/>
+        </svg>
+        <svg className="fx" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <defs><filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.5"/></filter></defs>
+          {toy && <Smoke at={toyGeom(toy).smoke}/>}
+          {site && <Flag at={siteGeom(site).flag} reduced={reduced}/>}
+          {scene.snowfall && <Snowfall reduced={reduced}/>}
+        </svg>
+        <div className="layer vignette"/>
+        <div className="layer grain"/>
+        <PaperEdge/>
+        {sel && <InfoCard b={sel} sheet={plateW<720} onClose={()=>setSelected(null)}/>}
+      </div>
+    </div>
+    <div className="caption">
+      <div className="cap-l"><h1>Toy Town</h1><p>A winter stop on the Toys for Tots Railroad. Tap a storefront to visit.</p></div>
+      <button className="btn-ghost" type="button" aria-expanded={editor} onClick={()=>setEditor(v=>!v)}>{editor?'Hide editor':'Show editor'}</button>
+    </div>
+    {editor && <Editor scene={scene} set={setScene} onClose={()=>setEditor(false)} onReset={()=>{ setScene(JSON.parse(JSON.stringify(DEFAULT_SCENE))); setSelected(null); }}/>}
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>

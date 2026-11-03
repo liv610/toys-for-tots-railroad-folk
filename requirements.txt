@@ -1,0 +1,6 @@
+# Exact versions used to render every committed image (Python 3.13.17).
+# Pixel-identical output is only guaranteed with these versions; see docs/DETERMINISM.md.
+numpy==2.5.3
+opencv-python-headless==5.0.0.93
+Pillow==12.3.0
+matplotlib==3.11.2
