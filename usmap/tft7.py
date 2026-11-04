@@ -431,7 +431,7 @@ def square(scene_town_seed):
     band = np.zeros((c.H, c.W), np.float32)
     px0, px1 = int((X0 + c.d[0]) * k), int((X1 + c.d[0]) * k); py0, py1 = int((B.TOWN[1] - 30 + c.d[1]) * k), int((B.TOWN[1] + 17 + c.d[1]) * k)
     px0, px1 = min(max(0, px0), c.W), min(max(0, px1), c.W); py0, py1 = min(max(0, py0), c.H), min(max(0, py1), c.H)   # (partial renders)
-    band[py0:py1, px0:px1] = 1; band = cv2.GaussianBlur(band, (0, 0), 1.2 * k)
+    band[py0:py1, px0:px1] = 1; band = cv2.GaussianBlur(band, (0, 0), sigmaX=1.2 * k, sigmaY=.01)   # soft only at the sides: a soft top edge faded the sign
     keep_rng, keep_clip = c.rng, c.clipm
     c.rng = np.random.RandomState(scene_town_seed); c.set_clip((0, 0, band))
     B.town_row(*B.TOWN)
