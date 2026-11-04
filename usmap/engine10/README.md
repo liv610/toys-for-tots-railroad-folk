@@ -98,6 +98,10 @@ each tile's key with `tile_key()`.
 Four regions were rendered in tiles and as a single window: Toy Town, the Northwest coast and mountains, Florida, and
 the river and bridge. All four tiled renders are 100.0% pixel-identical to their single-window renders.
 
+That test was not enough. On 4 November a whole-map comparison found three more ways tiles could differ, plus a
+painter that kept state between renders. All are fixed; see section 11. Since then, the whole 1× map assembled from
+its 35 tiles has been identical to a single-window render of the whole map, in colour and depth.
+
 Against the published map, the engine's mean colour is within 0.2 levels and its texture energy is within 2%. The
 small remaining differences come from movers and the sign blur, not from the engine itself.
 
@@ -242,7 +246,89 @@ commands above, in about 10 minutes for 1× and about 12 minutes for 2× on two 
 The prototype is published as its own artifact, "Toy Town Detail Prototype". The live Pass 5 map artifact is
 untouched.
 
-## 11. Recovery
+## 11. The 4 November performance work
+
+### Brush: `folk2/brush.py`, on `main`
+
+`Canvas.stroke` now evaluates only the band around a stroke's path. Outside that band the cover is exactly 0. The
+original is kept as `Canvas.stroke_bbox`.
+
+The change is bit-identical. It was checked on 3000 random strokes, on the full pass 5 pipeline at 3200 and 6400
+(570 files), on every engine tile, on the viewer bundle, and with `scripts/verify.py`.
+
+### Tiles equal one complete render (engine only)
+
+| Fixed | What was wrong |
+|---|---|
+| `tft7._station_without_wreath` | It compiled the station into a copy of `station5`'s namespace, which froze the first render's canvas. This fix is on `main`, because whole-map output is unchanged. |
+| `brush10.EngineCanvas.mask` | OpenCV's anti-aliased fill cuts polygons differently at each window edge. Masks are now filled over their full extent in world pixels and then cropped. |
+| `brush10._stroke_world` | Stroke arithmetic relative to the window origin flipped discrete choices in the last bit. It is now done in world pixels. |
+| `render10.land_mask` | The coastline is filled once per density over the whole frame (`cache/land_f*.npy`) and read through a memory map. |
+
+Checks: `tools/engine_complete_render.py` paints a region or the whole map as one window, and
+`tools/compare_tiles_to_complete.py` compares it with the cache.
+
+### Toy Town as separate objects (`split10.py`)
+
+The engine splits `town` and `shops7` into a street, nine houses, lamps and nine storefront parts. The storefront
+experiment's pavement overlay is a part of its own. The parts make the same calls in the same order, with the same
+seed and depth, and depth is recorded per original element. So the whole map is identical, pixels and depth.
+
+`tools/check_part_boxes.py` proves every part stays inside its box, for every storefront level.
+
+The published scene and pipeline are untouched. There, each element restarts the shared random stream, so a split
+would change houses 1–8.
+
+### Measured
+
+| Task | Before (4 Nov morning) | Now |
+|---|---|---|
+| Full map, 6400, published pipeline | 669 s | 253 s |
+| Full map, 3200 | 180 s | 89 s |
+| Engine, whole 1× map, 35 tiles | 628 CPU-s | about 135 CPU-s |
+| Engine, 2× Toy Town, 20 tiles | 1419 CPU-s | about 200 CPU-s |
+| Move one tree (tiles repainted) | 52.5 s (2 tiles) | 13.6 s (2 tiles) |
+| Edit the yellow shop, 1× | 6 tiles, 310 s | 4 tiles, 44–48 s |
+| Edit the yellow shop, 2× | 15 tiles | 4 tiles, 54–56 s |
+| Code change that does not alter pixels | full rebuild | `rekey`, about 23 s for 35 tiles |
+| Storefront comparison sheets (5 versions) | 1163 s | 28 s (`shop11.py`) |
+| Whole-map complete render (engine) | — | about 120 s |
+
+### Not yet the publishing pipeline
+
+The engine places brush marks by map position. The published pipeline places them by painting order. The engine's
+map is therefore a slightly different painting: the same objects, colours and composition, with mean colour within
+0.03 levels, but different marks (`out/p4_engine_vs_published.jpg`).
+
+Publishing from tiles means approving that one-time change of brushwork. Until then, `usmap5.py` remains the
+publishing pipeline.
+
+## 12. Recommended workflow for artistic iteration
+
+1. **Design a component in isolation.** Use `gallery10.py`, `figsheet10.py`, or a crop of only the area you are
+   changing (`views10.crop`, a few seconds).
+2. **Compare versions.** Use patched views: the cached map plus only the changed area (`views10.view`,
+   `shop11.py`). The original version costs nothing.
+3. **Integrate.** Update the tile cache: only the tiles the edited parts touch are repainted. Check the region with
+   `tools/compare_tiles_to_complete.py` when it matters.
+4. **Checkpoint.** Run the full pipeline and `scripts/verify.py`, commit, and tag if approved.
+5. **Long jobs.** Run them through `tools/job.py`: background, no duplicates, two CPU jobs and 5.5 GB at most. Run
+   `job.py guard` before editing rendering code.
+6. **Code changes that should not alter the painting.** Use `cache10.py rekey F --verify N`, not a rebuild.
+
+## 13. Remaining bottlenecks
+
+- **The brush is still most of the time.** Strokes are about 65% of a render after the speed-up. The next step,
+  checking each pixel against nearby segments only, might give another 2×. This is not measured yet.
+- **Two cores.** At most two jobs run at once. A 6400-wide full-map render needs about 3.2 GB of the 5.98 GB
+  workspace, so only one runs at a time.
+- **The station** is still one object: 6 tiles at 1× and 15 at 2×. Splitting the banner and medallion from the
+  building would cut a branding edit to 2 and 6 tiles (measured boxes). Splitting the building itself needs its
+  100-line painter restructured.
+- **The viewer build** (`make_viewer10.py`, about 26 s) repaints every Toy Town sprite at 1× and 2×. These sprites
+  could be cached like tiles.
+
+## 14. Recovery
 
 - **`checkpoints/pass5-toytown-branding-2026-11-04`** is the published state (Pass 5 versions 18–19). Copy its
   contents over `usmap/` to restore it.
