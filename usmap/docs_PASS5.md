@@ -150,3 +150,15 @@ The manifest (`out5*/anim/manifest.json`) records:
 * The motion curves are written in the viewer page (`viewer5_src/index.html`), not in the manifest.
 * Only the main river has glints. The delta channels do not.
 * The pass 4 tree types elsewhere in the country are unchanged, apart from the trees that now move.
+
+## Engine 10 prototype (separate, not part of the live map)
+
+The work after Pass 5 group 8 lives in `engine10/`, documented in `engine10/README.md`, and builds its own viewer in
+`viewer10/`. It covers:
+
+- a position-exact brush and tiled, incremental rendering
+- a 2× Toy Town layer that fades in as you zoom
+- storefront levels A, B and C, the toy library, and the figure study
+
+It changes nothing in the published map. The only edit outside those folders is a one-line clamp in `tft7.square`,
+which does not affect the full-frame render.
