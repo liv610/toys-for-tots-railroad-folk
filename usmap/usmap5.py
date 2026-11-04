@@ -29,6 +29,9 @@ import story as S
 from matplotlib.path import Path as MP
 
 sid = B.sid
+import fl5 as F5
+B.COAST = F5.coast5(); B.LANDP = MP(B.COAST)                          # group 6: the re-traced Florida peninsula
+B.U.boat = F5.boat6                                                  # group 6: boats after the Florida reference
 
 # ====================================================================== regions (map units, reference-v2 grid)
 PNW = MP([(0, 40), (600, 40), (600, 250), (470, 300), (330, 330), (300, 470), (0, 470)])
@@ -161,7 +164,7 @@ def flower_bush(x, y, h, seed, col):
     if m is None: return
     c.stip(m, pal_fn(['#3e5e2c', '#4e7034', '#304a22', '#5e8040']), spacing=1.1, L=2.0, w=1.2, seed=seed + 1, jit=.8)
     pts = [(x + r.uniform(-.65, .65) * h, y - h * .45 + r.uniform(-.38, .38) * h) for _ in range(int(h * 2.2))]
-    c.dots(pts, max(.7, h * .07), [col, '#ffffff' if col != '#ffffff' else '#f4e8ec'], seed=seed + 2)
+    c.dots(pts[:int(len(pts) * .7)], max(.9, h * .1), [col, '#ffffff' if col != '#ffffff' else '#f4e8ec'], seed=seed + 2)
 
 EV_PAINT = {'ev_fir': ev_fir, 'ev_spruce': ev_spruce, 'ev_douglas': ev_douglas, 'ev_pine': ev_pine,
             'ev_tiered': ev_tiered, 'ev_tiered_narrow': lambda x, y, h, s: ev_tiered(x, y, h, s, 'narrow'),
@@ -228,6 +231,48 @@ def palm5(x, y, h, seed, variant):
     for i in order: palm_frond(x, y, h, seed, variant, i)
 
 # ====================================================================== scene refinement
+PALM6 = [('#b4cc44', '#5a7a20', '#88a630', '#d6e46a'), ('#aac63e', '#56761e', '#82a02c', '#d0e064'), ('#bcd04c', '#5e7e24', '#8eaa34', '#dce872')]
+def palm_geom(x, y, h, seed, variant):
+    """Bold storybook palms (Florida reference): a tall curved, ringed trunk and a full crown of long arching fronds."""
+    r = np.random.RandomState(seed)
+    bend = {'tall': r.uniform(.14, .26), 'short': r.uniform(.04, .1), 'odd': r.uniform(.2, .3)}[variant] * r.choice([-1, 1])
+    hh = h * {'tall': 1.0, 'short': .7, 'odd': .9}[variant]
+    trunk = np.array([(x + bend * hh * (t ** 1.7), y - hh * t) for t in np.linspace(0, 1, 16)])
+    n = r.randint(9, 12)
+    fronds = []
+    for i in range(n):
+        a = -math.pi * 1.06 + i * math.pi * 1.12 / (n - 1) + r.randn() * .08
+        if variant == 'odd': a += (.25 if bend > 0 else -.25)
+        ln = hh * r.uniform(.5, .62) * (.8 if abs(math.cos(a)) < .5 else 1.0)
+        droop = r.uniform(.4, .62) + (.1 if abs(math.cos(a)) > .7 else 0)
+        fronds.append((a, ln, droop, r.randint(1 << 30)))
+    return trunk, fronds, bend
+
+def palm_trunk(x, y, h, seed, variant):
+    trunk, _, _ = palm_geom(x, y, h, seed, variant)
+    w = h * .072
+    c.stroke(trunk, w, '#a8824c', a=1, dry=.1, taper=(0, .3), streak=.2)
+    c.stroke(trunk - [w * .28, 0], w * .22, '#c8a26a', a=.8, dry=.2, taper=(0, .4))
+    c.stroke(trunk + [w * .3, 0], w * .28, '#7a5a34', a=.7, dry=.2, taper=(0, .4))
+    for t in np.linspace(.05, .92, 13):                                # curved ring bands
+        i = int(t * (len(trunk) - 1)); p = trunk[i]; ww = w * (1 - t * .3) * .5
+        c.stroke([(p[0] - ww, p[1] - .4), (p[0], p[1] + .8), (p[0] + ww, p[1] - .4)], .8, '#6a4a2a', a=.75, dry=0, taper=(0, 0))
+    top = trunk[-1]
+    c.dots([tuple(top + [-2.2, 2.4]), tuple(top + [1.8, 3.0]), tuple(top + [0, 4.2])], max(1.3, h * .028), ['#6a4424', '#7a5230'])
+
+def palm_frond(x, y, h, seed, variant, i):
+    trunk, fronds, _ = palm_geom(x, y, h, seed, variant); top = trunk[-1]
+    a, ln, droop, fs = fronds[i]; rr = np.random.RandomState(fs); up, under, rib, tip = PALM6[seed % 3]
+    mid = np.array([(top[0] + math.cos(a) * ln * u, top[1] + math.sin(a) * ln * u * .7 - .42 * ln * u * (1 - u) + droop * ln * u * u) for u in np.linspace(0, 1, 13)])   # rises, then arches down
+    d = np.gradient(mid, axis=0); d /= np.hypot(*d.T)[:, None] + 1e-9; nrm = np.stack([-d[:, 1], d[:, 0]], 1)
+    if nrm[len(nrm) // 2, 1] > 0: nrm = -nrm                           # the first side is the upper one
+    for side, col in ((-1, under), (1, up)):                           # darker underside first, lit upper leaflets over it
+        for j in range(1, len(mid) - 1):
+            u = j / (len(mid) - 1); lf = ln * (.3 - .16 * u) * rr.uniform(.85, 1.15)
+            p = mid[j]; q = p + nrm[j] * side * lf * .75 + d[j] * lf * .4 + [0, lf * (.42 if side < 0 else .18)]
+            c.stroke([p, q], max(1.4, h * .05 * (1 - u * .4)), col if u < .78 else tip, a=1, dry=.06, taper=(0, .75))
+    c.stroke(mid, max(1.1, h * .03), rib, a=1, dry=.05, taper=(.05, .85))
+
 def keep_boxes():
     boxes = [(x, y, w * .55 + 18, h + 30) for (x, y, w, h, *_) in B.HOUSES]
     boxes += [(98, 150, 115, 85), (176, 590, 110, 70), (1588, 150, 90, 70), (95, 388, 30, 110), (680, 216, 90, 100), (744, 212, 40, 130),
@@ -387,6 +432,108 @@ def pnw5_refine(els, changes, gbase, free, scene):
         placed.append((x, y)); counts[kd] += 1
     changes.append(dict(what='add desert plants', where='southwest', now=counts))
 
+BOATS5 = [(196, 800, 1.1), (880, 884, 1.0), (1610, 482, .95), (1578, 700, .9)]     # Gulf and Florida boats moved into open water
+SE_HILLS = {(1250, 566): 'lime', (1460, 566): 'lime', (1410, 726): 'fgreen', (1360, 856): 'fgreen', (1230, 456): 'lime', (1450, 446): 'lime',
+            (1240, 706): 'field'}
+B.U2.PAL['lime'] = ['#6e9c30', '#7ca838', '#628c2a', '#8ab442', '#74a234']
+B.U2.PAL['fgreen'] = ['#5a8a2a', '#669632', '#4e7a24', '#74a23a', '#5e8e2c']
+B.U2.PATCH['fgreen'] = ['moss', 'lime']
+B.U2.PATCH['lime'] = ['gold', 'moss']
+B.U2.FIELD_STRIPES[1240] = ['#b88a2c', '#eec660']
+for i_, hl in enumerate(B.HILLS):
+    if (hl[0], hl[1]) in SE_HILLS: B.HILLS[i_] = hl[:4] + (SE_HILLS[(hl[0], hl[1])],)
+SE = MP([(860, 470), (1671, 420), (1671, 941), (860, 941)])           # the Southeast, below Toy Town and east of the river
+PEN = lambda x, y: x > 1294 and y > 712                                # the Florida peninsula
+def fl6_refine(els, changes, gbase, scene):
+    """Group 6: Florida and the Southeast after the user's Florida reference."""
+    tracks = np.vstack([np.array(r['points']) for r in scene['routes'].values()])
+    houses = [(x, y, w, h) for (x, y, w, h, *_) in B.HOUSES]
+    def under_house(x, y, h):
+        return any(x + h * .42 > hx - hw * .7 and x - h * .42 < hx + hw * .8 and y - h > hy - hh * 2.3 and y < hy + 40 and y > hy - hh * 2.4 for hx, hy, hw, hh in houses) \
+            or any(abs(x - hx) < hw * .7 + 6 and abs(y - hy) < 12 for hx, hy, hw, hh in houses)
+    def near_track(x, y, h):
+        dt = np.hypot(*(tracks - [x, y]).T); j = int(np.argmin(dt))
+        return dt[j] < 18 or (y < tracks[j][1] and np.min(np.hypot(*(tracks - [x, y - h * .55]).T)) < h * .45 + 10)
+    def near_river(x, y, pad):
+        return min(np.min(np.hypot(*(B.RIVER - [x, y]).T)), np.min(np.hypot(*(np.array(MOUTH) - [x, y]).T))) < pad
+    # 1. vegetation that the new, narrower peninsula leaves in the sea goes
+    veg = ('tree', 'palm5', 'bush5', 'fpatch5')
+    for e in list(els):
+        if e['kind'] in veg and not B.on_land(e['params']['x'], e['params']['y'], 6):
+            els.remove(e); changes.append(dict(what='remove (now in the sea)', where='florida', at=[round(e['params']['x']), round(e['params']['y'])], was=e['params'].get('kd', e['kind'])))
+    # 2. the river: no delta channels; one mouth that runs out through the shore into the Gulf
+    for e in list(els):
+        if e['kind'] == 'river' and str(e['params'].get('name', '')).startswith('delta'):
+            els.remove(e); changes.append(dict(what='remove delta channel', where='river', was=e['params']['name']))
+    els.append(dict(kind='mouth5', depth=805.0, bbox=[1030, 740, 1170, 880], seed=sid('mouth5'), layer='base', params=dict(pts=MOUTH)))
+    changes.append(dict(what='river mouth into the Gulf', where='river', at=[1100, 820]))
+    # 3. Southeast trees: the round, blossom-dotted kind, larger and fewer; about half the dark firs stay
+    cmap = {'green': 'green', 'olive': 'green', 'red': 'red', 'orange': 'orange', 'yellow': 'yellow', 'pink': 'pink'}
+    kept = []
+    for e in sorted([e for e in els if e['kind'] == 'tree' and SE.contains_point((e['params']['x'], e['params']['y']))], key=lambda e: -e['params']['h']):
+        p = e['params']; x, y = p['x'], p['y']; old = p['kd']
+        if PEN(x, y):
+            els.remove(e); changes.append(dict(what='remove (palms take its place)', where='florida', at=[round(x), round(y)], was=old)); continue
+        if old in cmap: p['kd'] = 'bl5_' + (cmap[old] if e['seed'] % 5 else ['pink', 'green', 'orange', 'red'][e['seed'] % 4]); p['h'] = round(p['h'] * 1.22, 2)
+        elif old in ('fir', 'lfir'):
+            if e['seed'] % 2: els.remove(e); changes.append(dict(what='remove fir (fewer firs)', where='southeast', at=[round(x), round(y)])); continue
+        h = p['h']
+        if under_house(x, y, h) or near_track(x, y, h) or near_river(x, y, 16) or \
+           any(abs(x - q[0]) < .34 * max(h, q[2]) and abs(y - q[1]) < .2 * max(h, q[2]) for q in kept):
+            els.remove(e); changes.append(dict(what='remove tree (make room)', where='southeast', at=[round(x), round(y)], was=old)); continue
+        e['bbox'] = [x - h * .75, y - h * 1.2, x + h * .75, y + h * .12]; kept.append((x, y, h))
+        if p['kd'] != old: changes.append(dict(what='retype tree', where='southeast', at=[round(x), round(y)], was=old, now=p['kd']))
+    for e in list(els):                                              # palmetto scrub goes; the bold palms replace it
+        if e['kind'] == 'palm5' and (e['params']['variant'] == 'palmetto' or PEN(e['params']['x'], e['params']['y'])):
+            els.remove(e)
+    # 4. Florida: about a dozen bold palms, singly and in twos and threes
+    rr = np.random.RandomState(sid('fl6palms')); palms = []
+    SPOTS = [(1340, 752), (1446, 746), (1318, 812), (1432, 812), (1326, 868), (1420, 884), (1358, 918), (1384, 938)]   # spread down the whole peninsula
+    for att, (sx, sy) in enumerate(SPOTS):
+        for tries in range(30):
+            x, y = sx + rr.uniform(-8, 8), sy + rr.uniform(-6, 6)
+            if B.on_land(x, y, 8): break
+        else: continue
+        h = rr.uniform(80, 100) * (.85 if y > 860 else 1.0)
+        if under_house(x, y, h * .6) or any(abs(x - q[0]) < 30 and abs(y - q[1]) < 20 for q in palms): continue
+        seed = sid('fl6palm', att); variant = ['tall', 'tall', 'short', 'odd'][seed % 4]
+        els.append(dict(kind='palm5', depth=float(B.depth_at(x, y, gbase)), bbox=[x - h * .8, y - h * 1.15, x + h * .8, y + h * .1], seed=seed, layer='base',
+                        params=dict(x=x, y=y, h=round(h, 2), variant=variant)))
+        palms.append((x, y)); changes.append(dict(what='add palm', where='florida', at=[round(x), round(y)], now=variant))
+    # 5. flowering bushes across Florida and the Southeast, and yellow wildflower patches in the meadows
+    occupied = [(q[0], q[1]) for q in kept] + palms
+    rr = np.random.RandomState(sid('fl6bush')); nb = 0
+    for att in range(3000):
+        if nb >= 26: break
+        x, y = rr.uniform(880, 1490), rr.uniform(480, 940)
+        if not SE.contains_point((x, y)) or not B.on_land(x, y, 10): continue
+        h = rr.uniform(14, 20)
+        if under_house(x, y, h * 2) or near_track(x, y, h * 1.5) or near_river(x, y, 22): continue
+        if any(abs(x - q[0]) < 18 and abs(y - q[1]) < 12 for q in occupied): continue
+        if 700 < x < 1180 and y < 600: continue                          # keep Toy Town's street clear
+        col = ['#e8869e', '#d8507a', '#ffffff', '#f2a8bc', '#f6dc6a', '#e8869e'][nb % 6]; seed = sid('fl6bush', att)
+        els.append(dict(kind='bush5', depth=float(B.depth_at(x, y, gbase)), bbox=[x - h, y - h * 1.1, x + h, y + 2], seed=seed, layer='base', params=dict(x=x, y=y, h=h, col=col)))
+        occupied.append((x, y)); nb += 1
+    rr = np.random.RandomState(sid('fl6patch')); npch = 0
+    for att in range(2000):
+        if npch >= 9: break
+        x, y = rr.uniform(900, 1480), rr.uniform(500, 900)
+        if not SE.contains_point((x, y)) or not B.on_land(x, y, 16) or near_track(x, y, 30) or near_river(x, y, 26): continue
+        if under_house(x, y, 30) or (700 < x < 1180 and y < 600): continue
+        seed = sid('fl6patch', att)
+        els.append(dict(kind='fpatch5', depth=float(B.depth_at(x, y, gbase)) - .3, bbox=[x - 30, y - 14, x + 30, y + 14], seed=seed, layer='base',
+                        params=dict(x=x, y=y, rx=rr.uniform(16, 26), ry=rr.uniform(6, 9))))
+        npch += 1
+    changes.append(dict(what='add flowering bushes and wildflower patches', where='southeast', now=dict(bushes=nb, patches=npch)))
+    # 6. boats into open water
+    boats = [e for e in els if e['kind'] == 'boat']
+    for e, (x, y, s_) in zip(boats, BOATS5):
+        if (e['params']['x'], e['params']['y']) != (x, y):
+            changes.append(dict(what='move boat into open water', where='sea', at=[x, y], was=[e['params']['x'], e['params']['y']]))
+        e['params'].update(x=x, y=y, s=s_); e['bbox'] = [x - 50 * s_, y - 74 * s_, x + 50 * s_, y + 26 * s_]
+
+MOUTH = [(1076, 752), (1088, 774), (1096, 796), (1101, 812), (1104, 826)]
+
 def refine(scene):
     els = scene['elements']; changes = []
     gbase, _ = B.build_ground()
@@ -466,6 +613,7 @@ def refine(scene):
     # --- group 4: the Pacific Northwest after the second reference: distinct tiered evergreens with ground showing
     #     between them, lighter meadow hills, and a few flowering shrubs in the gaps
     pnw5_refine(els, changes, gbase, free, scene)
+    fl6_refine(els, changes, gbase, scene)
     # --- Toy Town's grand station, redrawn after the reference (station5.py); the pennants move to its new finials
     import station5 as ST
     feet = ST.flag_feet(*B.HALL); cols = {'#c8302a': 'red', '#3f6aa8': 'blue', '#3f7a3a': 'green'}
@@ -491,6 +639,11 @@ def paint5(e, routes):
     if e['kind'] == 'lodge5':
         B.depot(p['x'], p['y'], p['roof'], pier=True, seed=e['seed'] % 100000); P5.lodge_extras(p['x'], p['y'], seed=e['seed'] % 1000); return
     if e['kind'] == 'desert': P5.desert_floor(e['seed']); return
+    if e['kind'] == 'river' and p.get('name') == 'main':
+        P = B.RIVER; i0, i1 = p['i0'], min(len(P) - 1, p['i1'] + 1); n = len(P)
+        F5.river5(P[i0:i1 + 1], (13 + 17 * i0 / n) * 1.3, (13 + 17 * i1 / n) * 1.3, e['seed']); return
+    if e['kind'] == 'mouth5': F5.river_mouth(p['pts'], e['seed'] % 100000); return
+    if e['kind'] == 'fpatch5': F5.flower_patch(p['x'], p['y'], p['rx'], p['ry'], e['seed'] % 100000); return
     if e['kind'] == 'butte5': P5.double_butte(p['x'], p['y'], p['w'] * 1.15, p['h'] * 1.2, e['seed'] % 100000); return
     if e['kind'] == 'saguaro5': P5.saguaro(p['x'], p['y'], p['h'], e['seed'] % 100000); return
     if e['kind'] == 'pear5': P5.prickly_pear(p['x'], p['y'], p['h'], e['seed'] % 100000); return
@@ -568,7 +721,7 @@ def choose_movers(scene):
 
 def ocean_wave_spots(n=46, seed=505):
     r = np.random.RandomState(seed); out = []
-    boats = [(196, 800), (866, 822), (1610, 482), (1506, 676)]
+    boats = [(e_[0], e_[1]) for e_ in BOATS5]
     while len(out) < n:
         x, y = r.uniform(20, B.RW - 40), r.uniform(60, B.RH - 20)
         if B.LANDP.contains_point((x, y), radius=-40) or any(B.LANDP.contains_point((x + dx, y + dy)) for dx in (-30, 0, 50) for dy in (-20, 0, 20)): continue

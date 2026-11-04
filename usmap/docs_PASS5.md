@@ -92,6 +92,21 @@ The manifest (`out5*/anim/manifest.json`) records:
   shadowed right side and vertical grooves.
 * **Desert plants:** saguaros, flowering prickly pears, agave, sage and grass tufts, kept clear of the blue line.
 
+## Group 6 — Florida and the Southeast after the Florida reference (`fl5.py`, `fl6_refine` in `usmap5.py`)
+* **Coastline:** the Florida peninsula is re-traced narrower and longer, with a rounded tip (`coast5.npy` comes from
+  `fl5.coast5()`). Only its Gulf side and tip changed. Vegetation left in the sea was removed.
+* **River:** wider and lighter, with no brown banks and with white flow lines. The three delta channels are replaced
+  by one mouth that widens and runs out through a gap in the cream shoreline, fading into the Gulf.
+* **Palms:** bold storybook palms, with tall curved ringed trunks and arching yellow-green fronds that have darker
+  undersides. They are spread down the peninsula, and each frond still moves on its own. The palmetto scrub is gone.
+* **Southeast trees:** round, blossom-dotted trees, 1.22 times larger and fewer. About half of the dark firs remain.
+* **Ground:** brighter lime and mid-green hills, and a golden striped field hill east of the river.
+* **Flowers:** 26 flowering bushes (pink, white, yellow) and 9 yellow wildflower patches.
+* **Boats:**
+  * All four have a curved wooden hull, a mainsail and jib, and a red pennant.
+  * The Florida boat moved out to open water at (1578, 700), and the Gulf boat to (880, 884).
+  * Both now have a real drift range. Before, they had none, because they touched land.
+
 ## Known limits
 * The motion curves are written in the viewer page (`viewer5_src/index.html`), not in the manifest.
 * Only the main river has glints. The delta channels do not.
