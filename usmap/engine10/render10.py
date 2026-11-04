@@ -51,7 +51,22 @@ def use(c):
     B.OX, B.OY = c.d[0] * c.k, c.d[1] * c.k; B.U.OX, B.U.OY = B.OX, B.OY
 
 _SCENE = {}
-def load_scene(path=SCENE):
+def load_scene(path=SCENE, level=None):
+    """The scene, sorted and split for the engine. level: paint the yellow shop's storefront at this experiment
+    level, exactly as if the scene file said so (shops7 params['store_level'])."""
+    if level is not None:
+        key = (path, level)
+        if key not in _SCENE:
+            import copy
+            base = load_scene(path)
+            sc = copy.deepcopy(base['scene'])
+            for e in sc['elements']:
+                if e['kind'] == 'shops7': e['params']['store_level'] = level
+            import hashlib
+            tmp = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache', f'_scene_{hashlib.sha1(os.path.abspath(path).encode()).hexdigest()[:8]}_level_{level}.json')
+            json.dump(sc, open(tmp, 'w'))
+            _SCENE[key] = load_scene(tmp)
+        return _SCENE[key]
     if path not in _SCENE:
         scene = json.load(open(path))
         routes = {}
@@ -127,7 +142,7 @@ def coastline(c):
 def render_window(f, win, margin=16, level=None, hook=None, scene_path=SCENE, sea=True, shop=None):
     """Paint world pixels win = (x0, y0, x1, y1) at density f. Returns (bgr uint8, Z float32, stats).
     level: optional storefront level for the experiment's shop (lab8/store8); hook(c) runs after painting."""
-    t0 = time.time(); S = load_scene(scene_path)
+    t0 = time.time(); S = load_scene(scene_path, level)
     x0, y0, x1, y1 = win; W, H = x1 - x0, y1 - y0
     for m in MODS: m.c = None
     gc.collect()
