@@ -115,6 +115,82 @@ class Canvas:
     # ---- the brush stroke -----------------------------------------------------------------------------------
     def stroke(s, pts, w, col, a=1.0, dry=0.0, taper=(.12, .3), press=.18, rough=.3, streak=.07, ridge=.1, seed=None,
                scaled=False, tremor=0.0, col2=None):
+        """One brush stroke. Pure speed-up of stroke_bbox (4 Nov 2026), bit-identical to it.
+        stroke_bbox evaluates every pixel of the stroke's bounding box against every segment. A pixel farther than
+        pad = .8 w + 3 from the polyline always gets cover 0 (its edge distance de < -.27 w - 3), so its colour is
+        unchanged (reg += (cc - reg) * 0). Here only the pixels within pad + 2 px of the polyline are evaluated, with
+        the same arithmetic in the same dtypes, so every painted pixel gets exactly the same value."""
+        k = 1 if scaled else s.k
+        P = np.asarray(pts, np.float64) * k; w = max(.6, w * k)
+        if seed is None: seed = int(s.rng.randint(1 << 30))
+        r = np.random.RandomState(seed)
+        if tremor > 0 and len(P) > 1:
+            P = wobble(P, tremor * s.k, seed, wl=18 * s.k, closed=False)
+        P = resample(P, max(1.5, w * .45))
+        if len(P) < 2:
+            P = np.vstack([P[0], P[0] + [.5, 0]])
+        seg = np.diff(P, axis=0); L = np.hypot(seg[:, 0], seg[:, 1]); L[L < 1e-6] = 1e-6
+        cum = np.concatenate([[0], np.cumsum(L)]); total = cum[-1]
+        pad = w * .8 + 3
+        x0 = int(max(0, math.floor(P[:, 0].min() - pad))); x1 = int(min(s.W, math.ceil(P[:, 0].max() + pad)))
+        y0 = int(max(0, math.floor(P[:, 1].min() - pad))); y1 = int(min(s.H, math.ceil(P[:, 1].max() + pad)))
+        if x1 <= x0 or y1 <= y0: return
+        nb = max(5, int(w / 1.8))
+        comb = .35 + .65 * smooth1d(nb, seed, 2)
+        Lb = .5 + .55 * r.rand(nb)
+        pn = smooth1d(10, seed + 1, 2)
+        en = r.rand(int(total / (2.5 * s.k / 2)) + 4)
+        A = P[:-1]; U = seg / L[:, None]
+        c0 = hexc(col); c1 = hexc(col2) if col2 is not None else None
+        # the band: every pixel within pad + 2 px of the polyline (drawn with sub-pixel precision); outside it cover = 0
+        band = np.zeros((y1 - y0, x1 - x0), np.uint8)
+        q = np.round((P - [x0, y0]) * 16).astype(np.int32)
+        cv2.polylines(band, [q], False, 1, thickness=int(2 * pad + 5), lineType=cv2.LINE_8, shift=4)
+        YY, XX = np.nonzero(band)
+        if not len(YY): return
+        YY = YY + y0; XX = XX + x0
+        per = max(1, int(2.5e6 / max(1, len(A))))                      # pixels per chunk (same memory bound as before)
+        for i0 in range(0, len(YY), per):
+            ys = YY[i0:i0 + per]; xs = XX[i0:i0 + per]
+            px = xs.reshape(-1, 1).astype(np.float32); py = ys.reshape(-1, 1).astype(np.float32)
+            rx = px - A[None, :, 0]; ryy = py - A[None, :, 1]
+            u = np.clip(rx * U[None, :, 0] + ryy * U[None, :, 1], 0, L[None])
+            cx = rx - u * U[None, :, 0]; cy = ryy - u * U[None, :, 1]
+            d2 = cx * cx + cy * cy
+            j = np.argmin(d2, axis=1); idx = np.arange(len(j))
+            dmin = np.sqrt(d2[idx, j]); sv = cum[j] + u[idx, j]
+            sgn = np.sign(U[j, 0] * ryy[idx, j] - U[j, 1] * rx[idx, j]); sgn[sgn == 0] = 1
+            sn = sv / total; tn = dmin * sgn / (w / 2)
+            a0, a1 = taper
+            prof = np.clip(np.minimum(sn / a0 if a0 > 0 else 1e9, (1 - sn) / a1 if a1 > 0 else 1e9), 0, 1) ** .5
+            pp = np.interp(sn * 9, np.arange(10), pn)
+            wp = prof * (1 - press + press * pp)
+            ei = np.clip((sv / (2.5 * s.k / 2)).astype(int), 0, len(en) - 1)
+            de = (wp - np.abs(tn) + rough * .22 * (en[ei] - .5)) * (w / 2)
+            cover = np.clip(de / 1.1 + .5, 0, 1)
+            sel = cover > 0
+            if not sel.any(): continue
+            bi = np.clip(((tn * .5 + .5) * nb).astype(int), 0, nb - 1)
+            bt = comb[bi]
+            al = cover * a
+            if dry > 0:
+                run = np.clip((Lb[bi] - sn) / .22, 0, 1)
+                dep = 1 - dry * (1 - bt * run)
+                pap = s.paper[ys, xs]
+                dep = np.clip(dep * 1.3 - (1 - pap) * dry * 1.2 - .12 * dry, 0, 1)
+                al = al * dep
+            if s.clipm is not None: al = al * s.clipm[ys, xs]
+            f = (1 + streak * (bt - .6) * 2) * (1 - ridge * np.abs(np.clip(tn, -1, 1)) ** 4)
+            cc = c0[None] * f[:, None]
+            if c1 is not None: cc = (c0[None] * (1 - sn[:, None]) + c1[None] * sn[:, None]) * f[:, None]
+            reg = s.img[ys, xs]
+            reg += (cc - reg) * al[:, None]
+            s.img[ys, xs] = reg
+
+    def stroke_bbox(s, pts, w, col, a=1.0, dry=0.0, taper=(.12, .3), press=.18, rough=.3, streak=.07, ridge=.1, seed=None,
+               scaled=False, tremor=0.0, col2=None):
+        """The original stroke (until 4 Nov 2026), kept unchanged for comparison: stroke() must match it exactly.
+        Use it with  brush.Canvas.stroke = brush.Canvas.stroke_bbox."""
         k = 1 if scaled else s.k
         P = np.asarray(pts, np.float64) * k; w = max(.6, w * k)
         if seed is None: seed = int(s.rng.randint(1 << 30))
