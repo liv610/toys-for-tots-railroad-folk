@@ -24,6 +24,8 @@ OUTW = int(ARGS[ARGS.index('--width') + 1]) if '--width' in ARGS else 3200
 OUT5 = 'out5' if OUTW == 3200 else f'out5_{OUTW}'
 sys.argv = [sys.argv[0], '--width', str(OUTW), '--scene', f'{OUT5}/scene5.json']   # what pass 4's main() reads
 import usmap4 as B
+import pad5 as PAD
+PAD.install(B)                                                       # group 7: open sea on every side (the canvas grows)
 from usmap4 import c, k, hexc, pal_fn, catmull, resample
 import story as S
 from matplotlib.path import Path as MP
@@ -32,6 +34,7 @@ sid = B.sid
 import fl5 as F5
 B.COAST = F5.coast5(); B.LANDP = MP(B.COAST)                          # group 6: the re-traced Florida peninsula
 B.U.boat = F5.boat6                                                  # group 6: boats after the Florida reference
+import tft7 as T7                                                    # group 8: Toys for Tots branding for Toy Town
 
 # ====================================================================== regions (map units, reference-v2 grid)
 PNW = MP([(0, 40), (600, 40), (600, 250), (470, 300), (330, 330), (300, 470), (0, 470)])
@@ -433,6 +436,7 @@ def pnw5_refine(els, changes, gbase, free, scene):
     changes.append(dict(what='add desert plants', where='southwest', now=counts))
 
 BOATS5 = [(196, 800, 1.1), (880, 884, 1.0), (1610, 482, .95), (1578, 700, .9)]     # Gulf and Florida boats moved into open water
+STEAMER5 = (1215, 884)                                                            # group 7: the paddle steamer, off the river and out on the Gulf
 SE_HILLS = {(1250, 566): 'lime', (1460, 566): 'lime', (1410, 726): 'fgreen', (1360, 856): 'fgreen', (1230, 456): 'lime', (1450, 446): 'lime',
             (1240, 706): 'field'}
 B.U2.PAL['lime'] = ['#6e9c30', '#7ca838', '#628c2a', '#8ab442', '#74a234']
@@ -531,6 +535,35 @@ def fl6_refine(els, changes, gbase, scene):
         if (e['params']['x'], e['params']['y']) != (x, y):
             changes.append(dict(what='move boat into open water', where='sea', at=[x, y], was=[e['params']['x'], e['params']['y']]))
         e['params'].update(x=x, y=y, s=s_); e['bbox'] = [x - 50 * s_, y - 74 * s_, x + 50 * s_, y + 26 * s_]
+    # 7. (group 7) the paddle steamer leaves the river for the open Gulf, between the river mouth and the peninsula
+    sx, sy = STEAMER5
+    for e in els:
+        if e['kind'] == 'steamer':
+            changes.append(dict(what='move the steamer to the Gulf', where='sea', at=[sx, sy], was=[e['params']['x'], e['params']['y']]))
+            e['params'].update(x=sx, y=sy); e['bbox'] = [sx - 46, sy - 56, sx + 54, sy + 14]
+        if e['kind'] == 'wheel':
+            e['params'].update(x=sx + 39, y=sy - 2); e['bbox'] = [sx + 26, sy - 16, sx + 54, sy + 12]
+
+def toytown8_refine(els, changes):
+    """Group 8: Toys for Tots branding for Toy Town (tft7.py): the station's banner, medallion and bunting; shop windows
+    and a TOY DONATION sign; a cobbled square in front of the town where five trees stood."""
+    for e in els:
+        if e['kind'] == 'station5':
+            e['kind'] = 'station7'
+            changes.append(dict(what='Toys for Tots banner, medallion and bunting', where='toy town', at=list(B.HALL), was='station5'))
+    town = next(e for e in els if e['kind'] == 'town')
+    els.append(dict(kind='shops7', depth=town['depth'] + .5, bbox=list(town['bbox']), seed=sid('shops7'), layer='base', params={}))
+    gone = [(904.0, 603.4), (985.5, 591.7), (967.3, 641.6), (855.5, 627.5), (822.4, 621.4)]
+    keep = []
+    for e in els:
+        p = e['params']
+        if e['kind'] == 'tree' and any(abs(p['x'] - gx) < 1.5 and abs(p['y'] - gy) < 1.5 for gx, gy in gone):
+            changes.append(dict(what='remove tree for the town square', where='toy town', at=[round(p['x']), round(p['y'])], was=p['kd'])); continue
+        keep.append(e)
+    assert len(els) - len(keep) == len(gone), 'expected to find the five trees in front of Toy Town'
+    els[:] = keep
+    els.append(dict(kind='square7', depth=640.03, bbox=[800, 470, 1016, 612], seed=sid('square7'), layer='base', params=dict(town_seed=town['seed'])))
+    changes.append(dict(what='add the town square: lamp posts, Christmas tree, wagon, Marines, presents, donation box', where='toy town', at=[908, 576]))
 
 MOUTH = [(1076, 752), (1088, 774), (1096, 796), (1101, 812), (1104, 826)]
 
@@ -625,6 +658,7 @@ def refine(scene):
             fx, fy = feet[cols[e['params']['col']]]; old = (e['params']['x'], e['params']['y'])
             e['params']['x'], e['params']['y'] = fx, fy - 36; e['bbox'] = [fx - 4, fy - 42, fx + 28, fy + 4]
             changes.append(dict(what='move pennant', where='toy town', at=[round(fx), round(fy)], was=list(old)))
+    toytown8_refine(els, changes)
     scene['version'] = 5; scene['base'] = 'pass4 scene4.json (checkpoint pass4-approved-2026-11-03)'
     return scene, changes
 
@@ -656,6 +690,9 @@ def paint5(e, routes):
         flower_bush(p['x'], p['y'], p['h'], e['seed'] % 1000000, p['col']); return
     if e['kind'] == 'station5':
         import station5 as ST; ST.grand_station5(*B.HALL); return
+    if e['kind'] == 'station7': T7.station_branding(*B.HALL); return
+    if e['kind'] == 'shops7': T7.town_extras(set(range(9))); return
+    if e['kind'] == 'square7': T7.square(p['town_seed']); return
     if e['kind'] == 'palm5':
         (palmetto(p['x'], p['y'], p['h'], e['seed'] % 1000000) if p['variant'] == 'palmetto' else palm5(p['x'], p['y'], p['h'], e['seed'] % 1000000, p['variant'])); return
     _paint4(e, routes)
@@ -721,12 +758,23 @@ def choose_movers(scene):
 
 def ocean_wave_spots(n=46, seed=505):
     r = np.random.RandomState(seed); out = []
-    boats = [(e_[0], e_[1]) for e_ in BOATS5]
+    boats = [(e_[0], e_[1]) for e_ in BOATS5] + [STEAMER5]
     while len(out) < n:
         x, y = r.uniform(20, B.RW - 40), r.uniform(60, B.RH - 20)
         if B.LANDP.contains_point((x, y), radius=-40) or any(B.LANDP.contains_point((x + dx, y + dy)) for dx in (-30, 0, 50) for dy in (-20, 0, 20)): continue
         if any(abs(x - bx) < 70 and abs(y - by) < 50 for bx, by in boats) or any(abs(x - ox) < 60 and abs(y - oy) < 30 for ox, oy in out): continue
         if y < 70 and (380 < x < 520 or 860 < x < 1030 or 1150 < x < 1330): continue   # under the clouds
+        out.append((x, y))
+    return out
+def margin_wave_spots(n=18, seed=506):
+    """Group 7: a few more of the moving wave marks, out in the new margin of sea."""
+    r = np.random.RandomState(seed); out = []; L, T, R_, Bm = PAD.PADL, PAD.PADT, PAD.PADR, PAD.PADB
+    boats = [(e_[0], e_[1]) for e_ in BOATS5] + [STEAMER5]
+    while len(out) < n:
+        x, y = r.uniform(-L + 10, B.RW + R_ - 80), r.uniform(-T + 14, B.RH + Bm - 12)
+        if 0 <= x <= B.RW - 40 and 0 <= y <= B.RH: continue
+        if B.LANDP.contains_point((x, y), radius=-40) or any(B.LANDP.contains_point((x + dx, y + dy)) for dx in (-30, 0, 50) for dy in (-20, 0, 20)): continue
+        if any(abs(x - bx) < 80 and abs(y - by) < 60 for bx, by in boats) or any(abs(x - ox) < 70 and abs(y - oy) < 40 for ox, oy in out): continue
         out.append((x, y))
     return out
 def wave_mark(x, y, seed):
@@ -783,7 +831,7 @@ def export_movers(scene, movers, routes):
                 return
             name = f'tree_{cls}_{j}.png'; B.save_rgba(f'{A_}/{name}', rgb, a); place(rgb, a * vis, x0, y0)
             d_ = dict(kind='sway', cls=cls, file=name, x=x0, y=y0, w=int(a.shape[1]), h=int(a.shape[0]), depth=e['depth'],
-                      pivot=[p['x'] * K_ - x0, p['y'] * K_ - y0], tree=p['kd'], height=p['h'] * K_)
+                      pivot=[p['x'] * K_ + B.OX - x0, p['y'] * K_ + B.OY - y0], tree=p['kd'], height=p['h'] * K_)
             pf = patch((a > .02) & (vis < .5), x0, y0, f'front_{cls}_{j}.png')
             if pf: d_['front'] = pf
             add.append(d_)
@@ -808,7 +856,7 @@ def export_movers(scene, movers, routes):
             a_, ln, droop, _ = fronds[i]
             name = f'frond_{j}_{rank}.png'; B.save_rgba(f'{A_}/{name}', rgb, a); place(rgb, a * vis, x0, y0)
             d_ = dict(kind='frond', palm=j, order=rank, file=name, x=x0, y=y0, w=int(a.shape[1]), h=int(a.shape[0]), depth=e['depth'],
-                      pivot=[top[0] * K_ - x0, top[1] * K_ - y0], angle=round(a_, 3), length=ln * K_)
+                      pivot=[top[0] * K_ + B.OX - x0, top[1] * K_ + B.OY - y0], angle=round(a_, 3), length=ln * K_)
             pf = patch((a > .02) & (vis < .5), x0, y0, f'front_palm_{j}_{rank}.png')
             if pf: d_['front'] = pf
             add.append(d_)
@@ -817,7 +865,7 @@ def export_movers(scene, movers, routes):
         for _d, cls, j, e in sorted(items, key=lambda t: t[0]):
             do_palm(j, e, phase) if cls == 'palm' else do_sway(cls, j, e, phase)
     # extra ocean wave marks that come and go
-    for j, (x, y) in enumerate(ocean_wave_spots()):
+    for j, (x, y) in enumerate(ocean_wave_spots() + margin_wave_spots()):
         (x0, y0), rgb, a = B.sprite(lambda x=x, y=y, j=j: wave_mark(x, y, 8000 + j), (x - 6, y - 8, x + 76, y + 8), 8000 + j)
         name = f'wave_{j}.png'; B.save_rgba(f'{A_}/{name}', rgb, a)
         if j % 3 == 0: place(rgb, a * .7, x0, y0)                       # a third of them show in the still
@@ -835,12 +883,12 @@ def export_movers(scene, movers, routes):
         xi, yi = int(min(max(xp, 0), B.W - 1)), int(min(max(yp, 0), B.H - 1)); bgr = base[yi, xi]
         vis.append(int(bgr[0] > bgr[2] + 40 and bgr[0] > bgr[1] + 10))
     man['river_visible'] = vis
-    man['delta'] = [(np.array(P_) * K_).round(2).tolist() for P_ in B.DELTA]
+    man['delta'] = [(np.array(P_) * K_ + [B.OX, B.OY]).round(2).tolist() for P_ in B.DELTA]
     lh = next(e['params'] for e in scene['elements'] if e['kind'] == 'lighthouse')
-    man['lighthouse'] = [lh['x'] * K_, (lh['y'] - 92 - 8) * K_]
+    man['lighthouse'] = [lh['x'] * K_ + B.OX, (lh['y'] - 92 - 8) * K_ + B.OY]
     houses = [(x, y) for (x, y, *_r) in B.HOUSES]
     farm = [ch for ch in CHIMNEYS if any(abs(ch[0] - hx) < 40 and -90 < ch[1] - hy < 0 for hx, hy in houses)]
-    man['chimneys'] = [[x * K_, y * K_] for x, y in farm[::2][:6]]
+    man['chimneys'] = [[x * K_ + B.OX, y * K_ + B.OY] for x, y in farm[::2][:6]]
     man['wind'] = dict(note='gusts travel west to east across the map; see the viewer for the motion curves')
     json.dump(man, open(f'{A_}/manifest.json', 'w'))
     cv2.imwrite(f'{A_}/base.jpg', (BASE[..., ::-1] * 255 + .5).astype(np.uint8), [cv2.IMWRITE_JPEG_QUALITY, 92])

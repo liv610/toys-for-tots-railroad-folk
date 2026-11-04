@@ -107,6 +107,45 @@ The manifest (`out5*/anim/manifest.json`) records:
   * The Florida boat moved out to open water at (1578, 700), and the Gulf boat to (880, 884).
   * Both now have a real drift range. Before, they had none, because they touched land.
 
+## Group 7 — more ocean, and the steamer on the Gulf (`pad5.py`)
+* **Sea margin:** the canvas grows by open sea on every side: 100 map units west, 70 north, 80 east and 80 south.
+  * The map keeps its own coordinates. Every map unit is painted (100, 70) units further right and down.
+  * The 3200 render is now 3545 × 2087. The zoomable one is 7089 × 4175.
+  * Nothing is cut off at the edges any more: the west coast, the lodge pier, the rocks, the clouds and the tip of
+    Florida all have sea around them.
+* **How it is done:**
+  * The canvas shifts every coordinate it is given and shifts back the ones it hands to colour callbacks.
+  * The few places in pass 4 that convert to pixels by hand (`main`, `sprite`, the lighthouse) are recompiled from
+    pass 4's own source with each conversion shifted. Each replacement is checked to occur exactly once.
+  * Pass 4's files and the shared painting libraries are unchanged.
+* **Waves:** about 70 extra wave marks are painted in the new margin, and 18 extra moving wave marks come and go there.
+  The old waves keep their places.
+* **Manifest:** it now records `frame` (where the old map sits in the new canvas, in pixels) and `pad`. The viewer uses
+  them for the region buttons and the reference overlay.
+* **Steamer:** the paddle steamer leaves the river for open water in the Gulf, at (1215, 884). It sits between the river
+  mouth and the peninsula, clear of land even at the ends of its drift.
+
+## Group 8 — Toys for Tots branding for Toy Town (`tft7.py`, `toytown8_refine` in `usmap5.py`)
+* **Station:**
+  * A cream ribbon banner across the foot of the fan-light is lettered TOYS FOR TOTS with the registered mark. It
+    bends upward in the middle and has folded tails and gold knobs.
+  * A red tab with three white stars hangs under it.
+  * A round medallion at the crown of the fan-light replaces the wreath. It has a gold rim, a red field and laurel
+    sprays.
+  * Red bunting swags with gold balls hang along both wings and under the ends of the banner.
+* **Logo:** the medallion is the place for the official Toys for Tots logo. If `logo/t4t_logo.png` exists, it is set
+  into the red field at render time; until then the field carries a plain gold star. The emblem is never redrawn by
+  hand.
+* **Shops:** every house has a lit display window under its awning, with a toy in it: a train, a teddy bear, a rocking
+  horse, a nutcracker or presents. The shop beside the clock tower has a TOY DONATION sign.
+* **Square:**
+  * Five trees that stood in front of the town were removed. A cobbled square with a stone kerb now opens in front of
+    the town.
+  * On the square: two lamp posts, a Christmas tree with a red bow, presents, a red wagon with a teddy bear, two
+    Marines in dress blues handing over a present, and a red TOYS FOR donation box with stars.
+  * The foot of the town is painted again in front of the hill crest that used to hide it.
+* **Lettering:** set with TeX Gyre Bonum Bold and painted through the same gouache brush as everything else.
+
 ## Known limits
 * The motion curves are written in the viewer page (`viewer5_src/index.html`), not in the manifest.
 * Only the main river has glints. The delta channels do not.

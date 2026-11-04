@@ -23,7 +23,7 @@ button{font:500 12px var(--mono);letter-spacing:.04em;color:var(--ink);backgroun
 button:hover{border-color:var(--accent)}
 button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);border-color:var(--chip-on)}
-.stage{position:relative;height:min(78vh,calc((100vw - 32px) * .5625 + 2px));min-height:300px;border-radius:3px;overflow:hidden;
+.stage{position:relative;height:min(78vh,calc((100vw - 32px) * .589 + 2px));min-height:300px;border-radius:3px;overflow:hidden;
   box-shadow:0 14px 40px rgba(0,0,0,.45);background:var(--ocean)}
 .osdwrap{position:absolute;inset:0}
 #osd{width:100%;height:100%}   /* the zoom library makes this element position:relative, so it takes its size from the wrapper */
@@ -65,7 +65,7 @@ button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);b
     <button data-r="560,600,340,180">Windmill farm</button>
   </div>
   <div class="stage">
-    <img id="still" src="still_preview.jpg" alt="Pass 4 painted map" width="1600" height="900">
+    <img id="still" src="still_preview.jpg" alt="Painted map of the Toys for Tots Railroad" width="1600" height="942">
     <div class="osdwrap"><div id="osd" aria-label="Zoomable painted map"></div></div>
     <canvas id="fx" aria-hidden="true"></canvas>
     <div class="hud" id="hud">detail <b>—</b></div>
@@ -78,7 +78,7 @@ button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);b
         <li><strong>Palms</strong> in Florida move frond by frond, each at its own pace, a little more than the inland trees.</li>
         <li><strong>Water</strong>: glints run down the river with the current, and small wave marks come and go on the ocean.</li>
         <li><strong>Boats</strong> wander, rock and pause. Each one stays inside its own patch of open water.</li>
-        <li><strong>Also moving</strong>: a soft beam turns at the lighthouse, smoke rises from a few farmhouse chimneys, and the trains, steam, windmill, steamer, clouds and flags move as before.</li>
+        <li><strong>Also moving</strong>: a soft beam turns at the lighthouse, smoke rises from a few farmhouse chimneys, and the trains, steam, windmill, clouds and flags move as before. The paddle steamer now cruises on the Gulf.</li>
       </ul>
     </section>
     <section>
@@ -92,7 +92,7 @@ button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);b
     <section>
       <h2>Zoom</h2>
       <ul>
-        <li>The map is painted at <span class="res2">6400 &times; 3600</span> and cut into tiles like an online map. The <strong>detail</strong> reading shows how many screen pixels each painted pixel covers. Up to 100% everything is real brushwork.</li>
+        <li>The map is painted at <span class="res2">7089 &times; 4175</span> and cut into tiles like an online map. The <strong>detail</strong> reading shows how many screen pixels each painted pixel covers. Up to 100% everything is real brushwork.</li>
       </ul>
     </section>
   </div>
@@ -106,6 +106,7 @@ button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);b
   window.addEventListener('error', e => fail('error: ' + (e.message || 'script failed')));
   if (!window.OpenSeadragon) { fail('the zoom library did not load'); return; }
   const S = JSON.parse(document.getElementById('scene-data').textContent);
+  const VQ = S.build ? '?v=' + S.build : '';                    // every build gets fresh URLs, so no stale tile from an older version is reused
   const [W, H] = S.size, K = S.scale, kk = K / 1.915;          // K: painted px per map unit; kk: motion scale vs. the 3200 render
   document.getElementById('res').textContent = W + ' \u00d7 ' + H;
   document.querySelectorAll('.res2').forEach(e => { e.textContent = W + ' \u00d7 ' + H; });
@@ -120,12 +121,12 @@ button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);b
   } else start();
   function start() {
   const viewer = OpenSeadragon({
-    element: document.getElementById('osd'), tileSources: { Image: { xmlns: 'http://schemas.microsoft.com/deepzoom/2008', Url: 'tiles/base_files/', Format: 'jpg', Overlap: '1', TileSize: '1024', Size: { Width: String(W), Height: String(H) } } }, showNavigationControl: false,
+    element: document.getElementById('osd'), tileSources: { width: W, height: H, tileSize: 1024, tileOverlap: 1, minLevel: 0, maxLevel: Math.ceil(Math.log2(Math.max(W, H))), getTileUrl: (l, x, y) => 'tiles/base_files/' + l + '/' + x + '_' + y + '.jpg' + VQ }, showNavigationControl: false,
     maxZoomPixelRatio: 2.5, visibilityRatio: .7, constrainDuringPan: true, animationTime: .7, blendTime: .15,
     gestureSettingsMouse: { clickToZoom: false, dblClickToZoom: true }, gestureSettingsTouch: { pinchRotate: false }
   });
   let base = null;
-  const refImg = new Image(); refImg.src = 'reference.jpg';
+  const refImg = new Image(); refImg.src = 'reference.jpg' + VQ;
   viewer.addHandler('open-failed', e => fail('tiles did not load'));
   viewer.addHandler('open', () => {
     base = viewer.world.getItemAt(0);
@@ -134,10 +135,10 @@ button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);b
 
   // ---------- images
   const IMG = {};
-  const load = f => IMG[f] || (IMG[f] = Object.assign(new Image(), { src: 'sprites/' + f }));
+  const load = f => IMG[f] || (IMG[f] = Object.assign(new Image(), { src: 'sprites/' + f + VQ }));
   S.sprites.forEach(s => load(s.file));
   const occ = {}; const OT = S.occluder.tile; const occSet = new Set(S.occluder.tiles.map(t => t.join('_')));
-  const occImg = key => occ[key] || (occ[key] = Object.assign(new Image(), { src: 'occ/' + key + '.png' }));
+  const occImg = key => occ[key] || (occ[key] = Object.assign(new Image(), { src: 'occ/' + key + '.png' + VQ }));
   const byKind = k => S.sprites.filter(s => s.kind === k);
   const puffs = byKind('puff');
   // ---------- the living landscape: trees, palms, water, boats, lighthouse, chimneys
@@ -216,7 +217,7 @@ button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);b
     hudEl.innerHTML = 'detail <b>' + Math.round(s * dpr * 100) + '%</b>';
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
     ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * p0.x, dpr * p0.y);
-    if (showRef) { if (refImg.complete && refImg.naturalWidth) ctx.drawImage(refImg, 0, 0, W, H); return; }
+    if (showRef) { const FR = S.frame || [0, 0, W, H]; if (refImg.complete && refImg.naturalWidth) ctx.drawImage(refImg, FR[0], FR[1], FR[2], FR[3]); return; }
     ctx.imageSmoothingQuality = 'high';
     const view = [-p0.x / s, -p0.y / s, cv.clientWidth / s, cv.clientHeight / s];
     const vis = (x, y, w, h) => x + w > view[0] && y + h > view[1] && x < view[0] + view[2] && y < view[1] + view[3];
@@ -361,7 +362,7 @@ button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);b
   document.getElementById('home').onclick = () => viewer.viewport.goHome();
   document.querySelectorAll('[data-r]').forEach(b => b.onclick = () => {
     if (!base) return; const [x, y, w, h] = b.dataset.r.split(',').map(Number);
-    viewer.viewport.fitBounds(base.imageToViewportRectangle(x * K, y * K, w * K, h * K));
+    const FR = S.frame || [0, 0]; viewer.viewport.fitBounds(base.imageToViewportRectangle(x * K + FR[0], y * K + FR[1], w * K, h * K));
   });
   }
 })();

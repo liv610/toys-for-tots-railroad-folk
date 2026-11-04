@@ -53,10 +53,11 @@ for s in man['sprites']:
     shutil.copy(f'{A}/{s["file"]}', f'{dst}/sprites/{s["file"]}')
     if 'front' in s: shutil.copy(f'{A}/{s["front"]["file"]}', f'{dst}/sprites/{s["front"]["file"]}')
 man['occluder'] = dict(tile=OT, tiles=otiles)
+import time; man['build'] = time.strftime('%Y%m%d%H%M%S')                 # cache-busting tag for the page's asset URLs
 json.dump(man, open(f'{dst}/scene.json', 'w'))
 import glob
 full = cv2.imread(sorted(glob.glob(f'{src}/usmap[0-9].png'))[-1])
-cv2.imwrite(f'{dst}/still_preview.jpg', cv2.resize(full, (1600, 900), interpolation=cv2.INTER_AREA), [cv2.IMWRITE_JPEG_QUALITY, 86])
+cv2.imwrite(f'{dst}/still_preview.jpg', cv2.resize(full, (1600, round(1600 * full.shape[0] / full.shape[1])), interpolation=cv2.INTER_AREA), [cv2.IMWRITE_JPEG_QUALITY, 86])
 ref = cv2.imread('reference4.png'); cv2.imwrite(f'{dst}/reference.jpg', ref, [cv2.IMWRITE_JPEG_QUALITY, 92])
 tot = sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(dst) for f in fs)
 print('bundle MB', round(tot / 1e6, 1), 'files', sum(len(fs) for _, _, fs in os.walk(dst)))
