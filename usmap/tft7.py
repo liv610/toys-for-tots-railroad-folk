@@ -52,14 +52,23 @@ def text_mask(text, cx, cy, size, arc=0.0, track=0.0, font=FONT):
     x0, y0 = int(round(pcx - m.shape[1] / 2)), int(round(pcy - m.shape[0] / 2))
     return (x0, y0, np.clip(m, 0, 1))
 
+def _fit(m):
+    """Crop a pixel mask to the canvas (it only matters when a render covers part of the map)."""
+    x0, y0, mm = m; h, w = mm.shape
+    a0, b0 = max(0, -y0), max(0, -x0); a1, b1 = min(h, c.H - y0), min(w, c.W - x0)
+    if a1 <= a0 or b1 <= b0: return None
+    return (x0 + b0, y0 + a0, mm[a0:a1, b0:b1])
+
 def paint_text(text, cx, cy, size, col, arc=0.0, track=0.0, outline=None, ow=1.0):
     m = text_mask(text, cx, cy, size, arc, track)
     if m is None: return
     if outline:
         x0, y0, mm = m; p = int(math.ceil(ow * c.k)) + 2
         big = np.pad(mm, p); big = cv2.dilate(big, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * p - 3, 2 * p - 3)))
-        c.area(None, outline, m=(x0 - p, y0 - p, cv2.GaussianBlur(big, (0, 0), .6)), edge_dark=0, var=.03)
-    c.area(None, col, m=m, edge_dark=.12, var=.04, varbig=.03)
+        om = _fit((x0 - p, y0 - p, cv2.GaussianBlur(big, (0, 0), .6)))
+        if om is not None: c.area(None, outline, m=om, edge_dark=0, var=.03)
+    m = _fit(m)
+    if m is not None: c.area(None, col, m=m, edge_dark=.12, var=.04, varbig=.03)
 
 def star(x, y, r, col, rot=-math.pi / 2, inner=.42):
     pts = [(x + (r if i % 2 == 0 else r * inner) * math.cos(rot + i * math.pi / 5), y + (r if i % 2 == 0 else r * inner) * math.sin(rot + i * math.pi / 5)) for i in range(10)]
@@ -75,8 +84,12 @@ def _station_without_wreath():
     i = src.index('def grand_station5('); j = src.index('# where the three pennants fly', i); code = src[i:j]
     a = code.index('    # wreath at the crown of the fan-light'); b = code.index('    # finial at the apex for the blue pennant')
     code = code[:a] + code[b:]
-    ns = dict(ST.__dict__); exec(compile(code, '<tft7:grand_station5>', 'exec'), ns)
-    return ns['grand_station5']
+    # Compile into station5's own (live) namespace under a new name. A copy of the namespace (as before 4 Nov 2026)
+    # froze the canvas of the first render, so every later render in the same process sent the station's own marks
+    # to that first canvas: only the first station tile of a tiled build was right. Whole-map renders were unaffected.
+    code = code.replace('def grand_station5(', 'def _grand_station5_without_wreath(', 1)
+    exec(compile(code, '<tft7:grand_station5>', 'exec'), ST.__dict__)
+    return ST.__dict__['_grand_station5_without_wreath']
 _GS = None
 
 def medallion(x, y, r=18):
@@ -417,6 +430,7 @@ def square(scene_town_seed):
     # 1. the town again, clipped to the band at its foot that the hill crest used to hide
     band = np.zeros((c.H, c.W), np.float32)
     px0, px1 = int((X0 + c.d[0]) * k), int((X1 + c.d[0]) * k); py0, py1 = int((B.TOWN[1] - 30 + c.d[1]) * k), int((B.TOWN[1] + 17 + c.d[1]) * k)
+    px0, px1 = min(max(0, px0), c.W), min(max(0, px1), c.W); py0, py1 = min(max(0, py0), c.H), min(max(0, py1), c.H)   # (partial renders)
     band[py0:py1, px0:px1] = 1; band = cv2.GaussianBlur(band, (0, 0), 1.2 * k)
     keep_rng, keep_clip = c.rng, c.clipm
     c.rng = np.random.RandomState(scene_town_seed); c.set_clip((0, 0, band))
