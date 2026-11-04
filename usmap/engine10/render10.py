@@ -97,11 +97,24 @@ def waves(c):
             pts = [(x + kk * 22 + u * 18, y + 3 * math.sin(u * math.pi * 2)) for u in np.linspace(0, 1, 6)]
             c.stroke(pts, 2.4, '#dfe6e8', a=.85, dry=.25, taper=(.2, .2), seed=B.sid('wave7', n, kk))
 
+def _land_full(f, extra_below):
+    """The land mask of the WHOLE padded map at density f, blurred, with extra_below rows under the frame, exactly
+    what a whole-map render computes. Made once per density and coastline, kept in engine10/cache/, and read
+    through a memory map, so every window gets the same values (found 4 Nov 2026: filling the coast polygon into
+    each window's own buffer anti-aliased its edges differently in each tile)."""
+    import hashlib
+    GW, GH = frame_px(f); key = hashlib.sha1(np.asarray(B.COAST).tobytes() + f'{f}:{extra_below}:{GW}x{GH}'.encode()).hexdigest()[:12]
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache', f'land_f{f:g}_{key}.npy')
+    if not os.path.exists(path):
+        k = BR.K1 * f; LM = np.zeros((GH + extra_below, GW), np.float32)
+        cv2.fillPoly(LM, [np.round((np.asarray(B.COAST) + [BR.PADL, BR.PADT]) * k * 8).astype(np.int32)], 1.0, cv2.LINE_AA, shift=3)
+        LM = cv2.GaussianBlur(LM, (0, 0), k / 1.914)
+        os.makedirs(os.path.dirname(path), exist_ok=True); tmp = path[:-4] + f'.{os.getpid()}.tmp.npy'; np.save(tmp, LM); os.replace(tmp, path); del LM
+    return np.load(path, mmap_mode='r')
+
 def land_mask(c, extra_below=0):
-    H = c.H + extra_below
-    LM = np.zeros((H, c.W), np.float32)
-    cv2.fillPoly(LM, [np.round((np.asarray(B.COAST) + c.d) * c.k * 8).astype(np.int32)], 1.0, cv2.LINE_AA, shift=3)
-    return cv2.GaussianBlur(LM, (0, 0), c.k / 1.914)
+    ox, oy = c.T; full = _land_full(c.f, extra_below)
+    return np.array(full[oy:oy + c.H + extra_below, ox:ox + c.W], np.float32)
 
 def coastline(c):
     PP = B.resample(np.vstack([B.COAST, B.COAST[:1]]), 2.0)

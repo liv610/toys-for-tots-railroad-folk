@@ -1,0 +1,27 @@
+{
+ "identical_pixels_pct": 0.09,
+ "mean_abs_diff_levels": 13.6,
+ "mean_colour_diff_levels": [
+  0.03,
+  0.01,
+  0.0
+ ],
+ "blurred_diff_levels": 4.66,
+ "note": "base.jpg is JPEG (quality 92), so even an identical painting would not match pixel for pixel",
+ "Toy Town shops": {
+  "mean_abs_diff": 14.2,
+  "blurred_diff": 3.11
+ },
+ "Northwest coast": {
+  "mean_abs_diff": 14.2,
+  "blurred_diff": 3.59
+ },
+ "Florida": {
+  "mean_abs_diff": 11.9,
+  "blurred_diff": 4.3
+ },
+ "River and bridge": {
+  "mean_abs_diff": 12.6,
+  "blurred_diff": 3.14
+ }
+}
