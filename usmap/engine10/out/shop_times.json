@@ -1,0 +1,27 @@
+{
+ "Original (published)": {
+  "close_2x_s": 49.7,
+  "map_1x_s": 13.6,
+  "town_1x_s": 160.7
+ },
+ "lab8 B (previous best)": {
+  "close_2x_s": 54.0,
+  "map_1x_s": 13.8,
+  "town_1x_s": 167.8
+ },
+ "A  Refined construction": {
+  "close_2x_s": 51.6,
+  "map_1x_s": 14.2,
+  "town_1x_s": 169.9
+ },
+ "B  Rich illustration": {
+  "close_2x_s": 53.0,
+  "map_1x_s": 14.4,
+  "town_1x_s": 167.5
+ },
+ "C  Storybook": {
+  "close_2x_s": 53.0,
+  "map_1x_s": 13.9,
+  "town_1x_s": 166.0
+ }
+}
