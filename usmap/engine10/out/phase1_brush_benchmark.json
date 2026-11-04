@@ -1,0 +1,46 @@
+{
+ "change": "folk2/brush.py Canvas.stroke evaluates only the band within pad+2 px of the polyline; the original is kept as Canvas.stroke_bbox",
+ "checkpoint": "checkpoints/pre-fastbrush-2026-11-04",
+ "identity": {
+  "random_strokes": "3000 of 3000 identical (tools/verify_brush.py): short, long, edge-crossing, off-canvas, point, zero-length, curved; clip, dry, tremor, two-colour, scaled/unscaled",
+  "full_map_pipeline_3200": "out5: 285 files, 282 images, 40,619,907 pixels identical (base, still, 279 animation sprites, manifest, scene)",
+  "full_map_pipeline_6400": "out5_6400: 285 files, 282 images, 162,463,145 pixels identical",
+  "engine_1x_all_35_tiles": "colour, depth and track buffers identical, original vs new brush, same tile order (tools/p1_engine_ab.py)",
+  "engine_2x_toytown_20_tiles": "identical to the existing cache painted with the original brush (tools/p1_engine_check.py)",
+  "viewer10_bundle": "442 images, 133,045,219 pixels identical: every 1x and 2x tree, flag and train sprite, front patch and occluder (tools/p1_viewer_check.py)"
+ },
+ "benchmarks_seconds": {
+  "random_strokes_3000": [
+   139.9,
+   27.1
+  ],
+  "full_map_3200": [
+   180.5,
+   89
+  ],
+  "full_map_6400": [
+   669.2,
+   253
+  ],
+  "engine_1x_whole_map_35_tiles_cpu": [
+   628.4,
+   135.0
+  ],
+  "engine_2x_toytown_20_tiles_cpu": [
+   1419,
+   192.0
+  ],
+  "yellow_shop_crop_1x": [
+   13.3,
+   3.4
+  ],
+  "yellow_shop_crop_2x": [
+   51.4,
+   9.4
+  ],
+  "northwest_coast_crop_1x": [
+   18.3,
+   5.3
+  ]
+ }
+}

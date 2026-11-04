@@ -1,0 +1,42 @@
+{
+ "current artwork f1": {
+  "seconds": 4.9,
+  "px": 92460,
+  "jpeg_kb_per_1000_sq_units": 5.0
+ },
+ "current artwork f2": {
+  "seconds": 16.4,
+  "px": 369840,
+  "jpeg_kb_per_1000_sq_units": 13.4
+ },
+ "current artwork f3": {
+  "seconds": 35.1,
+  "px": 832140,
+  "jpeg_kb_per_1000_sq_units": 23.7
+ },
+ "current artwork f4": {
+  "seconds": 63.7,
+  "px": 1479360,
+  "jpeg_kb_per_1000_sq_units": 34.9
+ },
+ "richer content (lab8 B), selective edges f1": {
+  "seconds": 4.8,
+  "px": 92460,
+  "jpeg_kb_per_1000_sq_units": 5.4
+ },
+ "richer content (lab8 B), selective edges f2": {
+  "seconds": 17.6,
+  "px": 369840,
+  "jpeg_kb_per_1000_sq_units": 14.7
+ },
+ "richer content (lab8 B), selective edges f3": {
+  "seconds": 37.4,
+  "px": 832140,
+  "jpeg_kb_per_1000_sq_units": 26.2
+ },
+ "richer content (lab8 B), selective edges f4": {
+  "seconds": 67.9,
+  "px": 1479360,
+  "jpeg_kb_per_1000_sq_units": 38.9
+ }
+}

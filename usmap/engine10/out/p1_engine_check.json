@@ -1,0 +1,28 @@
+{
+ "f1": {
+  "tiles": 35,
+  "painted": 35,
+  "identical": 34,
+  "differences": [
+   {
+    "tile": [
+     4,
+     1
+    ],
+    "pixels": 4697,
+    "z": true,
+    "trk": false
+   }
+  ],
+  "new_brush_cpu_s": 135.0,
+  "wall_s": 134.9
+ },
+ "f2": {
+  "tiles": 20,
+  "painted": 20,
+  "identical": 20,
+  "differences": [],
+  "new_brush_cpu_s": 192.0,
+  "wall_s": 192.1
+ }
+}

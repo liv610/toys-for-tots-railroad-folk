@@ -1,0 +1,148 @@
+{
+ "density": 1.0,
+ "tile_px": 256,
+ "regions": {
+  "toytown_storefront": [
+   940,
+   405,
+   1030,
+   600
+  ],
+  "northwest_coast_mountains": [
+   -40,
+   20,
+   210,
+   420
+  ],
+  "florida_coast_palms": [
+   1270,
+   690,
+   1480,
+   960
+  ],
+  "river_bridge_hills": [
+   1000,
+   520,
+   1200,
+   760
+  ]
+ },
+ "results": {
+  "toytown_storefront": {
+   "size": [
+    344,
+    747
+   ],
+   "tiles": 8,
+   "whole_s": 12.08,
+   "tiles_s": 25.4,
+   "identical_pct": 100.0,
+   "within_2_pct": 100.0,
+   "max_diff": 0,
+   "mean_diff_on_seams": 0.0,
+   "mean_diff_elsewhere": 0.0,
+   "vs_published": {
+    "mean_colour_published": [
+     167.9,
+     130.3,
+     91.4
+    ],
+    "mean_colour_engine": [
+     167.9,
+     130.2,
+     91.4
+    ],
+    "structure_diff": 2.72,
+    "texture_energy_published": 27.76,
+    "texture_energy_engine": 28.41
+   }
+  },
+  "northwest_coast_mountains": {
+   "size": [
+    958,
+    1532
+   ],
+   "tiles": 35,
+   "whole_s": 20.52,
+   "tiles_s": 56.2,
+   "identical_pct": 100.0,
+   "within_2_pct": 100.0,
+   "max_diff": 2,
+   "mean_diff_on_seams": 0.0,
+   "mean_diff_elsewhere": 0.0,
+   "vs_published": {
+    "mean_colour_published": [
+     116.6,
+     122.9,
+     107.4
+    ],
+    "mean_colour_engine": [
+     116.7,
+     123.0,
+     107.5
+    ],
+    "structure_diff": 3.86,
+    "texture_energy_published": 23.62,
+    "texture_energy_engine": 23.79
+   }
+  },
+  "florida_coast_palms": {
+   "size": [
+    804,
+    1034
+   ],
+   "tiles": 20,
+   "whole_s": 19.58,
+   "tiles_s": 38.8,
+   "identical_pct": 100.0,
+   "within_2_pct": 100.0,
+   "max_diff": 0,
+   "mean_diff_on_seams": 0.0,
+   "mean_diff_elsewhere": 0.0,
+   "vs_published": {
+    "mean_colour_published": [
+     90.9,
+     116.7,
+     89.5
+    ],
+    "mean_colour_engine": [
+     90.8,
+     116.6,
+     89.4
+    ],
+    "structure_diff": 4.05,
+    "texture_energy_published": 19.28,
+    "texture_energy_engine": 19.72
+   }
+  },
+  "river_bridge_hills": {
+   "size": [
+    766,
+    919
+   ],
+   "tiles": 20,
+   "whole_s": 25.41,
+   "tiles_s": 61.0,
+   "identical_pct": 100.0,
+   "within_2_pct": 100.0,
+   "max_diff": 0,
+   "mean_diff_on_seams": 0.0,
+   "mean_diff_elsewhere": 0.0,
+   "vs_published": {
+    "mean_colour_published": [
+     151.4,
+     145.1,
+     92.5
+    ],
+    "mean_colour_engine": [
+     151.5,
+     145.2,
+     92.6
+    ],
+    "structure_diff": 5.06,
+    "texture_energy_published": 24.83,
+    "texture_energy_engine": 25.02
+   }
+  }
+ }
+}
