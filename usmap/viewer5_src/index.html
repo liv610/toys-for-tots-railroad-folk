@@ -1,0 +1,368 @@
+<title>Toys for Tots Railroad · Pass 5</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one working surface. A slim control bar over a full-bleed deep-zoom map; notes underneath. */
+:root{
+  --ocean:#14253b; --ink:#f3ead8; --muted:#aeb7c6; --rule:#2c4363; --accent:#e9a861; --chip:#1d3350; --chip-on:#f3ead8; --chip-on-ink:#14253b;
+  --display:"Young Serif", Georgia, "Times New Roman", serif; --mono:"DM Mono", ui-monospace, Menlo, monospace;
+  color-scheme:dark}
+html,body{height:100%}
+body{background:var(--ocean);color:var(--ink);font:14px/1.55 var(--mono);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1800px;margin:0 auto;padding-block:18px 56px;display:grid;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:10px 24px}
+.titles{display:grid;gap:2px;min-width:0}
+.eyebrow{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:400 clamp(22px,2.8vw,36px)/1.1 var(--display);margin:0;text-wrap:balance}
+.bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bar .sep{width:1px;height:22px;background:var(--rule);margin:0 4px}
+button{font:500 12px var(--mono);letter-spacing:.04em;color:var(--ink);background:var(--chip);border:1px solid var(--rule);
+  border-radius:999px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);border-color:var(--chip-on)}
+.stage{position:relative;height:min(78vh,calc((100vw - 32px) * .5625 + 2px));min-height:300px;border-radius:3px;overflow:hidden;
+  box-shadow:0 14px 40px rgba(0,0,0,.45);background:var(--ocean)}
+.osdwrap{position:absolute;inset:0}
+#osd{width:100%;height:100%}   /* the zoom library makes this element position:relative, so it takes its size from the wrapper */
+#still{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;max-width:none}
+#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity .4s}
+.hud{position:absolute;left:10px;bottom:10px;font:500 11px var(--mono);letter-spacing:.06em;background:rgba(20,37,59,.78);
+  color:var(--ink);padding:4px 9px;border-radius:999px;pointer-events:none;font-variant-numeric:tabular-nums}
+.hud b{color:var(--accent);font-weight:500}
+.regions{display:flex;flex-wrap:wrap;gap:6px}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:22px;padding-top:8px;border-top:1px solid var(--rule)}
+.notes section{min-width:0}
+.notes h2{font:400 18px/1.25 var(--display);margin:0 0 6px}
+.notes ul{margin:0;padding-left:18px;color:var(--muted)}
+.notes li{margin:0 0 4px}
+.notes li strong{color:var(--ink);font-weight:500}
+@media (prefers-reduced-motion:reduce){#fx{transition:none}}
+</style>
+<div class="wrap">
+  <header>
+    <div class="titles">
+      <span class="eyebrow">Experimental pass 5 &middot; living landscape &middot; painted at <span id="res">6400 &times; 3600</span></span>
+      <h1>Toys for Tots Railroad</h1>
+    </div>
+    <div class="bar" role="toolbar" aria-label="Map controls">
+      <button id="play" aria-pressed="true">Pause motion</button>
+      <button id="ref" aria-pressed="false">Show reference</button>
+      <span class="sep" aria-hidden="true"></span>
+      <button id="zin" aria-label="Zoom in">&plus;</button>
+      <button id="zout" aria-label="Zoom out">&minus;</button>
+      <button id="home">Whole map</button>
+    </div>
+  </header>
+  <div class="regions" role="group" aria-label="Jump to a region">
+    <button data-r="0,40,600,420">Northwest</button>
+    <button data-r="640,250,560,360">Toy Town</button>
+    <button data-r="1000,40,671,430">New England</button>
+    <button data-r="60,420,560,300">Southwest</button>
+    <button data-r="900,430,440,420">River &amp; delta</button>
+    <button data-r="560,600,340,180">Windmill farm</button>
+  </div>
+  <div class="stage">
+    <img id="still" src="still_preview.jpg" alt="Pass 4 painted map" width="1600" height="900">
+    <div class="osdwrap"><div id="osd" aria-label="Zoomable painted map"></div></div>
+    <canvas id="fx" aria-hidden="true"></canvas>
+    <div class="hud" id="hud">detail <b>—</b></div>
+  </div>
+  <div class="notes">
+    <section>
+      <h2>What moves</h2>
+      <ul>
+        <li><strong>Trees</strong>: about fifty across the country bend in the wind, the crown more than the trunk. A gust crosses the map from west to east about every 13 seconds, with calmer spells between. Evergreens move less and more slowly than broadleaf trees.</li>
+        <li><strong>Palms</strong> in Florida move frond by frond, each at its own pace, a little more than the inland trees.</li>
+        <li><strong>Water</strong>: glints run down the river with the current, and small wave marks come and go on the ocean.</li>
+        <li><strong>Boats</strong> wander, rock and pause. Each one stays inside its own patch of open water.</li>
+        <li><strong>Also moving</strong>: a soft beam turns at the lighthouse, smoke rises from a few farmhouse chimneys, and the trains, steam, windmill, steamer, clouds and flags move as before.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>How it stays clean</h2>
+      <ul>
+        <li>Moving trees are painted on their own and left out of the background, so no gap opens behind them when they move.</li>
+        <li>Anything painted in front of a moving tree, such as a hill crest or a nearer tree, is redrawn over it, so the tree stays behind it exactly as in the still.</li>
+        <li><strong>Pause motion</strong> shows the painting at rest. It matches the approved still apart from the new trees and palms and a few extra wave marks.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Zoom</h2>
+      <ul>
+        <li>The map is painted at <span class="res2">6400 &times; 3600</span> and cut into tiles like an online map. The <strong>detail</strong> reading shows how many screen pixels each painted pixel covers. Up to 100% everything is real brushwork.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+<!-- scene.json is inlined here by make_viewer4.py -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/openseadragon.min.js"></script>
+<script>
+(function(){
+  const hudEl = document.getElementById('hud');
+  const fail = m => { hudEl.innerHTML = 'still image only <b>&middot;</b> ' + m; };
+  window.addEventListener('error', e => fail('error: ' + (e.message || 'script failed')));
+  if (!window.OpenSeadragon) { fail('the zoom library did not load'); return; }
+  const S = JSON.parse(document.getElementById('scene-data').textContent);
+  const [W, H] = S.size, K = S.scale, kk = K / 1.915;          // K: painted px per map unit; kk: motion scale vs. the 3200 render
+  document.getElementById('res').textContent = W + ' \u00d7 ' + H;
+  document.querySelectorAll('.res2').forEach(e => { e.textContent = W + ' \u00d7 ' + H; });
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Start the zoomable viewer only once its box has a real size: inside the app the page can first lay out at
+  // zero width, and a viewer started then shrinks the map to a dot.
+  const osdEl = document.getElementById('osd');
+  if (osdEl.clientWidth < 10 || osdEl.clientHeight < 10) {
+    const ro = new ResizeObserver(() => { if (osdEl.clientWidth >= 10 && osdEl.clientHeight >= 10) { ro.disconnect(); start(); } });
+    ro.observe(osdEl);
+  } else start();
+  function start() {
+  const viewer = OpenSeadragon({
+    element: document.getElementById('osd'), tileSources: { Image: { xmlns: 'http://schemas.microsoft.com/deepzoom/2008', Url: 'tiles/base_files/', Format: 'jpg', Overlap: '1', TileSize: '1024', Size: { Width: String(W), Height: String(H) } } }, showNavigationControl: false,
+    maxZoomPixelRatio: 2.5, visibilityRatio: .7, constrainDuringPan: true, animationTime: .7, blendTime: .15,
+    gestureSettingsMouse: { clickToZoom: false, dblClickToZoom: true }, gestureSettingsTouch: { pinchRotate: false }
+  });
+  let base = null;
+  const refImg = new Image(); refImg.src = 'reference.jpg';
+  viewer.addHandler('open-failed', e => fail('tiles did not load'));
+  viewer.addHandler('open', () => {
+    base = viewer.world.getItemAt(0);
+    viewer.viewport.goHome(true);
+  });
+
+  // ---------- images
+  const IMG = {};
+  const load = f => IMG[f] || (IMG[f] = Object.assign(new Image(), { src: 'sprites/' + f }));
+  S.sprites.forEach(s => load(s.file));
+  const occ = {}; const OT = S.occluder.tile; const occSet = new Set(S.occluder.tiles.map(t => t.join('_')));
+  const occImg = key => occ[key] || (occ[key] = Object.assign(new Image(), { src: 'occ/' + key + '.png' }));
+  const byKind = k => S.sprites.filter(s => s.kind === k);
+  const puffs = byKind('puff');
+  // ---------- the living landscape: trees, palms, water, boats, lighthouse, chimneys
+  const movers = S.sprites.filter(s => s.kind === 'sway' || s.kind === 'frond').sort((a, b) => a.depth - b.depth || (a.order || 0) - (b.order || 0));
+  S.sprites.forEach(s => { if (s.front) load(s.front.file); });
+  const waves = byKind('wave');
+  const hash = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  movers.forEach((m, i) => { m.ph = hash(i + 1) * 6.283; m.f = .8 + hash(i + 7) * .45; });
+  waves.forEach((w, i) => { w.ph = hash(i + 50) * 6.283; w.f = .7 + hash(i + 90) * .6; });
+  // wind: a light breeze everywhere plus a gust that sweeps west to east about every 22 s, with calm spells between
+  const gust = (x, t) => Math.pow(.5 + .5 * Math.sin((t * .075 - x / W * .55) * 6.283), 4);
+  const breeze = (x, t, ph) => .45 * Math.sin(t * .7 + ph) + .25 * Math.sin(t * 1.6 + ph * 2.1);
+  const wind = (x, t, ph) => breeze(x, t, ph) * (.5 + .5 * gust(x, t)) + gust(x, t);
+  // river glints: travel downstream along the visible stretches of the river
+  const RV = S.river, RVvis = S.river_visible || RV.map(() => 1);
+  const glints = Array.from({ length: 34 }, (_, i) => ({ s: hash(i + 300) * (RV.length - 2), t0: -hash(i + 400) * 4, life: 3 + hash(i + 500) * 2.5, off: hash(i + 600) - .5 }));
+  const chimneys = (S.chimneys || []).map((c, i) => ({ x: c[0], y: c[1], last: hash(i + 700) * 1.2 }));
+
+  // ---------- routes: arclength parameterisation
+  const R = {};
+  for (const [nm, r] of Object.entries(S.routes)) {
+    const P = r.points, A = [0];
+    for (let i = 1; i < P.length; i++) A.push(A[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+    R[nm] = { P, A, L: A[A.length - 1] };
+  }
+  function at(r, s) {
+    const { P, A } = r; s = Math.max(0, Math.min(r.L, s));
+    let lo = 0, hi = A.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (A[m] <= s) lo = m; else hi = m; }
+    const u = (s - A[lo]) / Math.max(1e-6, A[hi] - A[lo]);
+    return [P[lo][0] + (P[hi][0] - P[lo][0]) * u, P[lo][1] + (P[hi][1] - P[lo][1]) * u];
+  }
+  const trains = S.trains.map((t, n) => {
+    const r = R[t.route], sHead = r.A[t.head_index];
+    const veh = t.vehicles.map(v => ({ ...v, sprite: S.sprites.find(s => s.file === v.file), off: sHead - r.A[v.index_on_route] }));
+    const len = Math.max(...veh.map(v => v.off)) + 40 * kk;
+    const rt = S.routes[t.route];
+    return { r, veh, len, s0: sHead, speed: 34 * kk, stack: t.stack_offset, lastPuff: 0, on: [r.A[rt.track_from], r.A[rt.track_to] - 20 * kk] };
+  });
+
+  // ---------- particles
+  const parts = [];
+  function emit(x, y, vx, now, big) {
+    parts.push({ x, y, vx, vy: -(18 + Math.random() * 8) * kk, t0: now, life: 2.6 + Math.random() * .8, img: puffs[(Math.random() * puffs.length) | 0], big });
+  }
+
+  // ---------- canvas
+  const cv = document.getElementById('fx'), ctx = cv.getContext('2d');
+  let dpr = 1;
+  function size() { dpr = devicePixelRatio || 1; cv.width = cv.clientWidth * dpr; cv.height = cv.clientHeight * dpr; }
+  new ResizeObserver(size).observe(cv); size();
+
+  let playing = !reduce, t = 0, last = performance.now(), showRef = false;
+  const hud = document.querySelector('#hud b'), stillEl = document.getElementById('still');
+
+  function drawPivot(sp, x, y, rot, sx, sy, skew) {
+    const img = IMG[sp.file]; if (!img.complete || !img.naturalWidth) return;
+    const pv = sp.pivot || [sp.w / 2, sp.h / 2];
+    ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot);
+    if (skew) ctx.transform(1, skew, 0, 1, 0, 0);
+    if (sx !== 1 || sy !== 1) ctx.scale(sx, sy);
+    ctx.drawImage(img, -pv[0], -pv[1]); ctx.restore();
+  }
+  function pivotXY(sp) { const pv = sp.pivot || [sp.w / 2, sp.h / 2]; return [sp.x + pv[0], sp.y + pv[1]]; }
+
+  function frame(now) {
+    const dt = Math.min(.1, (now - last) / 1000); last = now; if (playing) t += dt;
+    requestAnimationFrame(frame);
+    if (!base) return;
+    const p0 = base.imageToViewerElementCoordinates(new OpenSeadragon.Point(0, 0), true);
+    const p1 = base.imageToViewerElementCoordinates(new OpenSeadragon.Point(W, 0), true);
+    const s = (p1.x - p0.x) / W;
+    const box = osdEl.clientWidth;
+    if (!(s > 0) || (box > 10 && s * W < box * .3)) { viewer.viewport.resize(new OpenSeadragon.Point(osdEl.clientWidth, osdEl.clientHeight), false); viewer.viewport.goHome(true); return; }
+    if (stillEl && !stillEl.hidden && base.getFullyLoaded && base.getFullyLoaded()) stillEl.hidden = true;
+    hudEl.innerHTML = 'detail <b>' + Math.round(s * dpr * 100) + '%</b>';
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * p0.x, dpr * p0.y);
+    if (showRef) { if (refImg.complete && refImg.naturalWidth) ctx.drawImage(refImg, 0, 0, W, H); return; }
+    ctx.imageSmoothingQuality = 'high';
+    const view = [-p0.x / s, -p0.y / s, cv.clientWidth / s, cv.clientHeight / s];
+    const vis = (x, y, w, h) => x + w > view[0] && y + h > view[1] && x < view[0] + view[2] && y < view[1] + view[3];
+
+    // clouds
+    for (const [i, c] of byKind('cloud').entries()) {
+      const v = (5 + i * 1.5) * kk, x = ((c.x + c.w + t * v) % (W + c.w)) - c.w;
+      if (vis(x, c.y, c.w, c.h) && IMG[c.file].complete) ctx.drawImage(IMG[c.file], x, c.y);
+    }
+    // ocean wave marks that come and go
+    for (const w of waves) {
+      if (!vis(w.x - 10 * kk, w.y, w.w + 20 * kk, w.h) || !IMG[w.file].complete) continue;
+      const p = .5 + .5 * Math.sin(t * .22 * w.f + w.ph); ctx.globalAlpha = Math.pow(p, 2.5) * .85;
+      ctx.drawImage(IMG[w.file], w.x + Math.sin(t * .06 * w.f + w.ph) * 6 * kk, w.y);
+    }
+    ctx.globalAlpha = 1;
+    // river glints, moving with the current
+    ctx.lineCap = 'round';
+    for (const g of glints) {
+      let age = t - g.t0;
+      if (age > g.life || age < 0) { g.t0 = t; g.s = hash(t * 13.1 + g.off * 99) * (RV.length - 12); g.off = hash(t * 7.7 + g.s) - .5; g.life = 3 + hash(g.s) * 2.5; age = 0; }
+      const si = g.s + age * 3.2, i0 = Math.floor(si); if (i0 + 3 >= RV.length || !RVvis[i0] || !RVvis[i0 + 2]) continue;
+      const a = RV[i0], b = RV[i0 + 2], wd = (13 + 17 * i0 / RV.length) * K, dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1;
+      const x = a[0] + dx * (si - i0) / 2 - dy / n * g.off * wd * .55, y = a[1] + dy * (si - i0) / 2 + dx / n * g.off * wd * .55;
+      if (!vis(x - 20, y - 20, 40, 40)) continue;
+      const u = age / g.life; ctx.globalAlpha = Math.sin(u * Math.PI) * .7;
+      ctx.strokeStyle = '#eef4fa'; ctx.lineWidth = 1.2 * K;
+      ctx.beginPath(); ctx.moveTo(x - dx / n * 3.5 * K, y - dy / n * 3.5 * K); ctx.lineTo(x + dx / n * 3.5 * K, y + dy / n * 3.5 * K); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // lighthouse: a soft turning beam
+    if (S.lighthouse) {
+      const [lx, ly] = S.lighthouse, ang = t * .5, L = 150 * K, hw = .12;
+      if (vis(lx - L, ly - L, 2 * L, 2 * L)) {
+        const gr = ctx.createRadialGradient(lx, ly, 2 * K, lx, ly, L); gr.addColorStop(0, 'rgba(255,238,175,.34)'); gr.addColorStop(1, 'rgba(255,238,175,0)');
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(lx, ly); ctx.arc(lx, ly, L, ang - hw, ang + hw); ctx.closePath(); ctx.fill();
+        const hg = ctx.createRadialGradient(lx, ly, 0, lx, ly, 11 * K); hg.addColorStop(0, 'rgba(255,240,190,.5)'); hg.addColorStop(1, 'rgba(255,240,190,0)');
+        ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(lx, ly, 11 * K, 0, 6.283); ctx.fill();
+      }
+    }
+    // boats: wander inside their own patch of water, rock and pause
+    for (const [i, b] of byKind('boat').entries()) {
+      const [px, py] = pivotXY(b); const dr = b.drift || [-20 * kk, 20 * kk, -4 * kk, 4 * kk];
+      const ph = i * 2.1 + 1, nx = .55 * Math.sin(t * .031 + ph) + .3 * Math.sin(t * .083 + ph * 2) + .15 * Math.sin(t * .19 + ph * 3);
+      const ny = .6 * Math.sin(t * .027 + ph * 1.7) + .4 * Math.sin(t * .071 + ph);
+      const dx = (dr[0] + dr[1]) / 2 + (dr[1] - dr[0]) / 2 * .9 * nx, dy = (dr[2] + dr[3]) / 2 + (dr[3] - dr[2]) / 2 * .8 * ny + Math.sin(t * 1.4 + ph) * 1.6 * kk;
+      if (!vis(b.x + dx - 10, b.y + dy - 10, b.w + 20, b.h + 20)) continue;
+      drawPivot(b, px + dx, py + dy, .04 * Math.sin(t * 1.05 + ph) + .018 * Math.sin(t * 2.2 + ph * 1.3), 1, 1, 0);
+    }
+    // trees and palm fronds, back to front; whatever stands in front of each is redrawn over it
+    for (const m of movers) {
+      const img = IMG[m.file]; if (!img.complete || !img.naturalWidth) continue;
+      if (!vis(m.x - 20 * kk, m.y, m.w + 40 * kk, m.h)) continue;
+      const wv = wind(m.x + m.pivot[0], t, m.ph);
+      if (m.kind === 'sway') {
+        const ever = m.cls === 'ever', amp = (ever ? 3.2 : 6.5) * K * m.f, wl = ever ? wind(m.x + m.pivot[0], t * .8, m.ph) : wv;
+        const n = 14, sh = Math.ceil(m.h / n);
+        for (let j = 0; j < n; j++) {
+          const sy = j * sh, hgt = Math.min(sh, m.h - sy); if (hgt <= 0) break;
+          const rel = Math.max(0, Math.min(1, (m.pivot[1] - (sy + hgt / 2)) / m.height));
+          ctx.drawImage(img, 0, sy, m.w, hgt, m.x + amp * wl * Math.pow(rel, 1.7), m.y + sy, m.w, hgt + .6);
+        }
+      } else {
+        const rot = .15 * m.f * (wv * .8 + .5 * Math.sin(t * (1.1 + .3 * m.f) + m.ph) * (.4 + .6 * gust(m.x, t)));
+        drawPivot(m, m.x + m.pivot[0], m.y + m.pivot[1], rot, 1, 1, 0);
+      }
+      if (m.front) { const fi = IMG[m.front.file]; if (fi.complete && fi.naturalWidth) ctx.drawImage(fi, m.front.x, m.front.y); }
+    }
+    // chimney smoke
+    for (const ch of chimneys) {
+      if (playing && t - ch.last > 1.15) { ch.last = t; parts.push({ x: ch.x, y: ch.y, vx: (3 + 5 * gust(ch.x, t)) * kk, vy: -6.5 * kk, t0: t, life: 4.6, img: puffs[(Math.random() * puffs.length) | 0], big: false, small: true }); }
+    }
+    // windmill
+    for (const b of byKind('blades')) { const [px, py] = pivotXY(b); if (vis(b.x, b.y, b.w, b.h)) drawPivot(b, px, py, t * 1.1, 1, 1, 0); }
+    // steamer + wheel + its smoke
+    const st = byKind('steamer')[0], wh = byKind('wheel')[0];
+    if (st) {
+      const [px, py] = pivotXY(st); const dx = Math.sin(t * .2) * 16 * kk, dy = Math.sin(t * 1.5) * 1.2 * kk;
+      if (vis(st.x - 30 * kk, st.y - 60 * kk, st.w + 60 * kk, st.h + 60 * kk)) {
+        drawPivot(st, px + dx, py + dy, 0, 1, 1, 0);
+        if (wh) { const [wx, wy] = pivotXY(wh); drawPivot(wh, wx + dx, wy + dy, t * 2.2, 1, 1, 0); }
+      }
+      if (playing && now - (st._lp || 0) > 420) {
+        st._lp = now;
+        for (const ox of [-18, -8]) emit(px + dx + ox * K, py + dy - 56 * K, -4 * kk, t, false);
+      }
+    }
+    // trains
+    const drawn = [];
+    for (const tr of trains) {
+      const cyc = tr.r.L + tr.len + 60 * kk;
+      const sHead = ((tr.s0 + t * tr.speed) % cyc);
+      for (const v of tr.veh) {
+        const sv = sHead - v.off; if (sv < 0 || sv > tr.r.L) continue;
+        const [x, y] = at(tr.r, sv), a = at(tr.r, sv - 5 * K), b2 = at(tr.r, sv + 5 * K);
+        let dx = b2[0] - a[0], dy = b2[1] - a[1]; const n = Math.hypot(dx, dy) || 1; dx /= n; dy /= n;
+        const flip = dx < 0, rot = flip ? Math.atan2(-dy, -dx) : Math.atan2(dy, dx);
+        drawPivot(v.sprite, x, y, rot, flip ? -1 : 1, 1, 0);
+        drawn.push([x, y]);
+        if (v.sprite.kind === 'loco' && playing && t - tr.lastPuff > .26 && sv > tr.on[0] && sv < tr.on[1]) {
+          tr.lastPuff = t;
+          const lx = (flip ? -1 : 1) * tr.stack[0], oy = tr.stack[1], c = Math.cos(rot), sn = Math.sin(rot);
+          emit(x + c * lx - sn * oy, y + sn * lx + c * oy, -dx * 9 * kk, t, true);
+        }
+      }
+    }
+    // occluder tiles over the trains: trees and the station hall pass in front
+    const seen = new Set(), rad = 110 * kk;
+    for (const [x, y] of drawn) {
+      for (let cx = Math.floor((x - rad) / OT); cx <= Math.floor((x + rad) / OT); cx++)
+        for (let cy = Math.floor((y - rad * 1.4) / OT); cy <= Math.floor((y + rad * .5) / OT); cy++) {
+          const key = cx + '_' + cy; if (seen.has(key) || !occSet.has(key)) continue; seen.add(key);
+          const im = occImg(key); if (im.complete && im.naturalWidth) ctx.drawImage(im, cx * OT, cy * OT);
+        }
+    }
+    // smoke
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i], age = t - p.t0; if (age > p.life || age < 0) { parts.splice(i, 1); continue; }
+      const u = age / p.life, sc = p.small ? .22 + u * .55 : (p.big ? .5 : .35) + u * (p.big ? 1.25 : .9);
+      const x = p.x + p.vx * age, y = p.y + p.vy * age;
+      if (!vis(x - 60 * kk, y - 60 * kk, 120 * kk, 120 * kk) || !IMG[p.img.file].complete) continue;
+      ctx.globalAlpha = (1 - u) * (u < .12 ? u / .12 : 1) * (p.small ? .55 : .92);
+      drawPivot(p.img, x, y, 0, sc, sc, 0);
+    }
+    ctx.globalAlpha = 1;
+    // flags
+    for (const [i, f] of byKind('flag').entries()) {
+      const [px, py] = pivotXY(f); if (!vis(f.x, f.y, f.w, f.h)) continue;
+      drawPivot(f, px, py, 0, .9 + .1 * Math.sin(t * 4.2 + i), 1, Math.sin(t * 3.1 + i * 1.3) * .1);
+    }
+  }
+  requestAnimationFrame(frame);
+
+  // ---------- controls
+  const play = document.getElementById('play'), ref = document.getElementById('ref');
+  const setPlay = v => { playing = v; play.setAttribute('aria-pressed', v); play.textContent = v ? 'Pause motion' : 'Play motion'; };
+  setPlay(playing);
+  play.onclick = () => setPlay(!playing);
+  ref.onclick = () => { showRef = !showRef; ref.setAttribute('aria-pressed', showRef); ref.textContent = showRef ? 'Show pass 4' : 'Show reference'; };
+  document.getElementById('zin').onclick = () => viewer.viewport.zoomBy(1.6);
+  document.getElementById('zout').onclick = () => viewer.viewport.zoomBy(1 / 1.6);
+  document.getElementById('home').onclick = () => viewer.viewport.goHome();
+  document.querySelectorAll('[data-r]').forEach(b => b.onclick = () => {
+    if (!base) return; const [x, y, w, h] = b.dataset.r.split(',').map(Number);
+    viewer.viewport.fitBounds(base.imageToViewportRectangle(x * K, y * K, w * K, h * K));
+  });
+  }
+})();
+</script>

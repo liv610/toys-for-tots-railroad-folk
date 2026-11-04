@@ -1,6 +1,7 @@
 """Builds the deep-zoom viewer bundle for pass 4.
 
-    python3 make_viewer4.py out4_6400 viewer4
+    python3 make_viewer4.py out4_6400 viewer4                       # pass 4
+    python3 make_viewer4.py out5_6400 viewer5 viewer5_src/index.html # pass 5 (experimental)
 
 Writes, inside the viewer folder:
   tiles/base_files/<level>/<col>_<row>.jpg + tiles/base.dzi   the painting WITHOUT moving parts (Deep Zoom format)
@@ -48,17 +49,20 @@ for cy in range(math.ceil(H / OT)):
 print('occluder tiles', len(otiles))
 
 # ---- sprites
-for s in man['sprites']: shutil.copy(f'{A}/{s["file"]}', f'{dst}/sprites/{s["file"]}')
+for s in man['sprites']:
+    shutil.copy(f'{A}/{s["file"]}', f'{dst}/sprites/{s["file"]}')
+    if 'front' in s: shutil.copy(f'{A}/{s["front"]["file"]}', f'{dst}/sprites/{s["front"]["file"]}')
 man['occluder'] = dict(tile=OT, tiles=otiles)
 json.dump(man, open(f'{dst}/scene.json', 'w'))
-full = cv2.imread(f'{src}/usmap4.png')
+import glob
+full = cv2.imread(sorted(glob.glob(f'{src}/usmap[0-9].png'))[-1])
 cv2.imwrite(f'{dst}/still_preview.jpg', cv2.resize(full, (1600, 900), interpolation=cv2.INTER_AREA), [cv2.IMWRITE_JPEG_QUALITY, 86])
 ref = cv2.imread('reference4.png'); cv2.imwrite(f'{dst}/reference.jpg', ref, [cv2.IMWRITE_JPEG_QUALITY, 92])
 tot = sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(dst) for f in fs)
 print('bundle MB', round(tot / 1e6, 1), 'files', sum(len(fs) for _, _, fs in os.walk(dst)))
 
 # ---- the page, with scene.json inlined (the page needs no fetch to start)
-page = open('viewer4_src/index.html').read()
+page = open(sys.argv[3] if len(sys.argv) > 3 else 'viewer4_src/index.html').read()
 blob = '<script id="scene-data" type="application/json">' + json.dumps(man).replace('</', '<\\/') + '</script>\n'
 open(f'{dst}/index.html', 'w').write(page.replace('<!-- scene.json is inlined here by make_viewer4.py -->\n', blob))
 print('page written')
