@@ -80,3 +80,36 @@ git add -p && git commit -m "Toy Town: <what changed and how it was checked>"
 git switch main && git merge --no-ff <topic>     # only after verification (see tools/WORKFLOW.md)
 git tag -a pass5-v20 -m "..."                    # when a new version is approved
 ```
+
+## Where the repository lives
+
+- **Your Mac:** `~/Documents/tft-railroad/toys-for-tots-railroad`, with `develop` checked out. This is the
+  permanent copy.
+- **Claude's workspace:** a working copy that can be reclaimed when idle. New commits travel to the Mac as a Git
+  bundle and are fast-forwarded in. Nothing is ever force-pushed.
+
+## Putting it on GitHub (needs you)
+
+Claude's workspace has no GitHub sign-in, so this is yours to do, once. On your Mac:
+
+1. On github.com, create a new **private** repository, for example `toys-for-tots-railroad`. Leave it **empty**: no
+   README, licence or .gitignore, so nothing has to be merged or overwritten.
+2. In Terminal:
+   ```
+   cd ~/Documents/tft-railroad/toys-for-tots-railroad
+   git remote add origin https://github.com/<your-account>/toys-for-tots-railroad.git
+   git push -u origin main develop experiment/rendering toytown/hires viewer/dev
+   git push origin --tags
+   ```
+   Git asks you to sign in the first time; use a browser sign-in or a personal access token.
+3. Optional: in the repository's Settings → Branches, protect `main` so it can't be force-pushed or deleted.
+4. Optional: connect the repository to Claude, so Claude can push future commits itself.
+
+If the repository already exists and has commits, don't push over it. Tell Claude, and the two histories will be
+compared first.
+
+## Committing while working on develop
+
+`develop` is checked out in the working folder, and the topic branches are not. To put a change on a topic branch,
+commit it there through a temporary worktree (`git worktree add <dir> <branch>`), then merge that branch into
+`develop`. Work that belongs only to `develop` can be committed directly.
