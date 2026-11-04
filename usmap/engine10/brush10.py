@@ -20,7 +20,7 @@ Edges are controlled by presets, chosen per call, per block (`with c.edges('fine
 import math, zlib, contextlib
 import numpy as np, cv2
 from kit import Kanvas
-from brush import hexc
+from brush import hexc, wobble, resample, smooth1d
 
 K1 = 6400 / 1671                      # px per map unit on the published zoomable map
 PADL, PADT, PADR, PADB = 100, 70, 80, 80
@@ -138,18 +138,101 @@ class EngineCanvas(Kanvas):
         return (P + np.array([PADL, PADT])) * s.k - np.array(s.T, np.float64)
     def _sh(s, P): return np.asarray(P, np.float64) + np.array(s.d)
     def mask(s, poly, wob=2.0, rough=1.0, seed=0, soft=None, scaled=False):
-        e = s.edge
-        if not scaled and poly is not None: poly = s._px(poly); scaled = True
-        m = Kanvas.mask(s, poly, wob * e['wob'], rough * e['rough'], seed, e['soft'] if soft is None else soft, scaled)
-        # A shape wholly outside this window gets an EMPTY mask, not None: painters use the returned mask as a clip
-        # (set_clip(m)), and a None clip means "paint everywhere". On a whole map this case never arose.
-        return m if m is not None else (0, 0, np.zeros((1, 1), np.float32))
+        """Kanvas.mask, rasterised exactly as a render of the WHOLE map would rasterise it, then cropped to this window.
+        OpenCV's anti-aliased polygon fill gives slightly different edges when the polygon is cut by the buffer, so
+        a shape crossing a window used to come out a little differently in every tile (found 4 Nov 2026: up to 0.35
+        in coverage, along the whole shape). Here the polygon is filled and softened over its full box in world
+        pixels, clipped only by the map's frame, exactly like a whole-map render; only the result is cropped.
+        A whole-map render (window = frame) is unchanged by this.
+        A shape wholly outside this window gets an EMPTY mask, not None: painters use the returned mask as a clip
+        (set_clip(m)), and a None clip means "paint everywhere"."""
+        e = s.edge; wob = wob * e['wob']; rough = rough * e['rough']; soft = e['soft'] if soft is None else soft
+        empty = (0, 0, np.zeros((1, 1), np.float32))
+        if poly is None: return empty
+        ox, oy = s.T
+        Pw = (np.asarray(poly, np.float64) + np.array([PADL, PADT])) * s.k if not scaled else np.asarray(poly, np.float64) + np.array([ox, oy], np.float64)
+        if wob > 0: Pw = wobble(Pw, wob * s.k, seed, wl=34 * s.k)
+        pad = int(6 * s.k); GW, GH = s.G
+        X0 = max(0, int(Pw[:, 0].min()) - pad); X1 = min(GW, int(Pw[:, 0].max()) + pad + 1)
+        Y0 = max(0, int(Pw[:, 1].min()) - pad); Y1 = min(GH, int(Pw[:, 1].max()) + pad + 1)
+        wx0, wy0, wx1, wy1 = max(X0, ox), max(Y0, oy), min(X1, ox + s.W), min(Y1, oy + s.H)
+        if X1 <= X0 or Y1 <= Y0 or wx1 <= wx0 or wy1 <= wy0: return empty
+        m = np.zeros((Y1 - Y0, X1 - X0), np.float32)
+        cv2.fillPoly(m, [np.round((Pw - [X0, Y0]) * 8).astype(np.int32)], 1.0, cv2.LINE_AA, shift=3)
+        if rough > 0: m = cv2.GaussianBlur(m, (0, 0), soft * s.k)
+        m = m[wy0 - Y0:wy1 - Y0, wx0 - X0:wx1 - X0]
+        x0, y0 = wx0 - ox, wy0 - oy; x1, y1 = wx1 - ox, wy1 - oy
+        if rough > 0:
+            n = s.Nsm[y0:y1, x0:x1] * .6 + s.paper[y0:y1, x0:x1] * .4
+            m = np.clip((m - .5 + rough * .32 * (n - .5)) * 3.2 + .5, 0, 1)
+        return (x0, y0, m)
     def stroke(s, pts, w, col, a=1.0, dry=0.0, taper=(.12, .3), press=.18, rough=.3, streak=.07, ridge=.1, seed=None, scaled=False, tremor=0.0, col2=None):
         if seed is None:                                               # from the stroke itself, not from a sequence
             q = np.round(np.asarray(pts, np.float64) * 64).astype(np.int64)
             seed = (zlib.crc32(q.tobytes()) ^ (s.eseed * 2654435761)) & 0x3FFFFFFF
-        if not scaled: pts = s._px(pts); w = w * s.k; scaled = True
-        return Kanvas.stroke(s, pts, w, col, a, dry, taper, press, rough, streak, ridge, seed, scaled, tremor, col2)
+        # world pixels: (map + pad) * k, the same numbers a whole-map render computes (found 4 Nov 2026: computing
+        # relative to the window origin changed the last bit, which now and then flipped a discrete choice in the
+        # brush, such as the nearest segment or a noise cell, and left an isolated pixel different in a tile)
+        ox, oy = s.T
+        Pw = (np.asarray(pts, np.float64) + np.array([PADL, PADT])) * s.k if not scaled else np.asarray(pts, np.float64) + np.array([ox, oy], np.float64)
+        return s._stroke_world(Pw, w * s.k if not scaled else w, col, a, dry, taper, press, rough, streak, ridge, seed, tremor, col2)
+
+    def _stroke_world(s, P, w, col, a, dry, taper, press, rough, streak, ridge, seed, tremor, col2):
+        """brush.Canvas.stroke (the band-limited version), with every coordinate in world pixels so each window
+        repeats exactly the arithmetic of a whole-map render; only the reads and writes are offset by the window."""
+        ox, oy = s.T; GW, GH = s.G
+        w = max(.6, w)
+        r = np.random.RandomState(seed)
+        if tremor > 0 and len(P) > 1: P = wobble(P, tremor * s.k, seed, wl=18 * s.k, closed=False)
+        P = resample(P, max(1.5, w * .45))
+        if len(P) < 2: P = np.vstack([P[0], P[0] + [.5, 0]])
+        seg = np.diff(P, axis=0); L = np.hypot(seg[:, 0], seg[:, 1]); L[L < 1e-6] = 1e-6
+        cum = np.concatenate([[0], np.cumsum(L)]); total = cum[-1]
+        pad = w * .8 + 3
+        x0 = int(max(0, math.floor(P[:, 0].min() - pad))); x1 = int(min(GW, math.ceil(P[:, 0].max() + pad)))      # as on the whole map
+        y0 = int(max(0, math.floor(P[:, 1].min() - pad))); y1 = int(min(GH, math.ceil(P[:, 1].max() + pad)))
+        if x1 <= x0 or y1 <= y0: return
+        nb = max(5, int(w / 1.8)); comb = .35 + .65 * smooth1d(nb, seed, 2); Lb = .5 + .55 * r.rand(nb)
+        pn = smooth1d(10, seed + 1, 2); en = r.rand(int(total / (2.5 * s.k / 2)) + 4)
+        A = P[:-1]; U = seg / L[:, None]
+        c0 = hexc(col); c1 = hexc(col2) if col2 is not None else None
+        band = np.zeros((y1 - y0, x1 - x0), np.uint8)
+        q = np.round((P - [x0, y0]) * 16).astype(np.int32)
+        cv2.polylines(band, [q], False, 1, thickness=int(2 * pad + 5), lineType=cv2.LINE_8, shift=4)
+        wx0, wy0, wx1, wy1 = max(x0, ox), max(y0, oy), min(x1, ox + s.W), min(y1, oy + s.H)                    # this window's part
+        if wx1 <= wx0 or wy1 <= wy0: return
+        YY, XX = np.nonzero(band[wy0 - y0:wy1 - y0, wx0 - x0:wx1 - x0])
+        if not len(YY): return
+        YY = YY + wy0; XX = XX + wx0
+        per = max(1, int(2.5e6 / max(1, len(A))))
+        for i0 in range(0, len(YY), per):
+            ys = YY[i0:i0 + per]; xs = XX[i0:i0 + per]
+            px = xs.reshape(-1, 1).astype(np.float32); py = ys.reshape(-1, 1).astype(np.float32)
+            rx = px - A[None, :, 0]; ryy = py - A[None, :, 1]
+            u = np.clip(rx * U[None, :, 0] + ryy * U[None, :, 1], 0, L[None])
+            cx = rx - u * U[None, :, 0]; cy = ryy - u * U[None, :, 1]
+            d2 = cx * cx + cy * cy
+            j = np.argmin(d2, axis=1); idx = np.arange(len(j))
+            dmin = np.sqrt(d2[idx, j]); sv = cum[j] + u[idx, j]
+            sgn = np.sign(U[j, 0] * ryy[idx, j] - U[j, 1] * rx[idx, j]); sgn[sgn == 0] = 1
+            sn = sv / total; tn = dmin * sgn / (w / 2)
+            a0, a1 = taper
+            prof = np.clip(np.minimum(sn / a0 if a0 > 0 else 1e9, (1 - sn) / a1 if a1 > 0 else 1e9), 0, 1) ** .5
+            pp = np.interp(sn * 9, np.arange(10), pn); wp = prof * (1 - press + press * pp)
+            ei = np.clip((sv / (2.5 * s.k / 2)).astype(int), 0, len(en) - 1)
+            de = (wp - np.abs(tn) + rough * .22 * (en[ei] - .5)) * (w / 2)
+            cover = np.clip(de / 1.1 + .5, 0, 1)
+            if not (cover > 0).any(): continue
+            bi = np.clip(((tn * .5 + .5) * nb).astype(int), 0, nb - 1); bt = comb[bi]; al = cover * a
+            wy, wx = ys - oy, xs - ox
+            if dry > 0:
+                run = np.clip((Lb[bi] - sn) / .22, 0, 1); dep = 1 - dry * (1 - bt * run)
+                pap = s.paper[wy, wx]; dep = np.clip(dep * 1.3 - (1 - pap) * dry * 1.2 - .12 * dry, 0, 1); al = al * dep
+            if s.clipm is not None: al = al * s.clipm[wy, wx]
+            f = (1 + streak * (bt - .6) * 2) * (1 - ridge * np.abs(np.clip(tn, -1, 1)) ** 4)
+            cc = c0[None] * f[:, None]
+            if c1 is not None: cc = (c0[None] * (1 - sn[:, None]) + c1[None] * sn[:, None]) * f[:, None]
+            reg = s.img[wy, wx]; reg += (cc - reg) * al[:, None]; s.img[wy, wx] = reg
     def dots(s, pts, r_, cols, a=1.0, seed=0):
         """kit.dots, with each centre rounded in WORLD pixels (so every window rounds it the same way) and with the
         clip respected (the legacy dots ignored a clip)."""
