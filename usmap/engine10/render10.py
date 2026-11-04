@@ -25,6 +25,7 @@ import station5 as ST, pnw5 as P5, fl5 as F5, store8 as SF
 from brush import hexc
 from kit import pal_fn
 import brush10 as BR
+import split10 as SP
 os.chdir(_cwd); sys.argv = _argv
 
 MODS = [B, B.U, B.U2, B.U3, B.S, B.A, U5, F5, P5, ST, T7, SF]
@@ -50,7 +51,22 @@ def use(c):
     B.OX, B.OY = c.d[0] * c.k, c.d[1] * c.k; B.U.OX, B.U.OY = B.OX, B.OY
 
 _SCENE = {}
-def load_scene(path=SCENE):
+def load_scene(path=SCENE, level=None):
+    """The scene, sorted and split for the engine. level: paint the yellow shop's storefront at this experiment
+    level, exactly as if the scene file said so (shops7 params['store_level'])."""
+    if level is not None:
+        key = (path, level)
+        if key not in _SCENE:
+            import copy
+            base = load_scene(path)
+            sc = copy.deepcopy(base['scene'])
+            for e in sc['elements']:
+                if e['kind'] == 'shops7': e['params']['store_level'] = level
+            import hashlib
+            tmp = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache', f'_scene_{hashlib.sha1(os.path.abspath(path).encode()).hexdigest()[:8]}_level_{level}.json')
+            json.dump(sc, open(tmp, 'w'))
+            _SCENE[key] = load_scene(tmp)
+        return _SCENE[key]
     if path not in _SCENE:
         scene = json.load(open(path))
         routes = {}
@@ -74,6 +90,7 @@ def load_scene(path=SCENE):
         back_ids = {id(e) for e in back}
         base = [e for e in base if not any(e['kind'] == 'palm5' and e['params'] == dict(b['params'], trunk_only=True) for b in back)]
         allb = sorted(base + back, key=lambda e: e['depth'])
+        allb = SP.split(allb)                                           # Toy Town's houses and storefronts as separate objects
         trig = next(i for i, e in enumerate(allb) if e['kind'] not in TERRAIN and e['depth'] > 120)
         _SCENE[path] = dict(scene=scene, routes=routes, base=allb, coast_at=trig, painted_back=len(back))
     return _SCENE[path]
@@ -97,11 +114,24 @@ def waves(c):
             pts = [(x + kk * 22 + u * 18, y + 3 * math.sin(u * math.pi * 2)) for u in np.linspace(0, 1, 6)]
             c.stroke(pts, 2.4, '#dfe6e8', a=.85, dry=.25, taper=(.2, .2), seed=B.sid('wave7', n, kk))
 
+def _land_full(f, extra_below):
+    """The land mask of the WHOLE padded map at density f, blurred, with extra_below rows under the frame, exactly
+    what a whole-map render computes. Made once per density and coastline, kept in engine10/cache/, and read
+    through a memory map, so every window gets the same values (found 4 Nov 2026: filling the coast polygon into
+    each window's own buffer anti-aliased its edges differently in each tile)."""
+    import hashlib
+    GW, GH = frame_px(f); key = hashlib.sha1(np.asarray(B.COAST).tobytes() + f'{f}:{extra_below}:{GW}x{GH}'.encode()).hexdigest()[:12]
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache', f'land_f{f:g}_{key}.npy')
+    if not os.path.exists(path):
+        k = BR.K1 * f; LM = np.zeros((GH + extra_below, GW), np.float32)
+        cv2.fillPoly(LM, [np.round((np.asarray(B.COAST) + [BR.PADL, BR.PADT]) * k * 8).astype(np.int32)], 1.0, cv2.LINE_AA, shift=3)
+        LM = cv2.GaussianBlur(LM, (0, 0), k / 1.914)
+        os.makedirs(os.path.dirname(path), exist_ok=True); tmp = path[:-4] + f'.{os.getpid()}.tmp.npy'; np.save(tmp, LM); os.replace(tmp, path); del LM
+    return np.load(path, mmap_mode='r')
+
 def land_mask(c, extra_below=0):
-    H = c.H + extra_below
-    LM = np.zeros((H, c.W), np.float32)
-    cv2.fillPoly(LM, [np.round((np.asarray(B.COAST) + c.d) * c.k * 8).astype(np.int32)], 1.0, cv2.LINE_AA, shift=3)
-    return cv2.GaussianBlur(LM, (0, 0), c.k / 1.914)
+    ox, oy = c.T; full = _land_full(c.f, extra_below)
+    return np.array(full[oy:oy + c.H + extra_below, ox:ox + c.W], np.float32)
 
 def coastline(c):
     PP = B.resample(np.vstack([B.COAST, B.COAST[:1]]), 2.0)
@@ -112,7 +142,7 @@ def coastline(c):
 def render_window(f, win, margin=16, level=None, hook=None, scene_path=SCENE, sea=True, shop=None):
     """Paint world pixels win = (x0, y0, x1, y1) at density f. Returns (bgr uint8, Z float32, stats).
     level: optional storefront level for the experiment's shop (lab8/store8); hook(c) runs after painting."""
-    t0 = time.time(); S = load_scene(scene_path)
+    t0 = time.time(); S = load_scene(scene_path, level)
     x0, y0, x1, y1 = win; W, H = x1 - x0, y1 - y0
     for m in MODS: m.c = None
     gc.collect()
@@ -133,17 +163,23 @@ def render_window(f, win, margin=16, level=None, hook=None, scene_path=SCENE, se
     c.stip((0, 0, B.U.LAND_MASK), groundcol, spacing=2.2, L=6, w=2.6, angfn=lambda X, Y: .4 * np.sin(X / 60), seed=3, jit=.4)
     Z = np.full((H, W), -1e9, np.float32); MT = np.zeros((H, W), bool); TRK = np.zeros((H, W), bool); OWN = np.full((H, W), -1, np.int32)
     if level is None:                                                   # a scene may ask for a storefront level (the experiment's shop)
-        sh = next((e for e in S['base'] if e['kind'] == 'shops7'), None)
-        level = sh['params'].get('store_level') if sh else None
+        level = next((e['params']['store_level'] for e in S['base'] if e['kind'] == 'shops7' and 'store_level' in e['params']), None)
     te0, sq0 = T7.town_extras, T7.square
     if level is not None:
         SH = shop or SF                                                 # which storefront module paints the shop (lab8 store8 or engine10 store10)
         def town_extras(which):
             te0(set(which) - {5})
             if 5 in which: SH.storefront(level)
-        def square(seed): sq0(seed); SH.after_square(level)
-        T7.town_extras, T7.square = town_extras, square
-    n_el = 0; coast_done = False
+        T7.town_extras = town_extras                                   # the square itself is unchanged; what the storefront
+        SP.AFTER_SQUARE = SH.after_square                              # paints after it is a part of its own (split10)
+    n_el = 0; coast_done = False; open_grp = None
+    def close_group():
+        nonlocal open_grp
+        if open_grp is None: return
+        _, (gx0, gy0, gx1, gy1), gbefore, ge, ggi = open_grp; open_grp = None
+        if gbefore is None: return
+        ch = np.abs(c.img[gy0:gy1, gx0:gx1] - gbefore).max(-1) > .004
+        Z[gy0:gy1, gx0:gx1][ch] = ge['depth']; MT[gy0:gy1, gx0:gx1][ch] = ge['kind'] == 'mountain'; TRK[gy0:gy1, gx0:gx1][ch] = ge['kind'] == 'track'; OWN[gy0:gy1, gx0:gx1][ch] = ggi
     try:
         for gi, e in enumerate(S['base']):
             if not coast_done and gi >= S['coast_at']:
@@ -152,16 +188,27 @@ def render_window(f, win, margin=16, level=None, hook=None, scene_path=SCENE, se
             if not (b[2] > mx0 - margin and b[0] < mx1 + margin and b[3] > my0 - margin and b[1] < my1 + margin): continue
             ex0, ey0 = int(max(0, (b[0] - margin + c.d[0]) * k)), int(max(0, (b[1] - margin + c.d[1]) * k))
             ex1, ey1 = int(min(W, (b[2] + margin + c.d[0]) * k)), int(min(H, (b[3] + margin + c.d[1]) * k))
-            before = c.img[ey0:ey1, ex0:ex1].copy() if ex1 > ex0 and ey1 > ey0 else None
+            # depth is recorded per element, from what it changed. The parts of a split element (split10) are recorded
+            # together, as the element they came from: one snapshot before the first part, one comparison after the last.
+            grp = SP.group(e)
+            if grp != (open_grp[0] if open_grp else None): close_group()
+            if grp is not None and open_grp is None:
+                gb = SP.group_box(S['base'], grp)
+                gx0, gy0 = int(max(0, (gb[0] - margin + c.d[0]) * k)), int(max(0, (gb[1] - margin + c.d[1]) * k))
+                gx1, gy1 = int(min(W, (gb[2] + margin + c.d[0]) * k)), int(min(H, (gb[3] + margin + c.d[1]) * k))
+                open_grp = (grp, (gx0, gy0, gx1, gy1), c.img[gy0:gy1, gx0:gx1].copy() if gx1 > gx0 and gy1 > gy0 else None, e, gi)
+            before = c.img[ey0:ey1, ex0:ex1].copy() if grp is None and ex1 > ex0 and ey1 > ey0 else None
             c.rng = np.random.RandomState(e['seed']); c.eseed = e['seed'] & 0x7FFFFFFF
             c.set_clip((0, 0, MTCLIP) if e['kind'] == 'mountain' else (0, 0, B.U.LAND_MASK) if e['kind'] in TERRAIN - {'bridge', 'cactus'} else None)
-            B.paint(e, S['routes']); n_el += 1
+            if not SP.paint(e): B.paint(e, S['routes'])
+            n_el += 1
             if before is not None:
                 ch = np.abs(c.img[ey0:ey1, ex0:ex1] - before).max(-1) > .004
                 Z[ey0:ey1, ex0:ex1][ch] = e['depth']; MT[ey0:ey1, ex0:ex1][ch] = e['kind'] == 'mountain'; TRK[ey0:ey1, ex0:ex1][ch] = e['kind'] == 'track'; OWN[ey0:ey1, ex0:ex1][ch] = gi
+        close_group()
         if not coast_done: c.set_clip(None); snap = c.img.copy(); coastline(c); c.img[MT] = snap[MT]
     finally:
-        T7.town_extras, T7.square = te0, sq0
+        T7.town_extras, T7.square = te0, sq0; SP.AFTER_SQUARE = None       # nothing carries over to the next render
     c.set_clip(None)
     if hook: hook(c)
     BR.impasto(c, .14)

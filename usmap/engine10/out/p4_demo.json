@@ -1,0 +1,16 @@
+{
+ "object": "tree at map (245, 395), moved 9 units east",
+ "tiles": 35,
+ "painted": [
+  [
+   0,
+   1
+  ],
+  [
+   1,
+   1
+  ]
+ ],
+ "reused": 33,
+ "seconds": 13.6
+}
