@@ -1,0 +1,39 @@
+{
+ "desktop": {
+  "load_home_s": 1.682,
+  "load_toytown_s": 1.265,
+  "hud_toytown": "detail 51% · Toy Town layer 0%",
+  "load_shop_s": 1.037,
+  "hud_shop": "detail 175% · Toy Town layer 100%",
+  "fps_shop": 60,
+  "sequence": [
+   "detail 156% · Toy Town layer 100%",
+   "detail 139% · Toy Town layer 100%",
+   "detail 124% · Toy Town layer 76%",
+   "detail 111% · Toy Town layer 47%",
+   "detail 99% · Toy Town layer 20%",
+   "detail 88% · Toy Town layer 0%",
+   "detail 79% · Toy Town layer 0%",
+   "detail 71% · Toy Town layer 0%",
+   "detail 63% · Toy Town layer 0%"
+  ],
+  "fps_crossfade_idle": 59,
+  "fps_panning": 44,
+  "js_heap_mb": 10,
+  "tiles_requested": 0,
+  "tile_mb": 0,
+  "errors": []
+ },
+ "phone": {
+  "load_home_s": 3.083,
+  "load_toytown_s": 4.692,
+  "hud_toytown": "detail 122% · Toy Town layer 71%",
+  "load_shop_s": 1.546,
+  "hud_shop": "detail 418% · Toy Town layer 100%",
+  "fps_shop": 60,
+  "js_heap_mb": 10,
+  "tiles_requested": 0,
+  "tile_mb": 0,
+  "errors": []
+ }
+}
