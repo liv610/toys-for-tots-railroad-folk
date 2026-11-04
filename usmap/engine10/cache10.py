@@ -151,14 +151,17 @@ def assemble(f, rect=None, store=None, what='img'):
     return out, (X0, Y0, X1, Y1)
 
 if __name__ == '__main__':
-    #   cache10.py build F [X0 Y0 X1 Y1]            paint every out-of-date tile
+    #   cache10.py build F [X0 Y0 X1 Y1] [--profile P] [--store S]   paint every out-of-date tile
     #   cache10.py rekey F [X0 Y0 X1 Y1] [--verify N]   re-key tiles whose code changed but whose pixels did not
     #   cache10.py status F [X0 Y0 X1 Y1]           how many tiles are current / re-keyable / need painting (no painting)
     cmd = sys.argv[1]; args = sys.argv[2:]
-    if '--verify' in args: vi = args.index('--verify'); args = args[:vi] + args[vi + 2:]     # drop the option and its value by position
+    for opt in ('--verify', '--profile', '--store'):                    # drop each option and its value by position
+        if opt in args: vi = args.index(opt); args = args[:vi] + args[vi + 2:]
     nums = [a_ for a_ in args if not a_.startswith('--')]
     f = float(nums[0]); rect = tuple(map(float, nums[1:5])) if len(nums) >= 5 else None
-    if cmd == 'build': print(json.dumps(build(f, rect), indent=0))
+    prof = sys.argv[sys.argv.index('--profile') + 1] if '--profile' in sys.argv else 'equivalent'
+    store = sys.argv[sys.argv.index('--store') + 1] if '--store' in sys.argv else None
+    if cmd == 'build': print(json.dumps(build(f, rect, profile=prof, store=store), indent=0))
     elif cmd == 'rekey': print(json.dumps(rekey(f, rect, verify=int(sys.argv[sys.argv.index('--verify') + 1]) if '--verify' in sys.argv else 2), indent=0))
     elif cmd == 'status':
         S = R.load_scene(); d = os.path.join(CACHE, f'f{f:g}'); cur = rk = nb = 0

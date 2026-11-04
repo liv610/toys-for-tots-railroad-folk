@@ -52,7 +52,9 @@ def split(base):
             for i, (w, h, *_) in enumerate(ROW):
                 if h == 0: continue
                 p = {kk: v for kk, v in e['params'].items() if kk != 'store_level' or i == YELLOW_SHOP}
-                out.append(dict(e, params=dict(p, part=['shop', i]), bbox=[round(v, 2) for v in (xs[i] - 8, y - h * .28 - 34, xs[i] + w + 8, y + 6)]))
+                bb = (xs[i] - 8, y - h * .28 - 34, xs[i] + w + 8, y + 6)
+                if 'store_level' in p: bb = (xs[i] - 10, y - h - 60, xs[i] + w + 18, y + 6)       # an experiment storefront paints the whole facade (measured: up to the roof)
+                out.append(dict(e, params=dict(p, part=['shop', i]), bbox=[round(v, 2) for v in bb]))
         else: out.append(e)
     # The storefront experiment also paints on the pavement after the town square (light from the window, a
     # poinsettia). That used to run inside the square element, so the square's tiles did not know about it. It is a
