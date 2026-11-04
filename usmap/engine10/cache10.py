@@ -30,7 +30,8 @@ BASE_CODE = ['folk2/brush.py', 'folk2/kit.py', 'styles2/story.py', 'styles2/a.py
              'usmap/usmap4.py', 'usmap/usmap5.py', 'usmap/pad5.py', 'usmap/pnw5.py', 'usmap/fl5.py',
              'usmap/engine10/brush10.py', 'usmap/engine10/render10.py', 'usmap/engine10/edges10.py']
 KIND_CODE = {'station7': ['usmap/station5.py', 'usmap/tft7.py'], 'station5': ['usmap/station5.py'],
-             'shops7': ['usmap/tft7.py', 'usmap/lab8/store8.py'], 'square7': ['usmap/tft7.py', 'usmap/lab8/store8.py']}
+             'shops7': ['usmap/tft7.py', 'usmap/lab8/store8.py', 'usmap/engine10/split10.py'], 'square7': ['usmap/tft7.py', 'usmap/lab8/store8.py'],
+             'town': ['usmap/engine10/split10.py']}
 
 _src = {}
 def src_hash(rel):
@@ -153,8 +154,9 @@ if __name__ == '__main__':
     #   cache10.py build F [X0 Y0 X1 Y1]            paint every out-of-date tile
     #   cache10.py rekey F [X0 Y0 X1 Y1] [--verify N]   re-key tiles whose code changed but whose pixels did not
     #   cache10.py status F [X0 Y0 X1 Y1]           how many tiles are current / re-keyable / need painting (no painting)
-    cmd = sys.argv[1]; nums = [a_ for a_ in sys.argv[2:] if not a_.startswith('--')]
-    if '--verify' in sys.argv: nums.remove(sys.argv[sys.argv.index('--verify') + 1])
+    cmd = sys.argv[1]; args = sys.argv[2:]
+    if '--verify' in args: vi = args.index('--verify'); args = args[:vi] + args[vi + 2:]     # drop the option and its value by position
+    nums = [a_ for a_ in args if not a_.startswith('--')]
     f = float(nums[0]); rect = tuple(map(float, nums[1:5])) if len(nums) >= 5 else None
     if cmd == 'build': print(json.dumps(build(f, rect), indent=0))
     elif cmd == 'rekey': print(json.dumps(rekey(f, rect, verify=int(sys.argv[sys.argv.index('--verify') + 1]) if '--verify' in sys.argv else 2), indent=0))
