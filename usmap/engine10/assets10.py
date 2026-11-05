@@ -66,6 +66,22 @@ class Place:
         finally:
             c.edge = prev
         return m
+    def grain(s, pts, cols, spacing=1.2, L=2.2, w=.9, ang=1.35, a=1.0, smooth=False, soft=.6, n=10, seed=0):
+        """The painted grain of cloth, gold or wood: small brush dabs in `cols`, clipped to the shape, over paint already there."""
+        c = B.c
+        pts = np.asarray(pts, np.float64)
+        if smooth and len(pts) >= 4: pts = np.asarray(catmull([tuple(p) for p in pts], n, closed=True))
+        prev = c.edge; c.edge = dict(soft=soft * s.u, rough=1.0, wob=0.0)
+        try:
+            m = c.mask([tuple(p) for p in s.P(pts)], 0, .2, 0)
+            if m[2].size <= 1 or m[2].max() <= 0: return
+            ang = (math.pi - ang) if s.flip else ang
+            r = max(1, int(round(1.2 * c.f * 1.6)))           # the brush feathers the dabs by 1.2 f px: keep them inside the outline
+            m = (m[0], m[1], cv2.erode(m[2], cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))))
+            c.stip(m, pal_fn(cols, .03), spacing=spacing * s.u, L=L * s.u, w=w * s.u, angfn=lambda X, Y: ang + 0 * X,
+                   seed=(int(abs(pts[0][0] * 31 + pts[0][1] * 7)) + seed) % 9973, jit=.7, spill=.8, a=a)
+        finally:
+            c.edge = prev
     def ellipse(s, cx, cy, rx, ry, col, rot=0.0, **kw):
         t = np.linspace(0, 2 * math.pi, 28, endpoint=False); cr, sr = math.cos(rot), math.sin(rot)
         pts = [(cx + rx * math.cos(a) * cr - ry * math.sin(a) * sr, cy + rx * math.cos(a) * sr + ry * math.sin(a) * cr) for a in t]
