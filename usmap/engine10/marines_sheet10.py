@@ -5,7 +5,9 @@ import sys, os, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np, cv2
 from PIL import Image, ImageDraw, ImageFont
-import render10 as R, edges10 as E, marines10 as M
+import render10 as R, edges10 as E, marines10 as M, assets10 as A
+if os.environ.get("RELIEF_GAIN"): A.RELIEF_GAIN = float(os.environ["RELIEF_GAIN"])
+if os.environ.get("AMBIENT"): A.AMBIENT = float(os.environ["AMBIENT"])
 BR = R.BR; T7 = R.T7
 HERE = os.path.dirname(os.path.abspath(__file__)); OUT = os.path.join(HERE, 'out')
 F = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 17)
