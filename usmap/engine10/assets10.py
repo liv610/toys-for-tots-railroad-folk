@@ -25,6 +25,9 @@ from brush import catmull, hexc
 from kit import pal_fn
 
 SOFT = {'fine': .6, 'crisp': .35}         # the old preset names, as asset-unit softness (reference pixels)
+RELIEF_LIGHT = (1.0, -.7, 50.0)           # relief lighting: asset direction of the light (front and above), elevation in degrees
+AMBIENT = .40
+RELIEF_GAIN = 1.6                          # scales every relief height (tuning)
 
 class Place:
     def __init__(s, x, y, scale, flip=False, W=0):
@@ -35,7 +38,7 @@ class Place:
         return np.stack([s.x + xs * s.u, s.y + pts[:, 1] * s.u], 1)
     # ---- the shading field: distance from the outline and a light ramp, in WORLD pixels over the shape's whole box,
     # then cropped to this window, so a shape crossing a tile edge is shaded identically in every tile.
-    def _field(s, poly, m, light):
+    def _field(s, poly, m, light, relief=None):
         c = B.c; x0, y0, mm = m; h, w = mm.shape; ox, oy = c.T
         Pw = (np.asarray(poly, np.float64) + np.array([BR.PADL, BR.PADT])) * c.k
         X0, Y0 = int(math.floor(Pw[:, 0].min())) - 3, int(math.floor(Pw[:, 1].min())) - 3
@@ -47,6 +50,17 @@ class Place:
         gx0, gy0 = ox + x0, oy + y0
         a0, b0 = max(gx0, X0), max(gy0, Y0); a1, b1 = min(gx0 + w, X1), min(gy0 + h, Y1)
         if a1 > a0 and b1 > b0: Dw[b0 - gy0:b1 - gy0, a0 - gx0:a1 - gx0] = D[b0 - Y0:b1 - Y0, a0 - X0:a1 - X0]
+        G = None
+        if relief:                                   # a height that rises from the outline and levels off: a bevelled, moulded part
+            hgt, wd = relief[0] * RELIEF_GAIN, relief[1]; px = s.u * c.k
+            d = np.clip(D / max(.5, wd * px), 0, 1); H = (hgt * px) * np.sqrt(1 - (1 - d) ** 2)
+            H = cv2.GaussianBlur(H, (0, 0), max(.4, .35 * px))
+            gx = cv2.Sobel(H, cv2.CV_32F, 1, 0, ksize=3) / 8; gy = cv2.Sobel(H, cv2.CV_32F, 0, 1, ksize=3) / 8
+            G = []
+            for A_ in (gx, gy):
+                o = np.zeros((h, w), np.float32)
+                if a1 > a0 and b1 > b0: o[b0 - gy0:b1 - gy0, a0 - gx0:a1 - gx0] = A_[b0 - Y0:b1 - Y0, a0 - X0:a1 - X0]
+                G.append(o)
         t = None
         if light:
             dx, dy = light[0], light[1]; dx = -dx if s.flip else dx; L = math.hypot(dx, dy) or 1
@@ -54,7 +68,21 @@ class Place:
             lo, hi = float(pr.min()), float(pr.max())
             Y, X = np.mgrid[gy0:gy0 + h, gx0:gx0 + w].astype(np.float64)
             t = np.clip(((X * dx + Y * dy) / L - lo) / max(1e-6, hi - lo), 0, 1).astype(np.float32)
-        return Dw, t
+        return Dw, t, G
+    def _relief(s, G, relief):
+        """Light the height field: diffuse shading relative to a flat top (so 1 where the part is level), plus a highlight."""
+        spec, pw = (relief[2] if len(relief) > 2 else 0.0), (relief[3] if len(relief) > 3 else 14)
+        lx, ly, el = RELIEF_LIGHT; lx = -lx if s.flip else lx; e = math.radians(el); n = math.hypot(lx, ly) or 1
+        L = np.array([lx / n * math.cos(e), ly / n * math.cos(e), math.sin(e)], np.float32)
+        gx, gy = G; inv = 1 / np.sqrt(gx * gx + gy * gy + 1)
+        Nx, Ny, Nz = -gx * inv, -gy * inv, inv
+        ndl = Nx * L[0] + Ny * L[1] + Nz * L[2]
+        dif = (AMBIENT + (1 - AMBIENT) * np.clip(ndl, 0, 1)) / (AMBIENT + (1 - AMBIENT) * L[2])
+        sp = None
+        if spec:
+            Rz = 2 * ndl * Nz - L[2]                                                     # reflection towards the viewer
+            sp = spec * np.clip(Rz, 0, 1) ** pw * (1 - Nz ** 40)                         # only on the curved edge, not the flat top
+        return np.clip(dif, .45, 1.4).astype(np.float32), sp
     def _shade(s, Dw, t, rim, rimw, light, form):
         c = B.c; px = s.u * c.k; shade = np.ones_like(Dw)
         if rim: shade *= 1 - rim * np.clip(1 - Dw / max(.5, rimw * px), 0, 1)          # pigment pooled at the edge
@@ -66,7 +94,7 @@ class Place:
             shade *= 1 - amt * f
         return shade
     def shape(s, pts, col, smooth=True, soft=.6, rough=.3, rim=.10, rimw=2.5, var=.04, a=1.0, stip=None, n=10,
-              light=None, form=None, edge=None, edge_dark=None):
+              light=None, form=None, relief=None, edge=None, edge_dark=None):
         """light = (dx, dy, amount): brighter towards asset direction (dx, dy), darker away from it.
         form = (amount, width): darker towards the outline over `width` asset units, as on a rounded object."""
         c = B.c
@@ -80,10 +108,16 @@ class Place:
             m = c.mask(poly, 0, rough, 0)
             x0, y0, mm = m
             if mm.size <= 1 or mm.max() <= 0: return m
-            if rim or light or form:
-                Dw, t = s._field(poly, m, light); shade = s._shade(Dw, t, rim, rimw, light, form)
+            sp = None
+            if rim or light or form or relief:
+                Dw, t, G = s._field(poly, m, light, relief); shade = s._shade(Dw, t, rim, rimw, light, form)
+                if relief: r_, sp = s._relief(G, relief); shade = shade * r_
             else: shade = None
             c.area(poly, col, m=m, shade=shade, edge_dark=0, var=var, a=a)
+            if sp is not None:
+                reg = c.img[y0:y0 + mm.shape[0], x0:x0 + mm.shape[1]]; al = mm * sp * a
+                if c.clipm is not None: al = al * c.clipm[y0:y0 + mm.shape[0], x0:x0 + mm.shape[1]]
+                reg += (1 - reg) * al[..., None]
             if stip:                                     # painted dabs inside larger areas, as on the rest of the map
                 cols, spacing, L_, w = stip
                 c.stip(m, pal_fn(cols, .04), spacing=spacing * s.u, L=L_ * s.u, w=w * s.u, angfn=lambda X, Y: 1.35 + 0 * X,
@@ -91,7 +125,7 @@ class Place:
         finally:
             c.edge = prev
         return m
-    def tone(s, pts, light=None, form=None, rim=0, rimw=2.5, smooth=True, soft=.6, n=10, tint=None):
+    def tone(s, pts, light=None, form=None, rim=0, rimw=2.5, smooth=True, soft=.6, n=10, tint=None, relief=None):
         """Shade what is already painted inside a shape (after its grain and details), so the volume covers them too.
         tint: a colour the shadows lean towards (cool for cloth, warm for skin)."""
         c = B.c
@@ -105,13 +139,15 @@ class Place:
             c.edge = prev
         x0, y0, mm = m
         if mm.size <= 1 or mm.max() <= 0: return
-        Dw, t = s._field(poly, m, light); sh = s._shade(Dw, t, rim, rimw, light, form)
+        Dw, t, G = s._field(poly, m, light, relief); sh = s._shade(Dw, t, rim, rimw, light, form); sp = None
+        if relief: r_, sp = s._relief(G, relief); sh = sh * r_
         reg = c.img[y0:y0 + mm.shape[0], x0:x0 + mm.shape[1]]
         al = mm if c.clipm is None else mm * c.clipm[y0:y0 + mm.shape[0], x0:x0 + mm.shape[1]]
         new = reg * sh[..., None]
         if tint is not None:                                                         # shadows lean towards the tint
             dk = np.clip(1 - sh, 0, 1)[..., None] * 1.2
             new = new * (1 - dk * .35) + hexc(tint)[None, None] * new.mean(-1, keepdims=True) / max(1e-3, hexc(tint).mean()) * dk * .35
+        if sp is not None: new = new + (1 - new) * sp[..., None]                     # the sheen on the curve
         reg += (new - reg) * al[..., None]
     def grain(s, pts, cols, spacing=1.2, L=2.2, w=.9, ang=1.35, a=1.0, smooth=False, soft=.6, n=10, seed=0):
         """The painted grain of cloth, gold or wood: small brush dabs in `cols`, clipped to the shape, over paint already there."""
