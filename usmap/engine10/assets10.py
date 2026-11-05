@@ -20,6 +20,7 @@ gradient across the shape) all scale with the asset, so it looks the same at eve
 import math
 import numpy as np, cv2
 import usmap4 as B
+import brush10 as BR
 from brush import catmull, hexc
 from kit import pal_fn
 
@@ -32,9 +33,42 @@ class Place:
         pts = np.asarray(pts, np.float64)
         xs = (s.W - pts[:, 0]) if s.flip else pts[:, 0]
         return np.stack([s.x + xs * s.u, s.y + pts[:, 1] * s.u], 1)
+    # ---- the shading field: distance from the outline and a light ramp, in WORLD pixels over the shape's whole box,
+    # then cropped to this window, so a shape crossing a tile edge is shaded identically in every tile.
+    def _field(s, poly, m, light):
+        c = B.c; x0, y0, mm = m; h, w = mm.shape; ox, oy = c.T
+        Pw = (np.asarray(poly, np.float64) + np.array([BR.PADL, BR.PADT])) * c.k
+        X0, Y0 = int(math.floor(Pw[:, 0].min())) - 3, int(math.floor(Pw[:, 1].min())) - 3
+        X1, Y1 = int(math.ceil(Pw[:, 0].max())) + 4, int(math.ceil(Pw[:, 1].max())) + 4
+        F = np.zeros((Y1 - Y0, X1 - X0), np.uint8)
+        cv2.fillPoly(F, [np.round((Pw - [X0, Y0]) * 8).astype(np.int32)], 1, cv2.LINE_8, shift=3)
+        D = cv2.distanceTransform(F, cv2.DIST_L2, 5)
+        Dw = np.zeros((h, w), np.float32)                                # cropped to this window's mask box
+        gx0, gy0 = ox + x0, oy + y0
+        a0, b0 = max(gx0, X0), max(gy0, Y0); a1, b1 = min(gx0 + w, X1), min(gy0 + h, Y1)
+        if a1 > a0 and b1 > b0: Dw[b0 - gy0:b1 - gy0, a0 - gx0:a1 - gx0] = D[b0 - Y0:b1 - Y0, a0 - X0:a1 - X0]
+        t = None
+        if light:
+            dx, dy = light[0], light[1]; dx = -dx if s.flip else dx; L = math.hypot(dx, dy) or 1
+            YY, XX = np.nonzero(F); pr = ((XX + X0) * dx + (YY + Y0) * dy) / L
+            lo, hi = float(pr.min()), float(pr.max())
+            Y, X = np.mgrid[gy0:gy0 + h, gx0:gx0 + w].astype(np.float64)
+            t = np.clip(((X * dx + Y * dy) / L - lo) / max(1e-6, hi - lo), 0, 1).astype(np.float32)
+        return Dw, t
+    def _shade(s, Dw, t, rim, rimw, light, form):
+        c = B.c; px = s.u * c.k; shade = np.ones_like(Dw)
+        if rim: shade *= 1 - rim * np.clip(1 - Dw / max(.5, rimw * px), 0, 1)          # pigment pooled at the edge
+        if light is not None and t is not None: shade *= 1 + light[2] * (2 * t - 1)
+        if form:                                                                         # a rounded, moulded body
+            amt, wd = form[0], form[1]
+            f = (1 - np.clip(Dw / max(.5, wd * px), 0, 1)) ** 1.6
+            if t is not None: f = f * (1.25 - .6 * t)                                    # edges turned from the light go darker
+            shade *= 1 - amt * f
+        return shade
     def shape(s, pts, col, smooth=True, soft=.6, rough=.3, rim=.10, rimw=2.5, var=.04, a=1.0, stip=None, n=10,
-              light=None, edge=None, edge_dark=None):
-        """light = (dx, dy, amount): brighter towards asset direction (dx, dy), darker away from it."""
+              light=None, form=None, edge=None, edge_dark=None):
+        """light = (dx, dy, amount): brighter towards asset direction (dx, dy), darker away from it.
+        form = (amount, width): darker towards the outline over `width` asset units, as on a rounded object."""
         c = B.c
         if edge is not None: soft = SOFT.get(edge, soft)
         if edge_dark is not None: rim = edge_dark
@@ -46,18 +80,9 @@ class Place:
             m = c.mask(poly, 0, rough, 0)
             x0, y0, mm = m
             if mm.size <= 1 or mm.max() <= 0: return m
-            shade = np.ones_like(mm)
-            if rim:
-                inner = cv2.GaussianBlur(mm, (0, 0), max(.5, rimw * s.u * c.k))
-                shade *= 1 - rim * np.clip((mm - inner) * 2.5, 0, 1)
-            if light:
-                dx, dy, amt = light; dx = -dx if s.flip else dx; L = math.hypot(dx, dy) or 1
-                Y, X = np.mgrid[0:mm.shape[0], 0:mm.shape[1]].astype(np.float32)
-                pr = (X * dx + Y * dy) / L; ins = mm > .5
-                if ins.any():
-                    lo, hi = pr[ins].min(), pr[ins].max()
-                    t = np.clip((pr - lo) / max(1e-6, hi - lo), 0, 1)
-                    shade *= 1 + amt * (2 * t - 1)
+            if rim or light or form:
+                Dw, t = s._field(poly, m, light); shade = s._shade(Dw, t, rim, rimw, light, form)
+            else: shade = None
             c.area(poly, col, m=m, shade=shade, edge_dark=0, var=var, a=a)
             if stip:                                     # painted dabs inside larger areas, as on the rest of the map
                 cols, spacing, L_, w = stip
@@ -66,6 +91,28 @@ class Place:
         finally:
             c.edge = prev
         return m
+    def tone(s, pts, light=None, form=None, rim=0, rimw=2.5, smooth=True, soft=.6, n=10, tint=None):
+        """Shade what is already painted inside a shape (after its grain and details), so the volume covers them too.
+        tint: a colour the shadows lean towards (cool for cloth, warm for skin)."""
+        c = B.c
+        pts = np.asarray(pts, np.float64)
+        if smooth and len(pts) >= 4: pts = np.asarray(catmull([tuple(p) for p in pts], n, closed=True))
+        poly = [tuple(p) for p in s.P(pts)]
+        prev = c.edge; c.edge = dict(soft=soft * s.u, rough=1.0, wob=0.0)
+        try:
+            m = c.mask(poly, 0, .15, 0)
+        finally:
+            c.edge = prev
+        x0, y0, mm = m
+        if mm.size <= 1 or mm.max() <= 0: return
+        Dw, t = s._field(poly, m, light); sh = s._shade(Dw, t, rim, rimw, light, form)
+        reg = c.img[y0:y0 + mm.shape[0], x0:x0 + mm.shape[1]]
+        al = mm if c.clipm is None else mm * c.clipm[y0:y0 + mm.shape[0], x0:x0 + mm.shape[1]]
+        new = reg * sh[..., None]
+        if tint is not None:                                                         # shadows lean towards the tint
+            dk = np.clip(1 - sh, 0, 1)[..., None] * 1.2
+            new = new * (1 - dk * .35) + hexc(tint)[None, None] * new.mean(-1, keepdims=True) / max(1e-3, hexc(tint).mean()) * dk * .35
+        reg += (new - reg) * al[..., None]
     def grain(s, pts, cols, spacing=1.2, L=2.2, w=.9, ang=1.35, a=1.0, smooth=False, soft=.6, n=10, seed=0):
         """The painted grain of cloth, gold or wood: small brush dabs in `cols`, clipped to the shape, over paint already there."""
         c = B.c

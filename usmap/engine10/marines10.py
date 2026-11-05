@@ -9,6 +9,11 @@ Round 4 (5 Nov 2026): asset-scaled edges; the cap rebuilt (raked crown, navy ban
 faces in the reference's warm skin tones; shoulder insignia, lower buttons and red piping; trousers with a slanted
 stripe, a lit and a shaded leg and the far shoe; a frontal gift with hollow bow loops and smoother gold.
 
+Round 6: painted grain and reference-sampled cloth tones. Round 7: moulded volume on every part (assets10 form/tone),
+contact shadows and the shadows where parts meet (under collar, belt, chin, visor, gloves); gloves with a thumb, fingers
+and the notch between; round domed buttons; the reference's ear, deep mouth corner and nostril shadow.
+Painting the pair split across tiles (with the engine's tile margin) matches a whole render exactly: check_asset_tiles.py.
+
     pair(x, y, h=28)    paint the pair with the soles of the left Marine at map (x, y), about h map units tall
 """
 import assets10 as A
@@ -50,6 +55,12 @@ def marine(P, side):
     P.line([(31, 264.5), (64, 264)], 1.0, '#4a4a54', a=.6); P.line([(68, 257.5), (89, 257.5)], 1.0, '#4a4a54', a=.5)
     P.ellipse(61, 266.6, 4.5, 1.2, '#7a7a86', a=.7, rim=0, soft=.8); P.ellipse(86, 259.6, 3.8, 1.0, '#7a7a86', a=.6, rim=0, soft=.8)
     P.line([(27, 274.6), (66, 274.4)], .9, '#0c0b0e', a=.8)
+    # volume: each leg a rounded column, each shoe a rounded toe; contact shadows where they meet the ground
+    P.tone([(26, 172), (60, 172), (59, 246), (58, 265), (27, 265), (26, 215)], light=lt(.06), form=(.38, 9), smooth=False, tint='#0e1630')
+    P.tone([(60, 172), (81, 172), (80, 215), (77, 259), (61, 259), (60, 246)], light=lt(.06), form=(.38, 6), smooth=False, tint='#0e1630')
+    P.tone([(26, 262), (62, 261), (69, 264.5), (71, 270), (67, 275.5), (26, 276)], light=lt(.1), form=(.3, 3), n=6)
+    P.ellipse(48, 276.2, 23, 1.6, '#16120f', a=.55, rim=0, soft=1.2); P.ellipse(80, 269.4, 15, 1.4, '#16120f', a=.45, rim=0, soft=1.2)
+    P.shape([(27, 172), (85, 171), (80, 180), (27, 181)], '#0e1428', a=.4, rim=0, soft=2.5)                    # the coat shades the hips
     # ---- the coat
     COAT = [(30, 75), (40, 69), (52, 67), (64, 68), (74, 74), (80, 84), (84, 100), (85, 130), (86, 175), (56, 177.5), (26, 175.5),
             (26, 130), (25, 96), (26, 84)]
@@ -65,12 +76,16 @@ def marine(P, side):
     P.line([(74.6, 144), (75, 175)], .8, NAVY_X, a=.7)
     P.shape([(30, 132.5), (84, 131.5), (84.5, 142.5), (30, 143.5)], WHITE, smooth=False, rough=.2, rim=.10, light=lt(.06))   # belt
     P.line([(31, 141.8), (84, 140.8)], 1.0, WHITE_G, a=.8)
+    P.shape([(30, 143.4), (84.5, 142.4), (85, 147.5), (30, 148.5)], NAVY_X, a=.35, rim=0, soft=1.8)            # under the belt
     P.shape([(61, 131.8), (79, 131.6), (79.2, 142.6), (61.2, 142.8)], GOLD, smooth=False, rough=.2, rim=.18, rimw=1.6, light=lt(.12))
     P.line([(63, 137.2), (77, 137)], .8, GOLD_D, a=.6); P.line([(62, 132.8), (78, 132.6)], .8, GOLD_L, a=.8)
     buttons(P, [(48.6, 150), (55, 150), (75, 150.6)], 1.5)
     buttons(P, [(65, 86.6), (68.6, 95.6), (61.4, 98.4), (76, 97.6), (71.4, 104.4), (72.6, 111.6)], 2.05)
     P.shape([(43.5, 80), (46.2, 79.6), (44, 87.5), (41.6, 87.5)], '#b8402a', smooth=False, rough=.15, rim=0)  # shoulder insignia
     P.dots([(42.6, 78.8)], .9, '#e8e4e0')
+    P.tone(COAT, light=lt(.08), form=(.34, 11), tint='#0a1024')                                          # a rounded body
+    P.tone([(30, 132.5), (84, 131.5), (84.5, 142.5), (30, 143.5)], form=(.2, 3), smooth=False)               # the belt turns round
+    P.shape([(46, 74), (64, 74), (68, 79), (60, 82), (48, 81)], NAVY_X, a=.35, rim=0, soft=2.0)                # under the collar
     # ---- the head: neck, hair, face, ear, features
     P.shape([(51, 62), (65, 64), (65, 71), (51, 71)], skin_s, smooth=False, rim=0)
     P.shape([(42, 70), (52, 67.4), (62, 68.4), (66.5, 71.5), (65.5, 77.5), (44, 78.5)], NAVY_L, rough=.2, rim=.15, n=6)      # collar
@@ -87,13 +102,19 @@ def marine(P, side):
     P.shape([(62, 44), (75, 42.2), (75.5, 45), (63, 46.5)], skin_s, a=.5, rim=0, soft=1.2)                 # under the visor
     P.shape([(64, 49), (70, 47.5), (74, 52), (73, 57), (66, 58)], skin_l, a=.35, rim=0, soft=2.5)          # lit cheek
     P.line([(52.5, 62.5), (56.5, 67), (63, 70)], 1.0, skin_s, a=.85)                                     # jaw
-    P.ellipse(48, 53.2, 2.6, 3.6, skin, rim=.25, rimw=1.2, rough=.15)                                   # ear
-    P.line([(48.6, 51), (49.3, 53.5), (48.4, 55.5)], .8, skin_s, a=.9)
+    P.ellipse(47.6, 53.2, 3.1, 4.4, skin, rim=.22, rimw=1.3, rough=.15, form=(.25, 2.5))                 # ear
+    P.line([(46.8, 50.2), (48.8, 50.6), (49.6, 53.4), (48.4, 56.4)], .85, skin_s, a=.9)                       # its inner curl
     P.ellipse(69.4, 50.6, 1.75, 1.95, '#22160f', soft=.3, rough=.1, rim=0); P.dots([(69.9, 50)], .42, '#fbf3ea')   # eye
     P.line([(66.6, 47.2), (71.4, 46.6)], .9, hair_s, a=.65)                                              # brow
     P.line([(75.8, 59.4), (77.8, 59.6)], .8, skin_s, a=.9)                                               # under the nose
+    P.dots([(75.6, 57.8)], .7, '#e0784a' if side == 'left' else '#6e3a1e')                                   # the nostril's warm shadow
+    P.tone(FACE, light=lt(.06), form=(.22, 7), n=6, tint='#b04818' if side == 'left' else '#3a1808')          # a round head
+    P.tone(hair_pts, light=lt(.06), form=(.3, 4), n=6)
+    P.shape([(51, 66), (64, 69.5), (66, 72), (52, 72)], '#5a2a10' if side == 'left' else '#2a140a', a=.35, rim=0, soft=1.5)   # under the chin
     if side == 'left':                                                                                    # closed smile
-        P.line([(65.4, 60.2), (66.6, 61.6), (69.4, 62.6), (72.6, 62.1), (74, 61)], 1.15, mouth, a=.95, taper=(.3, .3))
+        P.line([(65.2, 60.4), (66.4, 61.7), (68.6, 62.7)], 1.6, mouth, a=.95, taper=(.4, 0))                 # the deep corner
+        P.line([(68.2, 62.6), (70.8, 63.1), (73, 62.5), (74.2, 61.4)], 1.05, mouth, a=.9, taper=(0, .5))
+        P.line([(66, 64.2), (70, 65.4)], .8, skin_s, a=.55)                                                  # the lower lip's shadow
     else:                                                                                                 # open smile, teeth
         P.shape([(65.5, 59.8), (73.4, 60.4), (72.4, 64), (67.2, 63.8)], mouth, smooth=False, rough=.1, rim=0, soft=.35)
         P.shape([(66.4, 60.3), (72.8, 60.8), (72.3, 62.3), (66.8, 62)], '#f6f0e8', smooth=False, rough=.1, rim=0, soft=.35)
@@ -107,6 +128,8 @@ def marine(P, side):
     buttons(P, [(54.2, 40.2)], 2.0)
     P.shape([(55, 41.4), (70, 37.4), (80, 37.6), (86.2, 40.3), (84.2, 42.8), (70, 43.4), (58, 45.2)], '#262a38', rough=.2, rim=0, n=6)
     P.line([(62, 39.8), (82.5, 39.2)], .8, '#5c6070', a=.75)
+    P.tone(CROWN, light=(LIGHT[0], -1.6, .05), form=(.16, 6), n=6, tint='#6a6080')
+    P.shape([(56, 45.4), (70, 43.8), (78, 43.6), (77.5, 47), (64, 48.4), (54, 48.6)], '#8a4a20' if side == 'left' else '#3a1a0c', a=.3, rim=0, soft=1.6)
     P.line([(74.3, 20.6), (74.6, 25)], 1.1, GOLD, a=.95, taper=(.4, 0))                                 # emblem: eagle, globe, anchor
     P.ellipse(74.7, 27.4, 2.5, 2.7, GOLD, soft=.3, rough=.1, rim=.25, rimw=.9)
     P.line([(72.6, 29.6), (74.7, 31.4), (76.8, 29.6)], .8, GOLD, a=.95)
@@ -125,12 +148,13 @@ def marine(P, side):
     P.line([(102.5, 110.5), (101, 139.5)], .9, NAVY_X, a=.75)                                          # cuff edge
     P.line([(101.6, 120.5), (101.2, 126.5)], .9, '#c8382a', a=.85)
     buttons(P, [(91, 134.4), (97.4, 135.4)], 1.7)
+    P.tone(SLEEVE, light=lt(.06), form=(.32, 6), n=6, tint='#0a1024')
 
 def buttons(P, pts, r):
     for x, y in pts:
-        P.ellipse(x + .35, y + .45, r * 1.05, r * 1.05, GOLD_D, soft=.35, rough=.1, rim=0, a=.85)
-        P.ellipse(x, y, r, r, GOLD, soft=.3, rough=.1, rim=.2, rimw=.8)
-        P.dots([(x - r * .3, y - r * .32)], r * .34, GOLD_L)
+        P.ellipse(x + .25, y + .35, r * 1.04, r * 1.04, GOLD_D, soft=.4, rough=.05, rim=0, a=.7)          # round, domed brass
+        P.ellipse(x, y, r, r, GOLD, soft=.35, rough=.05, rim=0, form=(.3, r * .8), light=(-.6, -1, .08))
+        P.dots([(x - r * .3, y - r * .32)], r * .3, GOLD_L)
 
 def gift(P):
     lt = lambda amt: (-.6, -1, amt)                                         # lit from the top left, like the reference
@@ -159,11 +183,17 @@ def gift(P):
     P.ellipse(151.6, 86.5, 4.4, 3.4, RIBBON_D, rough=.15, rim=0); P.ellipse(151.2, 86, 3.2, 2.3, RIBBON, rough=.15, rim=0)
 
 def glove(P):
-    P.shape([(104, 124), (110, 120.6), (118, 120), (125, 121.5), (130, 126), (131.2, 133), (126.5, 139.2), (113, 141.2), (104, 139.2)],
-            WHITE, rough=.2, rim=.16, rimw=2.0, light=(.2, -1, .06), n=6)
-    P.shape([(106, 134), (127, 133), (126.5, 139.2), (113, 141.2), (104, 139.2)], '#d9cfc8', a=.55, rim=0, soft=1.8)   # shade under the hand
-    P.line([(109, 125.4), (117, 123.2), (123, 124.6)], .9, WHITE_G, a=.85)                                   # the thumb
-    for y in (130, 134, 137.4): P.line([(116, y), (129, y - .6)], .75, WHITE_G, a=.85)
+    """A white dress glove holding the gift, as on the reference: the thumb along the top, the fingers reaching further
+    under the box, and the notch between them where the gift shows through."""
+    G = [(104.5, 124.5), (106.5, 121.8), (113, 121), (120, 121), (123.4, 122.4), (124, 124.8), (121.6, 126.6), (124.5, 127.6),
+         (129, 128.6), (131.4, 131.6), (131.2, 136.4), (128.4, 139.8), (122, 141.2), (112, 141.4), (106, 140.2), (104.2, 135)]
+    P.shape([(p[0] + 1.6, p[1] + 2.2) for p in G], '#8a5a18', a=.35, rim=0, soft=2.0, smooth=False)            # its shadow on the gift
+    P.shape(G, WHITE, rough=.12, rim=.12, rimw=1.4, light=(.2, -1, .05), n=4)
+    P.line([(113, 126.6), (118.5, 126.4), (121.8, 126.6)], .9, '#b8aca8', a=.85)                               # under the thumb
+    P.line([(108, 127.4), (113, 127)], .7, '#d6cdd2', a=.7)
+    P.line([(113, 134.4), (121, 134.2), (129.6, 133.4)], .75, '#d0c6cc', a=.85)                                # between the fingers
+    P.line([(118, 137.6), (128.4, 137)], .7, '#d0c6cc', a=.7)
+    P.tone(G, light=(.2, -1, .06), form=(.2, 4.5), n=4, tint='#8a80a0')
 
 def pair(x, y, h=28):
     """Paint the pair; (x, y) is where the left Marine's soles stand, h his height in map units."""
