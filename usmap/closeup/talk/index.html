@@ -53,11 +53,11 @@ ul{margin:0;padding-left:18px;color:var(--muted);display:grid;gap:5px;max-width:
 </div>
 <script>
 (function(){
-  const RIG = {"size": [1120, 1176], "k": 4, "marines": {"a": {"forearm": {"file": "forearm_a.png", "x": 254, "y": 434, "w": 246, "h": 154, "pivot": [272, 488]}, "head": {"frames": ["head_a_0.png", "head_a_1.png", "head_a_2.png", "head_a_3.png"], "x": 64, "y": 52, "pivot": [236, 312]}, "legs": {"back": {"file": "leg_a_back.png", "x": 77, "y": 683, "w": 121, "h": 441, "pivot": [136, 704]}, "front": {"file": "leg_a_front.png", "x": 194, "y": 683, "w": 152, "h": 444, "pivot": [260, 704]}}, "bounds": [64, 52, 344, 1176], "body": {"file": "body_a.png", "x": 75, "y": 292, "w": 325, "h": 433}}, "b": {"forearm": {"file": "forearm_b.png", "x": 624, "y": 430, "w": 243, "h": 156, "pivot": [848, 488]}, "head": {"frames": ["head_b_0.png", "head_b_1.png", "head_b_2.png", "head_b_3.png"], "x": 788, "y": 52, "pivot": [904, 304]}, "legs": {"back": {"file": "leg_b_back.png", "x": 914, "y": 659, "w": 110, "h": 444, "pivot": [968, 680]}, "front": {"file": "leg_b_front.png", "x": 802, "y": 659, "w": 116, "h": 445, "pivot": [868, 680]}}, "bounds": [804, 52, 1040, 1176], "body": {"file": "body_b.png", "x": 748, "y": 292, "w": 284, "h": 791}}}, "present": {"file": "present.png", "x": 400, "y": 264, "w": 329, "h": 328}};
+  const RIG = {"size": [1120, 1176], "k": 4, "marines": {"a": {"forearm": {"file": "forearm_a.png", "x": 254, "y": 434, "w": 246, "h": 154, "pivot": [272, 488]}, "forearm_far": {"file": "forearm_a_far.png", "x": 254, "y": 434, "w": 246, "h": 154, "pivot": [272, 488], "dx": -20, "dy": 52}, "head": {"frames": ["head_a_0.png", "head_a_1.png", "head_a_2.png", "head_a_3.png"], "x": 64, "y": 52, "pivot": [236, 312]}, "legs": {"back": {"file": "leg_a_back.png", "x": 77, "y": 683, "w": 121, "h": 441, "pivot": [136, 704]}, "front": {"file": "leg_a_front.png", "x": 194, "y": 683, "w": 162, "h": 444, "pivot": [260, 704]}}, "bounds": [56, 52, 376, 1176], "body": {"file": "body_a.png", "x": 75, "y": 292, "w": 325, "h": 433}}, "b": {"forearm": {"file": "forearm_b.png", "x": 623, "y": 430, "w": 244, "h": 156, "pivot": [848, 488]}, "forearm_far": {"file": "forearm_b_far.png", "x": 623, "y": 430, "w": 244, "h": 156, "pivot": [848, 488], "dx": 20, "dy": 52}, "head": {"frames": ["head_b_0.png", "head_b_1.png", "head_b_2.png", "head_b_3.png"], "x": 788, "y": 52, "pivot": [904, 304]}, "legs": {"back": {"file": "leg_b_back.png", "x": 914, "y": 659, "w": 110, "h": 444, "pivot": [968, 680]}, "front": {"file": "leg_b_front.png", "x": 759, "y": 659, "w": 159, "h": 445, "pivot": [868, 680]}}, "bounds": [744, 52, 1048, 1176], "body": {"file": "body_b.png", "x": 729, "y": 292, "w": 303, "h": 409}}}, "present": {"file": "present.png", "x": 398, "y": 264, "w": 333, "h": 331}};
   const cv = document.getElementById('cv'), ctx = cv.getContext('2d'), bub = document.getElementById('bub');
   const IMG = {}; const L = f => IMG[f] || (IMG[f] = Object.assign(new Image(), { src: f }));
   const stage = L('stage.jpg');
-  for (const m of Object.values(RIG.marines)) { L(m.body.file); L(m.forearm.file); L(m.legs.back.file); L(m.legs.front.file); m.head.frames.forEach(L); }
+  for (const m of Object.values(RIG.marines)) { L(m.body.file); L(m.forearm.file); L(m.forearm_far.file); L(m.legs.back.file); L(m.legs.front.file); m.head.frames.forEach(L); }
   L(RIG.present.file);
   const S = .74, OX = 250, OY = 285;                        // sprite -> stage
   const T = 24;
@@ -115,6 +115,8 @@ ul{margin:0;padding-left:18px;color:var(--muted);display:grid;gap:5px;max-width:
     if (m.mirror !== 1) { const cx = b.x + b.w / 2; ctx.translate(cx, 0); ctx.scale(m.mirror, 1); ctx.translate(-cx, 0); }
     for (const [side, sgn] of [['back', 1], ['front', -1]]) { const l = R.legs[side]; ctx.save(); rot(l.pivot[0], l.pivot[1], sgn * m.legs); img(l); ctx.restore(); }
     img(b);
+    const ff = R.forearm_far;                                   // the far arm, behind the present, holding it from below
+    ctx.save(); ctx.translate(ff.dx, ff.dy); rot(ff.pivot[0], ff.pivot[1], m.fa * .9); img(ff); ctx.restore();
     if (st.holder === name) present(st, m, name);
     ctx.save(); rot(R.forearm.pivot[0], R.forearm.pivot[1], m.fa); img(R.forearm); ctx.restore();
     const f = m.talk && !reduce ? mouth(t, name) : isBlink(t, name === 'a' ? 0 : 1.7) ? 3 : 0;

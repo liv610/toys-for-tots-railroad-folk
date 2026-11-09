@@ -22,11 +22,11 @@ def sp(p): return ((p[0] - X0) * K, (p[1] - Y0) * K)
 PARTS = {
     'a': dict(neck_y=613, head=MR.MARINES['a']['head'], head_pivot=(655, 618),
               forearm=[(661, 649), (700, 654), (724, 664), (724, 691), (695, 691), (667, 681), (660, 668)], elbow=(664, 662),
-              torso=[(616, 613), (674, 613), (679, 722), (615, 722)], hip=721, legsplit=645, legx=(612, 682),
+              torso=[(616, 613), (674, 613), (679, 722), (615, 722)], hip=721, legsplit=645, legx=(610, 690),
               hips={'back': (630, 716), 'front': (661, 716)}),
     'b': dict(neck_y=613, head=MR.MARINES['b']['head'], head_pivot=(822, 616),
               forearm=[(812, 648), (812, 682), (781, 686), (772, 687), (751, 686), (751, 666), (772, 654)], elbow=(808, 662),
-              torso=[(801, 613), (853, 613), (853, 716), (799, 716)], hip=715, legsplit=825, legx=(797, 856),
+              torso=[(801, 613), (853, 613), (853, 716), (799, 716)], hip=715, legsplit=825, legx=(782, 858),
               hips={'front': (813, 710), 'back': (838, 710)}),
 }
 PRESENT = [(696, 603), (778, 603), (778, 689), (696, 689)]
@@ -62,31 +62,51 @@ if __name__ == '__main__':
     rig = dict(size=[W, H], k=K, marines={}, present=None)
     body_rgb, body_a = rgb.copy(), A.copy()
     pm = poly_mask(A.shape, PRESENT, 0)
-    gloves = np.zeros_like(A)
     hsv = cv2.cvtColor((rgb * 255).astype(np.uint8), cv2.COLOR_RGB2HSV).astype(np.float32)
-    white = ((hsv[..., 1] < 70) & (hsv[..., 2] > 150)).astype(np.float32)          # the gloves are the white paint
+    white = ((hsv[..., 1] < 90) & (hsv[..., 2] > 140)).astype(np.float32)          # the gloves are the white paint
+    gloves = np.zeros_like(A)
     for nm, P in PARTS.items():
         fm = poly_mask(A.shape, P['forearm'], 1.2) * A
-        g = cv2.morphologyEx(white * (fm > .5), cv2.MORPH_CLOSE, np.ones((7, 7)))
+        g = cv2.morphologyEx(white * (fm > .5), cv2.MORPH_CLOSE, np.ones((9, 9)))
         gloves = np.maximum(gloves, cv2.GaussianBlur(cv2.dilate(g, np.ones((3, 3))), (0, 0), 1.0) * pm)
-    # the present: its pixels, minus the gloves over it; the hidden corners painted in
-    pr_a = np.clip(A * pm - gloves * 1.2, 0, 1)
-    hole = np.clip(cv2.dilate(gloves, np.ones((5, 5))) * pm, 0, 1)
-    # fill the corners from the present's own paint only: everything outside the present is masked out of the inpaint
-    ys_, xs_ = np.nonzero(pm > .5); bx0, by0, bx1, by1 = xs_.min() - 4, ys_.min() - 4, xs_.max() + 5, ys_.max() + 5
-    sub = (np.clip(rgb[by0:by1, bx0:bx1], 0, 1) * 255).astype(np.uint8)
-    msk = ((hole[by0:by1, bx0:bx1] > .05) | (pm[by0:by1, bx0:bx1] < .5)).astype(np.uint8) * 255
-    fill = cv2.inpaint(sub, msk, 15, cv2.INPAINT_TELEA).astype(np.float32) / 255
-    pre = rgb.copy(); pre[by0:by1, bx0:bx1] = np.where(msk[..., None] > 0, fill, pre[by0:by1, bx0:bx1])
-    pr_rgb = brush_fill(pre, hole, 51)
-    pr_a = np.maximum(pr_a, hole * (cv2.GaussianBlur(pm, (0, 0), 2) > .5))
+    # the present as a whole object: a clean box (lid and body) plus the traced bow; where gloves covered it, its own
+    # gold face is copied down from just above (same x, so the ribbon lines up), its edges shaded, then brushed over
+    box = np.maximum(poly_mask(A.shape, [(696, 631), (778, 631), (778, 646), (696, 646)], .8), poly_mask(A.shape, [(699, 645), (776, 645), (776, 688), (699, 688)], .8))
+    hole = np.clip(cv2.dilate((white * pm > .5).astype(np.float32) + (gloves > .05), np.ones((15, 15))), 0, 1) * (box > .3)
+    hole = cv2.GaussianBlur(hole, (0, 0), 1.5)
+    pre = rgb.copy(); dy = int(20 * K)
+    src = np.roll(rgb, dy, axis=0)
+    for _ in range(3):                                                 # copy again where the source itself was glove
+        bad = np.roll(hole, dy, axis=0) > .3
+        src = np.where(bad[..., None], np.roll(src, dy, axis=0), src)
+    pre = pre * (1 - hole[..., None]) + src * hole[..., None]
+    by1 = int(sp((0, 688))[1]); bx0, bx1 = int(sp((699, 0))[0]), int(sp((776, 0))[0])
+    shade_ = np.zeros_like(A); shade_[by1 - 10:by1, bx0:bx1] = np.linspace(0, .28, 10)[:, None]
+    shade_[:, bx1 - 8:bx1] = np.maximum(shade_[:, bx1 - 8:bx1], np.linspace(0, .2, 8)[None, :]) * (box[:, bx1 - 8:bx1] > .5)
+    pre = pre * (1 - shade_[..., None] * hole[..., None] * 1.0)
+    pr_rgb = brush_fill(pre, hole * 0, 51) if False else pre
+    from kit import Kanvas as _K
+    cpk = _K(W, H, 1, '#000000', seed=52); cpk.img[:] = pre
+    def colp(X, Y, r):
+        xi = np.clip(X.astype(int), 0, W - 1); yi = np.clip(Y.astype(int), 0, H - 1)
+        return np.clip(pre[yi, xi] * (1 + (r.rand(len(X), 1) - .5) * .08), 0, 1)
+    cpk.stip((0, 0, hole), colp, spacing=4, L=6, w=4, angfn=lambda X, Y: np.zeros(X.shape), seed=53, jit=.6, thresh=.2)
+    pr_rgb = cpk.img
+    bow = A * pm * (YY < sp((0, 634))[1])
+    pr_a = np.clip(np.maximum(box, bow), 0, 1)
     rig['present'] = crop_save('present', pr_rgb, pr_a)
     body_a = body_a * (1 - pm)
     for nm, P in PARTS.items():
         R = dict()
         fm = poly_mask(A.shape, P['forearm'], 1.2) * A
-        R['forearm'] = crop_save(f'forearm_{nm}', rgb, fm * (1 - pm) + fm * pm * np.clip(gloves * 1.3, 0, 1))
+        fa_a = fm * (1 - pm) + fm * pm * np.clip(gloves * 1.3, 0, 1)
+        R['forearm'] = crop_save(f'forearm_{nm}', rgb, fa_a)
         R['forearm']['pivot'] = list(sp(P['elbow']))
+        # the far arm: the same forearm, in the shadow side's darker paint, a little lower and further back; it holds
+        # the present from below, so both hands are on it
+        far = rgb * .78; far[..., 2] = far[..., 2] * 1.06
+        R['forearm_far'] = crop_save(f'forearm_{nm}_far', far, fa_a)
+        R['forearm_far'].update(pivot=list(sp(P['elbow'])), dx=int(-5 * K if nm == 'a' else 5 * K), dy=int(13 * K))
         # body: remove the forearm; paint the coat in where the forearm lay over the torso
         tm = poly_mask(A.shape, P['torso'], 1.0)
         behind = np.clip(fm * tm, 0, 1)
