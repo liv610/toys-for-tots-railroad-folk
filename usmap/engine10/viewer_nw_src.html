@@ -1,0 +1,617 @@
+<title>Northwest Railway Test</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one working surface. A slim control bar over a full-bleed deep-zoom map; notes underneath. */
+:root{
+  --ocean:#14253b; --ink:#f3ead8; --muted:#aeb7c6; --rule:#2c4363; --accent:#e9a861; --chip:#1d3350; --chip-on:#f3ead8; --chip-on-ink:#14253b;
+  --display:"Young Serif", Georgia, "Times New Roman", serif; --mono:"DM Mono", ui-monospace, Menlo, monospace;
+  color-scheme:dark}
+html,body{height:100%}
+body{background:var(--ocean);color:var(--ink);font:14px/1.55 var(--mono);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1800px;margin:0 auto;padding-block:18px 56px;display:grid;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:10px 24px}
+.titles{display:grid;gap:2px;min-width:0}
+.eyebrow{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:400 clamp(22px,2.8vw,36px)/1.1 var(--display);margin:0;text-wrap:balance}
+.bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bar .sep{width:1px;height:22px;background:var(--rule);margin:0 4px}
+button{font:500 12px var(--mono);letter-spacing:.04em;color:var(--ink);background:var(--chip);border:1px solid var(--rule);
+  border-radius:999px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);border-color:var(--chip-on)}
+.stage{position:relative;height:min(78vh,calc((100vw - 32px) * .589 + 2px));min-height:300px;border-radius:3px;overflow:hidden;
+  box-shadow:0 14px 40px rgba(0,0,0,.45);background:var(--ocean)}
+.osdwrap{position:absolute;inset:0}
+#osd{width:100%;height:100%}   /* the zoom library makes this element position:relative, so it takes its size from the wrapper */
+#still{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;max-width:none}
+#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity .4s}
+.hud{position:absolute;left:10px;bottom:10px;font:500 11px var(--mono);letter-spacing:.06em;background:rgba(20,37,59,.78);
+  color:var(--ink);padding:4px 9px;border-radius:999px;pointer-events:none;font-variant-numeric:tabular-nums}
+.hud b{color:var(--accent);font-weight:500}
+@media (max-width:620px){.hud{font-size:9.5px;letter-spacing:.02em;padding:3px 7px;max-width:calc(100% - 20px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+.regions{display:flex;flex-wrap:wrap;gap:6px}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:22px;padding-top:8px;border-top:1px solid var(--rule)}
+.notes section{min-width:0}
+.notes h2{font:400 18px/1.25 var(--display);margin:0 0 6px}
+.notes ul{margin:0;padding-left:18px;color:var(--muted)}
+.notes li{margin:0 0 4px}
+.notes li strong{color:var(--ink);font-weight:500}
+@media (prefers-reduced-motion:reduce){#fx{transition:none}}
+/* the station card: painted paper, a roof-red stamp, the map's own fonts */
+.card{position:absolute;z-index:5;width:min(330px,calc(100% - 20px));background:#f3ead6;color:#36281f;border-radius:7px 11px 8px 12px;
+  border:2px solid #6e3a2a;box-shadow:0 2px 0 #c9b48e inset,0 14px 34px rgba(8,14,24,.5);overflow:hidden;font:13px/1.55 var(--display)}
+.card::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background:radial-gradient(circle at 20% 30%,rgba(120,90,50,.07) 0 1px,transparent 1.5px) 0 0/7px 7px,
+             radial-gradient(circle at 70% 60%,rgba(120,90,50,.06) 0 1px,transparent 1.6px) 0 0/11px 11px}
+.card.docked{position:relative;left:auto!important;top:auto!important;width:auto;margin-top:-4px}
+.card-pic{display:block;width:100%;height:auto;max-width:none;border-bottom:2px solid #6e3a2a}
+.card-body{position:relative;padding:12px 16px 14px;display:grid;gap:8px}
+.card-eyebrow{justify-self:start;font:500 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;background:#b8402e;color:#f8efdc;
+  padding:3px 9px 2px;border-radius:3px 6px 4px 5px;transform:rotate(-1.2deg)}
+.card h2{font:400 25px/1.1 var(--display);margin:0;color:#2a1e18;text-wrap:balance}
+.card p{margin:0}
+.card-live{font:500 12px/1.45 var(--mono);color:#5a4030;background:rgba(184,64,46,.08);border-left:3px solid #b8402e;padding:5px 8px;border-radius:0 4px 4px 0}
+.card-live b{color:#8a2e22;font-weight:500}
+.card-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.card-actions button{background:#f8f0dd;color:#3a2a20;border:1.5px solid #6e3a2a;border-radius:999px;font:500 11.5px var(--mono);padding:5px 11px}
+.card-actions button:hover{background:#efe0bf;border-color:#b8402e}
+.card-note{font:400 10.5px/1.4 var(--mono);color:#8a7460}
+.card-x{position:absolute;top:8px;right:8px;z-index:2;width:28px;height:28px;padding:0;border-radius:50%;background:rgba(243,234,214,.92);color:#3a2a20;
+  border:1.5px solid #6e3a2a;font:400 18px/1 var(--display)}
+.card-x:hover{background:#efe0bf}
+.card button:focus-visible{outline:2px solid #b8402e;outline-offset:2px}
+.tag{position:absolute;z-index:4;pointer-events:none;transform:translate(-50%,-100%);background:#f3ead6;color:#36281f;border:1.5px solid #6e3a2a;
+  border-radius:5px 8px 6px 9px;padding:3px 10px;font:400 13px var(--display);white-space:nowrap;box-shadow:0 6px 14px rgba(8,14,24,.35)}
+.tag small{font:500 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:#8a2e22;margin-left:6px}
+.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:14px}
+.compare figure{margin:0;display:grid;gap:6px;min-width:0}
+.compare img{width:100%;height:auto;border-radius:3px;display:block}
+.compare figcaption{color:var(--muted);font-size:12.5px}
+.notes h2 small{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-left:8px}
+</style>
+<div class="wrap">
+  <header>
+    <div class="titles">
+      <span class="eyebrow">Integration test &middot; engine 10 &middot; Red Line, Northwest &middot; painted at <span id="res">6400 &times; 3600</span></span>
+      <h1>Northwest railway test</h1>
+    </div>
+    <div class="bar" role="toolbar" aria-label="Map controls">
+      <button id="play" aria-pressed="true">Pause motion</button>
+      <button id="ref" aria-pressed="false">Show reference</button>
+      <span class="sep" aria-hidden="true"></span>
+      <button id="zin" aria-label="Zoom in">&plus;</button>
+      <button id="zout" aria-label="Zoom out">&minus;</button>
+      <button id="home">Whole map</button>
+      <span class="sep" aria-hidden="true"></span>
+      <button id="again">Watch the departure</button>
+      <button id="follow" aria-pressed="false">Ride along</button>
+    </div>
+  </header>
+  <div class="regions" role="group" aria-label="Jump to a region">
+    <button data-r="40,90,700,330">Northwest section</button>
+    <button data-r="20,70,260,170">Station</button>
+    <button data-r="270,250,180,130">Viaduct</button>
+    <button data-r="420,250,220,150">Tunnel</button>
+    <button id="openStation">Northwest Harbor info</button>
+    <button data-r="0,40,600,420">Northwest</button>
+    <button data-r="640,250,560,360">Toy Town</button>
+    <button data-r="944,452,80,105">Yellow shop</button>
+    <button data-r="1000,40,671,430">New England</button>
+    <button data-r="60,420,560,300">Southwest</button>
+    <button data-r="900,430,440,420">River &amp; delta</button>
+    <button data-r="560,600,340,180">Windmill farm</button>
+  </div>
+  <div class="stage">
+    <img id="still" src="still_preview.jpg" alt="Painted map of the Toys for Tots Railroad" width="1600" height="942">
+    <div class="osdwrap"><div id="osd" aria-label="Zoomable painted map"></div></div>
+    <canvas id="fx" aria-hidden="true"></canvas>
+    <div class="hud" id="hud">detail <b>—</b></div>
+    <div class="tag" id="tag" hidden>Northwest Harbor<small>click to visit</small></div>
+    <div class="card" id="card" role="dialog" aria-labelledby="card-title" hidden>
+      <button class="card-x" id="card-x" aria-label="Close">&times;</button>
+      <img class="card-pic" src="sprites/nw_station_card.jpg" alt="Northwest Harbor station, as painted on the map" width="720" height="440">
+      <div class="card-body">
+        <span class="card-eyebrow">Red Line &middot; first station</span>
+        <h2 id="card-title">Northwest Harbor</h2>
+        <p>The Red Line begins here, where the harbor meets the mountains. Toys gathered along the coast leave this platform, roll through the firs, cross the stone viaduct and pass under Mossy Knoll on their way to Toy Town.</p>
+        <p class="card-live" id="card-live" aria-live="polite">&nbsp;</p>
+        <div class="card-actions"><button id="card-zoom">Zoom to the station</button><button id="card-ride">Ride the Red Line</button></div>
+        <p class="card-note">Placeholder text for this test. The real station story comes later.</p>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <section>
+      <h2>Look for</h2>
+      <ul>
+        <li><strong>The station stop.</strong> The red train creeps out of the Northwest Harbor hall, eases to a stop at the platform, idles with a little steam, chuffs, and pulls away. <strong>Watch the departure</strong> starts it again.</li>
+        <li><strong>The viaduct.</strong> The train runs along the deck, and the autumn trees in front of the arches stay in front of it.</li>
+        <li><strong>The tunnel.</strong> New in this test: a small wooded knoll with a stone portal, just east of the viaduct. The train darkens as it enters, its smoke stops and drifts out of the mouth, and it comes back into view from behind the knoll's shoulder.</li>
+        <li><strong>The station.</strong> Hover over the Northwest Harbor hall and click it. The card stays with the station as you pan and zoom.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>What changed</h2>
+      <ul>
+        <li>One new piece of artwork: the knoll and its portal, painted by the same engine with the map's own hill, tree and stone painters.</li>
+        <li>Only the tiles that hold the knoll were repainted. At 1&times;, 34 of the 35 map tiles are pixel-identical to the original prototype; in Toy Town's 2&times; layer, 18 of 20 are. The 3 changed tiles all contain the knoll.</li>
+        <li>No heightmap. The tunnel works through the existing depth order: the knoll's face is painted just in front of the track, so the occluder hides the train inside it.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Before and after<small>Northwest, 1&times;</small></h2>
+      <div class="compare">
+        <figure><img src="sprites/nw_before.jpg" alt="The Northwest section before the test" width="1200" height="560"><figcaption>Before: the original prototype</figcaption></figure>
+        <figure><img src="sprites/nw_after.jpg" alt="The Northwest section with the new knoll and tunnel portal" width="1200" height="560"><figcaption>After: the wooded knoll and portal past the viaduct</figcaption></figure>
+      </div>
+    </section>
+  </div>
+</div>
+<!--SCENE-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/openseadragon.min.js"></script>
+<script>
+(function(){
+  const hudEl = document.getElementById('hud');
+  const fail = m => { hudEl.innerHTML = 'still image only <b>&middot;</b> ' + m; };
+  window.addEventListener('error', e => fail('error: ' + (e.message || 'script failed')));
+  if (!window.OpenSeadragon) { fail('the zoom library did not load'); return; }
+  const S = JSON.parse(document.getElementById('scene-data').textContent);
+  const VQ = S.build ? '?v=' + S.build : '';                    // every build gets fresh URLs, so no stale tile from an older version is reused
+  const [W, H] = S.size, K = S.scale, kk = K / 1.915;          // K: painted px per map unit; kk: motion scale vs. the 3200 render
+  document.getElementById('res').textContent = W + ' \u00d7 ' + H;
+  document.querySelectorAll('.res2').forEach(e => { e.textContent = W + ' \u00d7 ' + H; });
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Start the zoomable viewer only once its box has a real size: inside the app the page can first lay out at
+  // zero width, and a viewer started then shrinks the map to a dot.
+  const osdEl = document.getElementById('osd');
+  if (osdEl.clientWidth < 10 || osdEl.clientHeight < 10) {
+    const ro = new ResizeObserver(() => { if (osdEl.clientWidth >= 10 && osdEl.clientHeight >= 10) { ro.disconnect(); start(); } });
+    ro.observe(osdEl);
+  } else start();
+  function start() {
+  const viewer = OpenSeadragon({
+    element: document.getElementById('osd'), tileSources: { width: W, height: H, tileSize: 1024, tileOverlap: 1, minLevel: 0, maxLevel: Math.ceil(Math.log2(Math.max(W, H))), getTileUrl: (l, x, y) => 'tiles/base_files/' + l + '/' + x + '_' + y + '.jpg' + VQ }, showNavigationControl: false,
+    maxZoomPixelRatio: 2.5, visibilityRatio: .7, constrainDuringPan: true, animationTime: .7, blendTime: .15,
+    gestureSettingsMouse: { clickToZoom: false, dblClickToZoom: true }, gestureSettingsTouch: { pinchRotate: false }
+  });
+  window.__viewer = viewer;                                     // test hook (headless transition and performance tests)
+  let base = null, detailItem = null;
+  const qp = new URLSearchParams(location.search), FORCE = qp.get('detail');
+  const D = S.detail, Q = D ? D.f : 1;
+  const refImg = new Image(); refImg.src = 'reference.jpg' + VQ;
+  viewer.addHandler('open-failed', e => fail('tiles did not load'));
+  viewer.addHandler('open', () => {
+    base = viewer.world.getItemAt(0);
+    viewer.viewport.goHome(true);
+    if (D && FORCE !== 'off') {
+      // the Toy Town detail layer: the same painting at Q x the density, laid exactly over the same place
+      const [rx, ry, rw] = D.rect_px_f1, [DW, DH] = D.size;
+      viewer.addTiledImage({ tileSource: { width: DW, height: DH, tileSize: 1024, tileOverlap: 1, minLevel: 0, maxLevel: Math.ceil(Math.log2(Math.max(DW, DH))),
+        getTileUrl: (l, x, y) => 'tiles/detail_files/' + l + '/' + x + '_' + y + '.jpg' + VQ }, x: rx / W, y: ry / W, width: rw / W, opacity: 0, preload: true,
+        success: ev => { detailItem = ev.item; } });
+    }
+  });
+
+  // ---------- images
+  const IMG = {};
+  const load = f => IMG[f] || (IMG[f] = Object.assign(new Image(), { src: 'sprites/' + f + VQ }));
+  S.sprites.forEach(s => load(s.file));
+  const occ = {}; const OT = S.occluder.tile; const occSet = new Set(S.occluder.tiles.map(t => t.join('_')));
+  const occImg = key => occ[key] || (occ[key] = Object.assign(new Image(), { src: 'occ/' + key + '.png' + VQ }));
+  const byKind = k => S.sprites.filter(s => s.kind === k);
+  if (S.nw && S.nw.occ_preload) S.nw.occ_preload.forEach(k => { if (occSet.has(k)) occImg(k); });
+  const occHi = {}, occHiSet = new Set(S.detail ? S.detail.occluder.tiles.map(t => t.join('_')) : []);
+  const puffs = byKind('puff');
+  // ---------- the living landscape: trees, palms, water, boats, lighthouse, chimneys
+  const movers = S.sprites.filter(s => s.kind === 'sway' || s.kind === 'frond').sort((a, b) => a.depth - b.depth || (a.order || 0) - (b.order || 0));
+  S.sprites.forEach(s => { if (s.front) load(s.front.file); });
+  const waves = byKind('wave');
+  const hash = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  movers.forEach((m, i) => { m.ph = hash(i + 1) * 6.283; m.f = .8 + hash(i + 7) * .45; });
+  waves.forEach((w, i) => { w.ph = hash(i + 50) * 6.283; w.f = .7 + hash(i + 90) * .6; });
+  // wind: a light breeze everywhere plus a gust that sweeps west to east about every 22 s, with calm spells between
+  const gust = (x, t) => Math.pow(.5 + .5 * Math.sin((t * .075 - x / W * .55) * 6.283), 4);
+  const breeze = (x, t, ph) => .45 * Math.sin(t * .7 + ph) + .25 * Math.sin(t * 1.6 + ph * 2.1);
+  const wind = (x, t, ph) => breeze(x, t, ph) * (.5 + .5 * gust(x, t)) + gust(x, t);
+  // river glints: travel downstream along the visible stretches of the river
+  const RV = S.river, RVvis = S.river_visible || RV.map(() => 1);
+  const glints = Array.from({ length: 34 }, (_, i) => ({ s: hash(i + 300) * (RV.length - 2), t0: -hash(i + 400) * 4, life: 3 + hash(i + 500) * 2.5, off: hash(i + 600) - .5 }));
+  const chimneys = (S.chimneys || []).map((c, i) => ({ x: c[0], y: c[1], last: hash(i + 700) * 1.2 }));
+
+  // ---------- routes: arclength parameterisation
+  const R = {};
+  for (const [nm, r] of Object.entries(S.routes)) {
+    const P = r.points, A = [0];
+    for (let i = 1; i < P.length; i++) A.push(A[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+    R[nm] = { P, A, L: A[A.length - 1] };
+  }
+  function at(r, s) {
+    const { P, A } = r; s = Math.max(0, Math.min(r.L, s));
+    let lo = 0, hi = A.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (A[m] <= s) lo = m; else hi = m; }
+    const u = (s - A[lo]) / Math.max(1e-6, A[hi] - A[lo]);
+    return [P[lo][0] + (P[hi][0] - P[lo][0]) * u, P[lo][1] + (P[hi][1] - P[lo][1]) * u];
+  }
+  const trains = S.trains.map((t, n) => {
+    const r = R[t.route], sHead = r.A[t.head_index];
+    const veh = t.vehicles.map(v => ({ ...v, sprite: S.sprites.find(s => s.file === v.file), off: sHead - r.A[v.index_on_route] }));
+    const len = Math.max(...veh.map(v => v.off)) + 40 * kk;
+    const rt = S.routes[t.route];
+    return { route: t.route, r, veh, len, s0: sHead, speed: 34 * kk, stack: t.stack_offset, lastPuff: 0, on: [r.A[rt.track_from], r.A[rt.track_to] - 20 * kk] };
+  });
+
+  // ---------- the Red Line in the Northwest: a station stop, the viaduct, the tunnel
+  const NW = S.nw || null, red = trains.find(tr => tr.route === 'red');
+  let redT0 = 0;                                                  // the departure clock: 'Watch the departure' resets it
+  const plan = (() => {
+    if (!NW || !red) return null;
+    const v = red.speed, v0 = v * .42, dA = NW.creep * K, dB = NW.pull * K;
+    const sStop = NW.stop_s, sEnd = red.r.L + red.len + 30 * kk;
+    const T0 = 2 * dA / v0, T1 = NW.dwell, T2 = 2 * dB / v, T3 = (sEnd - sStop - dB) / v, T4 = 2.5;
+    return { v, v0, dA, dB, sStop, sA: sStop - dA, T0, T1, T2, T3, T4, T: T0 + T1 + T2 + T3 + T4 };
+  })();
+  function redState(tt) {
+    const p = plan; let u = ((tt % p.T) + p.T) % p.T;
+    if (u < p.T0) { const f = u / p.T0; return { s: p.sA + p.dA * (1 - (1 - f) * (1 - f)), vel: p.v0 * (1 - f), ph: 'arrive', u, next: p.T0 - u + p.T1 }; }
+    u -= p.T0;
+    if (u < p.T1) return { s: p.sStop, vel: 0, ph: 'dwell', u, next: p.T1 - u };
+    u -= p.T1;
+    if (u < p.T2) { const f = u / p.T2; return { s: p.sStop + p.dB * f * f, vel: p.v * f, ph: 'depart', u, f }; }
+    u -= p.T2;
+    if (u < p.T3) return { s: p.sStop + p.dB + p.v * u, vel: p.v, ph: 'run', u, next: p.T3 - u + p.T4 + p.T0 + p.T1 };
+    return { s: -1e9, vel: 0, ph: 'away', u, next: p.T - p.T0 - p.T1 - p.T2 - p.T3 - u + p.T0 + p.T1 };
+  }
+  const where = st => {
+    if (!st) return '';
+    if (st.ph === 'arrive') return 'pulling in to Northwest Harbor';
+    if (st.ph === 'dwell') return 'at Northwest Harbor';
+    if (st.ph === 'away') return 'arrived in Toy Town';
+    if (st.s < NW.viaduct[0]) return st.ph === 'depart' ? 'leaving Northwest Harbor' : 'through the firs';
+    if (st.s < NW.viaduct[1]) return 'crossing the viaduct';
+    if (st.s < NW.portal_s - 20 * K) return 'heading for Mossy Knoll';
+    if (st.s - red.len < NW.exit_s) return st.s < NW.exit_s ? 'in the tunnel' : 'coming out of the tunnel';
+    return 'on its way to Toy Town';
+  };
+  // darker copies of the vehicles, laid over them as they go into the mouth of the tunnel
+  const dark = {};
+  function darkOf(img) {
+    if (dark[img.src]) return dark[img.src];
+    if (!img.complete || !img.naturalWidth) return null;
+    const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = '#0c0a10'; g.fillRect(0, 0, c.width, c.height);
+    return (dark[img.src] = c);
+  }
+  // test hook (headless checks): the clock, the red train's state, and the time at which its head reaches a distance s
+  window.__nw = { get t() { return t; }, set t(v) { t = v; }, get t0() { return redT0; }, state: () => redNow, plan, NW, red: () => red,
+    timeForS: s_ => plan ? redT0 + plan.T0 + plan.T1 + plan.T2 + (s_ - plan.sStop - plan.dB) / plan.v : 0,
+    setPlay: v => window.__setPlay && window.__setPlay(v) };
+  const smooth = (a, b, x) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+
+  // ---------- particles
+  const parts = [];
+  function emit(x, y, vx, now, big) {
+    parts.push({ x, y, vx, vy: -(18 + Math.random() * 8) * kk, t0: now, life: 2.6 + Math.random() * .8, img: puffs[(Math.random() * puffs.length) | 0], big });
+  }
+
+  // ---------- canvas
+  const cv = document.getElementById('fx'), ctx = cv.getContext('2d');
+  let dpr = 1;
+  function size() { dpr = devicePixelRatio || 1; cv.width = cv.clientWidth * dpr; cv.height = cv.clientHeight * dpr; }
+  new ResizeObserver(size).observe(cv); size();
+
+  let playing = !reduce, t = 0, last = performance.now(), showRef = false;
+  let redNow = null, stHover = false, cardOpen = false, follow = false;
+  const hud = document.querySelector('#hud b'), stillEl = document.getElementById('still');
+
+  // hi-density versions of Toy Town's moving parts, used while the detail layer is showing
+  let HI = false;
+  const hiImg = sp => { if (!HI || !sp.hi) return null; const im = load(sp.hi.file); return im.complete && im.naturalWidth ? im : null; };
+  function drawPivot(sp, x, y, rot, sx, sy, skew) {
+    const hi = hiImg(sp), img = hi || IMG[sp.file]; if (!img.complete || !img.naturalWidth) return;
+    const q = hi ? sp.hi.q : 1, pv = sp.pivot || [sp.w / 2, sp.h / 2];
+    ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot);
+    if (skew) ctx.transform(1, skew, 0, 1, 0, 0);
+    if (sx !== 1 || sy !== 1) ctx.scale(sx, sy);
+    if (q !== 1) ctx.scale(1 / q, 1 / q);
+    ctx.drawImage(img, -pv[0] * q, -pv[1] * q); ctx.restore();
+  }
+  function drawPivotImg(sp, img, x, y, rot, sx) {
+    const pv = sp.pivot || [sp.w / 2, sp.h / 2];
+    ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot); if (sx !== 1) ctx.scale(sx, 1);
+    ctx.drawImage(img, -pv[0], -pv[1]); ctx.restore();
+  }
+  function pivotXY(sp) { const pv = sp.pivot || [sp.w / 2, sp.h / 2]; return [sp.x + pv[0], sp.y + pv[1]]; }
+
+  function frame(now) {
+    const dt = Math.min(.1, (now - last) / 1000); last = now; if (playing) t += dt;
+    requestAnimationFrame(frame);
+    if (!base) return;
+    const p0 = base.imageToViewerElementCoordinates(new OpenSeadragon.Point(0, 0), true);
+    const p1 = base.imageToViewerElementCoordinates(new OpenSeadragon.Point(W, 0), true);
+    const s = (p1.x - p0.x) / W;
+    const box = osdEl.clientWidth;
+    if (!(s > 0) || (box > 10 && s * W < box * .3)) { viewer.viewport.resize(new OpenSeadragon.Point(osdEl.clientWidth, osdEl.clientHeight), false); viewer.viewport.goHome(true); return; }
+    if (stillEl && !stillEl.hidden && base.getFullyLoaded && base.getFullyLoaded()) stillEl.hidden = true;
+    // fade the detail layer in as the base painting starts to be magnified (it is the same painting, only sharper)
+    const zp = s * dpr, op = FORCE === 'on' ? 1 : FORCE === 'off' ? 0 : Math.max(0, Math.min(1, (zp - .9) / .45));
+    if (detailItem && Math.abs(detailItem.getOpacity() - op) > .004) detailItem.setOpacity(op);
+    HI = op > .5;
+    hudEl.innerHTML = 'detail <b>' + Math.round(zp * 100) + '%</b>' + (redNow ? ' <b>&middot;</b> Red Line ' + where(redNow) : '');
+    if (follow && red && plan) {                                    // ride along: keep the locomotive in view
+      const st = redState(t - redT0), on = st.ph !== 'away' && st.s > red.on[0] - 40 * K;
+      const [fx, fy] = on ? at(red.r, Math.max(0, st.s)) : NW.anchor;
+      const tgt = base.imageToViewportCoordinates(fx, fy - 20 * K), cur = viewer.viewport.getCenter(true);
+      viewer.viewport.panTo(new OpenSeadragon.Point(cur.x + (tgt.x - cur.x) * .07, cur.y + (tgt.y - cur.y) * .07), true);
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * p0.x, dpr * p0.y);
+    if (showRef) { const FR = S.frame || [0, 0, W, H]; if (refImg.complete && refImg.naturalWidth) ctx.drawImage(refImg, FR[0], FR[1], FR[2], FR[3]); return; }
+    ctx.imageSmoothingQuality = 'high';
+    const view = [-p0.x / s, -p0.y / s, cv.clientWidth / s, cv.clientHeight / s];
+    const vis = (x, y, w, h) => x + w > view[0] && y + h > view[1] && x < view[0] + view[2] && y < view[1] + view[3];
+
+    // clouds
+    for (const [i, c] of byKind('cloud').entries()) {
+      const v = (5 + i * 1.5) * kk, x = ((c.x + c.w + t * v) % (W + c.w)) - c.w;
+      if (vis(x, c.y, c.w, c.h) && IMG[c.file].complete) ctx.drawImage(IMG[c.file], x, c.y);
+    }
+    // ocean wave marks that come and go
+    for (const w of waves) {
+      if (!vis(w.x - 10 * kk, w.y, w.w + 20 * kk, w.h) || !IMG[w.file].complete) continue;
+      const p = .5 + .5 * Math.sin(t * .22 * w.f + w.ph); ctx.globalAlpha = Math.pow(p, 2.5) * .85;
+      ctx.drawImage(IMG[w.file], w.x + Math.sin(t * .06 * w.f + w.ph) * 6 * kk, w.y);
+    }
+    ctx.globalAlpha = 1;
+    // river glints, moving with the current
+    ctx.lineCap = 'round';
+    for (const g of glints) {
+      let age = t - g.t0;
+      if (age > g.life || age < 0) { g.t0 = t; g.s = hash(t * 13.1 + g.off * 99) * (RV.length - 12); g.off = hash(t * 7.7 + g.s) - .5; g.life = 3 + hash(g.s) * 2.5; age = 0; }
+      const si = g.s + age * 3.2, i0 = Math.floor(si); if (i0 + 3 >= RV.length || !RVvis[i0] || !RVvis[i0 + 2]) continue;
+      const a = RV[i0], b = RV[i0 + 2], wd = (13 + 17 * i0 / RV.length) * K, dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1;
+      const x = a[0] + dx * (si - i0) / 2 - dy / n * g.off * wd * .55, y = a[1] + dy * (si - i0) / 2 + dx / n * g.off * wd * .55;
+      if (!vis(x - 20, y - 20, 40, 40)) continue;
+      const u = age / g.life; ctx.globalAlpha = Math.sin(u * Math.PI) * .7;
+      ctx.strokeStyle = '#eef4fa'; ctx.lineWidth = 1.2 * K;
+      ctx.beginPath(); ctx.moveTo(x - dx / n * 3.5 * K, y - dy / n * 3.5 * K); ctx.lineTo(x + dx / n * 3.5 * K, y + dy / n * 3.5 * K); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // lighthouse: a soft turning beam
+    if (S.lighthouse) {
+      const [lx, ly] = S.lighthouse, ang = t * .5, L = 150 * K, hw = .12;
+      if (vis(lx - L, ly - L, 2 * L, 2 * L)) {
+        const gr = ctx.createRadialGradient(lx, ly, 2 * K, lx, ly, L); gr.addColorStop(0, 'rgba(255,238,175,.34)'); gr.addColorStop(1, 'rgba(255,238,175,0)');
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(lx, ly); ctx.arc(lx, ly, L, ang - hw, ang + hw); ctx.closePath(); ctx.fill();
+        const hg = ctx.createRadialGradient(lx, ly, 0, lx, ly, 11 * K); hg.addColorStop(0, 'rgba(255,240,190,.5)'); hg.addColorStop(1, 'rgba(255,240,190,0)');
+        ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(lx, ly, 11 * K, 0, 6.283); ctx.fill();
+      }
+    }
+    // boats: wander inside their own patch of water, rock and pause
+    for (const [i, b] of byKind('boat').entries()) {
+      const [px, py] = pivotXY(b); const dr = b.drift || [-20 * kk, 20 * kk, -4 * kk, 4 * kk];
+      const ph = i * 2.1 + 1, nx = .55 * Math.sin(t * .031 + ph) + .3 * Math.sin(t * .083 + ph * 2) + .15 * Math.sin(t * .19 + ph * 3);
+      const ny = .6 * Math.sin(t * .027 + ph * 1.7) + .4 * Math.sin(t * .071 + ph);
+      const dx = (dr[0] + dr[1]) / 2 + (dr[1] - dr[0]) / 2 * .9 * nx, dy = (dr[2] + dr[3]) / 2 + (dr[3] - dr[2]) / 2 * .8 * ny + Math.sin(t * 1.4 + ph) * 1.6 * kk;
+      if (!vis(b.x + dx - 10, b.y + dy - 10, b.w + 20, b.h + 20)) continue;
+      drawPivot(b, px + dx, py + dy, .04 * Math.sin(t * 1.05 + ph) + .018 * Math.sin(t * 2.2 + ph * 1.3), 1, 1, 0);
+    }
+    // trees and palm fronds, back to front; whatever stands in front of each is redrawn over it
+    for (const m of movers) {
+      const hi = hiImg(m), img = hi || IMG[m.file]; if (!img.complete || !img.naturalWidth) continue;
+      const q = hi ? m.hi.q : 1;
+      if (!vis(m.x - 20 * kk, m.y, m.w + 40 * kk, m.h)) continue;
+      const wv = wind(m.x + m.pivot[0], t, m.ph);
+      if (m.kind === 'sway') {
+        const ever = m.cls === 'ever', amp = (ever ? 3.2 : 6.5) * K * m.f, wl = ever ? wind(m.x + m.pivot[0], t * .8, m.ph) : wv;
+        const n = 14, sh = Math.ceil(m.h / n);
+        for (let j = 0; j < n; j++) {
+          const sy = j * sh, hgt = Math.min(sh, m.h - sy); if (hgt <= 0) break;
+          const rel = Math.max(0, Math.min(1, (m.pivot[1] - (sy + hgt / 2)) / m.height));
+          ctx.drawImage(img, 0, sy * q, m.w * q, hgt * q, m.x + amp * wl * Math.pow(rel, 1.7), m.y + sy, m.w, hgt + .6);
+        }
+      } else {
+        const rot = .15 * m.f * (wv * .8 + .5 * Math.sin(t * (1.1 + .3 * m.f) + m.ph) * (.4 + .6 * gust(m.x, t)));
+        drawPivot(m, m.x + m.pivot[0], m.y + m.pivot[1], rot, 1, 1, 0);
+      }
+      const fr = hi && m.hi.front ? m.hi.front : m.front, fq = hi && m.hi.front ? q : 1;
+      if (fr) { const fi = load(fr.file); if (fi.complete && fi.naturalWidth) ctx.drawImage(fi, fr.x / fq, fr.y / fq, fr.w / fq, fr.h / fq); }
+    }
+    // chimney smoke
+    for (const ch of chimneys) {
+      if (playing && t - ch.last > 1.15) { ch.last = t; parts.push({ x: ch.x, y: ch.y, vx: (3 + 5 * gust(ch.x, t)) * kk, vy: -6.5 * kk, t0: t, life: 4.6, img: puffs[(Math.random() * puffs.length) | 0], big: false, small: true }); }
+    }
+    // windmill
+    for (const b of byKind('blades')) { const [px, py] = pivotXY(b); if (vis(b.x, b.y, b.w, b.h)) drawPivot(b, px, py, t * 1.1, 1, 1, 0); }
+    // steamer + wheel + its smoke
+    const st = byKind('steamer')[0], wh = byKind('wheel')[0];
+    if (st) {
+      const [px, py] = pivotXY(st); const dx = Math.sin(t * .2) * 16 * kk, dy = Math.sin(t * 1.5) * 1.2 * kk;
+      if (vis(st.x - 30 * kk, st.y - 60 * kk, st.w + 60 * kk, st.h + 60 * kk)) {
+        drawPivot(st, px + dx, py + dy, 0, 1, 1, 0);
+        if (wh) { const [wx, wy] = pivotXY(wh); drawPivot(wh, wx + dx, wy + dy, t * 2.2, 1, 1, 0); }
+      }
+      if (playing && now - (st._lp || 0) > 420) {
+        st._lp = now;
+        for (const ox of [-18, -8]) emit(px + dx + ox * K, py + dy - 56 * K, -4 * kk, t, false);
+      }
+    }
+    // trains
+    const drawn = [];
+    redNow = null;
+    for (const tr of trains) {
+      const isRed = tr === red && plan;
+      const st = isRed ? redState(t - redT0) : null;
+      if (isRed) redNow = st;
+      const cyc = tr.r.L + tr.len + 60 * kk;
+      const sHead = isRed ? st.s : ((tr.s0 + t * tr.speed) % cyc);
+      for (const v of tr.veh) {
+        // couplings take up the slack for a moment after the stop
+        const settle = isRed && st.ph === 'dwell' && v.off > 0 ? Math.exp(-st.u * 4.5) * Math.sin(st.u * 16 + v.off * .01) * 1.1 * kk : 0;
+        const sv = sHead - v.off + settle; if (sv < 0 || sv > tr.r.L) continue;
+        const [x, y] = at(tr.r, sv), a = at(tr.r, sv - 5 * K), b2 = at(tr.r, sv + 5 * K);
+        let dx = b2[0] - a[0], dy = b2[1] - a[1]; const n = Math.hypot(dx, dy) || 1; dx /= n; dy /= n;
+        const flip = dx < 0, rot = flip ? Math.atan2(-dy, -dx) : Math.atan2(dy, dx);
+        drawPivot(v.sprite, x, y, rot, flip ? -1 : 1, 1, 0);
+        if (isRed) {                                                  // into the shadow of the portal
+          const sh = smooth(NW.portal_s - 34 * K, NW.portal_s + 4 * K, sv) * (1 - smooth(NW.portal_s + 30 * K, NW.portal_s + 60 * K, sv)) * .62;
+          if (sh > .01) { const dk = darkOf(IMG[v.sprite.file]); if (dk) { ctx.globalAlpha = sh; drawPivotImg(v.sprite, dk, x, y, rot, flip ? -1 : 1); ctx.globalAlpha = 1; } }
+        }
+        drawn.push([x, y]);
+        if (v.sprite.kind !== 'loco' || !playing) continue;
+        const lx = (flip ? -1 : 1) * tr.stack[0], oy = tr.stack[1], c = Math.cos(rot), sn = Math.sin(rot);
+        const sx_ = x + c * lx - sn * oy, sy_ = y + sn * lx + c * oy;
+        if (!isRed) {
+          if (t - tr.lastPuff > .26 && sv > tr.on[0] && sv < tr.on[1]) { tr.lastPuff = t; emit(sx_, sy_, -dx * 9 * kk, t, true); }
+          continue;
+        }
+        const inTunnel = sv > NW.portal_s + 6 * K && sv < NW.exit_s + 8 * K, inHall = sv < tr.on[0];
+        if (st.ph === 'dwell') {                                      // idling: a little steam, then a whistle of steam before leaving
+          const gap = st.next < 1.0 ? .12 : .9;
+          if (t - tr.lastPuff > gap) { tr.lastPuff = t; parts.push({ x: sx_, y: sy_, vx: 2 * kk, vy: -9 * kk, t0: t, life: 3.2, img: puffs[(Math.random() * puffs.length) | 0], big: false, small: st.next >= 1.0 }); }
+        } else if (!inTunnel && !inHall && st.vel > 1) {               // chuffs come faster as the train speeds up
+          const gap = Math.max(.24, Math.min(.9, .26 * tr.speed / st.vel));
+          if (t - tr.lastPuff > gap) { tr.lastPuff = t; emit(sx_, sy_, -dx * 9 * kk, t, true); }
+        } else if (inTunnel && sv < NW.portal_s + 70 * K && t - tr.lastPuff > .45) {   // smoke drifts out of the mouth behind the train
+          tr.lastPuff = t; const [mx, my] = NW.mouth_top;
+          parts.push({ x: mx + (Math.random() - .5) * 6 * K, y: my, vx: -5 * kk, vy: -11 * kk, t0: t, life: 3.0, img: puffs[(Math.random() * puffs.length) | 0], big: false, small: false });
+        }
+      }
+    }
+    // occluder tiles over the trains: trees, hills and the station hall pass in front.
+    // Look ahead: start loading the tiles a train is about to reach, so the first pass never shows it in front.
+    for (const tr of trains) {
+      const sH = tr === red && plan ? (redNow ? redNow.s : -1) : ((tr.s0 + t * tr.speed) % (tr.r.L + tr.len + 60 * kk));
+      for (const ahead of [250 * kk, 500 * kk, 800 * kk]) {
+        const sa = sH + ahead; if (sa < 0 || sa > tr.r.L) continue; const [ax, ay] = at(tr.r, sa);
+        for (const k of [Math.floor(ax / OT) + '_' + Math.floor(ay / OT), Math.floor(ax / OT) + '_' + Math.floor((ay - 110 * kk) / OT)]) if (occSet.has(k)) occImg(k);
+      }
+    }
+    const seen = new Set(), rad = 110 * kk;
+    for (const [x, y] of drawn) {
+      for (let cx = Math.floor((x - rad) / OT); cx <= Math.floor((x + rad) / OT); cx++)
+        for (let cy = Math.floor((y - rad * 1.4) / OT); cy <= Math.floor((y + rad * .5) / OT); cy++) {
+          const key = cx + '_' + cy; if (seen.has(key) || !occSet.has(key)) continue; seen.add(key);
+          const im = occImg(key); if (im.complete && im.naturalWidth) ctx.drawImage(im, cx * OT, cy * OT);
+        }
+      if (HI && D) {                                                    // the 2x occluder inside Toy Town
+        const [rx, ry] = D.rect_px_f1, OH = D.occluder.tile;
+        for (let cx = Math.floor(((x - rad) - rx) * Q / OH); cx <= Math.floor(((x + rad) - rx) * Q / OH); cx++)
+          for (let cy = Math.floor(((y - rad * 1.4) - ry) * Q / OH); cy <= Math.floor(((y + rad * .5) - ry) * Q / OH); cy++) {
+            const key = 'h' + cx + '_' + cy; if (seen.has(key) || !occHiSet.has(cx + '_' + cy)) continue; seen.add(key);
+            const im = occHi[key] || (occHi[key] = Object.assign(new Image(), { src: 'occ_hi/' + cx + '_' + cy + '.png' + VQ }));
+            if (im.complete && im.naturalWidth) ctx.drawImage(im, rx + cx * OH / Q, ry + cy * OH / Q, OH / Q, OH / Q);
+          }
+      }
+    }
+    // the station: a warm glow at the windows while hovered or open
+    if (NW) {
+      const gA = (stHover ? .2 : 0) + (cardOpen ? .12 + .05 * Math.sin(t * 2.2) : 0);
+      if (gA > 0) {
+        const [gx, gy, rx, ry] = NW.glow;
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(gx, gy); ctx.scale(1, ry / rx);
+        const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, rx); gr.addColorStop(0, `rgba(255,214,140,${gA})`); gr.addColorStop(1, 'rgba(255,214,140,0)');
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, rx, 0, 6.283); ctx.fill(); ctx.restore();
+      }
+      placeUI(redNow);
+    }
+    // smoke
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i], age = t - p.t0; if (age > p.life || age < 0) { parts.splice(i, 1); continue; }
+      const u = age / p.life, sc = p.small ? .22 + u * .55 : (p.big ? .5 : .35) + u * (p.big ? 1.25 : .9);
+      const x = p.x + p.vx * age, y = p.y + p.vy * age;
+      if (!vis(x - 60 * kk, y - 60 * kk, 120 * kk, 120 * kk) || !IMG[p.img.file].complete) continue;
+      ctx.globalAlpha = (1 - u) * (u < .12 ? u / .12 : 1) * (p.small ? .55 : .92);
+      drawPivot(p.img, x, y, 0, sc, sc, 0);
+    }
+    ctx.globalAlpha = 1;
+    // flags
+    for (const [i, f] of byKind('flag').entries()) {
+      const [px, py] = pivotXY(f); if (!vis(f.x, f.y, f.w, f.h)) continue;
+      drawPivot(f, px, py, 0, .9 + .1 * Math.sin(t * 4.2 + i), 1, Math.sin(t * 3.1 + i * 1.3) * .1);
+    }
+  }
+  requestAnimationFrame(frame);
+
+  // ---------- controls
+  const play = document.getElementById('play'), ref = document.getElementById('ref');
+  const setPlay = v => { playing = v; play.setAttribute('aria-pressed', v); play.textContent = v ? 'Pause motion' : 'Play motion'; };
+  setPlay(playing); window.__setPlay = setPlay;
+  play.onclick = () => setPlay(!playing);
+  ref.onclick = () => { showRef = !showRef; ref.setAttribute('aria-pressed', showRef); ref.textContent = showRef ? 'Show pass 4' : 'Show reference'; };
+  document.getElementById('zin').onclick = () => viewer.viewport.zoomBy(1.6);
+  document.getElementById('zout').onclick = () => viewer.viewport.zoomBy(1 / 1.6);
+  document.getElementById('home').onclick = () => viewer.viewport.goHome();
+  // ---------- the station: hover, click, the card that stays with it
+  const tag = document.getElementById('tag'), card = document.getElementById('card'), live = document.getElementById('card-live');
+  const stage = document.querySelector('.stage');
+  const inStation = p => NW && p.x >= NW.hit[0] && p.x <= NW.hit[2] && p.y >= NW.hit[1] && p.y <= NW.hit[3];
+  const imgPt = (ex, ey) => base.viewerElementToImageCoordinates(new OpenSeadragon.Point(ex, ey));
+  osdEl.addEventListener('pointermove', e => {
+    if (!base || e.pointerType === 'touch') return;
+    const r = osdEl.getBoundingClientRect(); const h = inStation(imgPt(e.clientX - r.left, e.clientY - r.top));
+    if (h !== stHover) { stHover = h; viewer.canvas.style.cursor = h ? 'pointer' : ''; }
+  });
+  osdEl.addEventListener('pointerleave', () => { stHover = false; viewer.canvas.style.cursor = ''; });
+  let lastFocus = null;
+  function openCard() { if (cardOpen) return; cardOpen = true; card.hidden = false; lastFocus = document.activeElement; card.querySelector('#card-x').focus({ preventScroll: true }); }
+  function closeCard() { if (!cardOpen) return; cardOpen = false; card.hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true }); }
+  viewer.addHandler('canvas-click', e => {
+    if (!e.quick || !base) return;
+    if (inStation(imgPt(e.position.x, e.position.y))) { openCard(); e.preventDefaultAction = true; }
+    else if (cardOpen) closeCard();
+  });
+  viewer.addHandler('canvas-drag', () => { if (follow) setFollow(false); });
+  document.getElementById('card-x').onclick = closeCard;
+  addEventListener('keydown', e => { if (e.key === 'Escape') closeCard(); });
+  const fitMap = (x, y, w, h) => { const FR = S.frame || [0, 0]; viewer.viewport.fitBounds(base.imageToViewportRectangle(x * K + FR[0], y * K + FR[1], w * K, h * K)); };
+  document.getElementById('card-zoom').onclick = () => fitMap(20, 70, 260, 170);
+  document.getElementById('openStation').onclick = () => { if (!base) return; fitMap(-20, 40, 460, 240); openCard(); };
+  const fmt = sec => sec < 1.5 ? 'now' : 'in ' + Math.round(sec) + ' s';
+  function placeUI(st) {
+    const pt = base.imageToViewerElementCoordinates(new OpenSeadragon.Point(NW.anchor[0], NW.anchor[1]));
+    const W_ = stage.clientWidth, H_ = stage.clientHeight;
+    if (stHover && !cardOpen) {
+      const tp = base.imageToViewerElementCoordinates(new OpenSeadragon.Point(NW.tag[0], NW.tag[1]));
+      tag.hidden = false; tag.style.left = Math.max(70, Math.min(W_ - 70, tp.x)) + 'px'; tag.style.top = Math.max(34, tp.y) + 'px';
+    } else tag.hidden = true;
+    if (!cardOpen) return;
+    const narrow = W_ < 620 || H_ < 420;                          // small screens: the card sits under the map, not over it
+    if (narrow && card.parentNode === stage) { stage.after(card); card.classList.add('docked'); card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+    else if (!narrow && card.parentNode !== stage) { stage.appendChild(card); card.classList.remove('docked'); }
+    if (!narrow) {
+      const cw = card.offsetWidth, ch = card.offsetHeight;
+      let x = pt.x + 18, y = pt.y - ch * .45;
+      if (x + cw > W_ - 10) x = Math.max(10, pt.x - cw - 18 - (NW.anchor_w || 0));
+      card.style.left = Math.round(Math.max(10, Math.min(W_ - cw - 10, x))) + 'px';
+      card.style.top = Math.round(Math.max(10, Math.min(H_ - ch - 10, y))) + 'px';
+    }
+    let msg = '&nbsp;';
+    if (st) {
+      if (st.ph === 'dwell') msg = '<b>The Red Line train is at the platform.</b> It leaves ' + fmt(st.next) + '.';
+      else if (st.ph === 'arrive') msg = '<b>A train is pulling in.</b> It leaves ' + fmt(st.next) + '.';
+      else if (st.ph === 'depart') msg = '<b>The train is leaving now</b>, bound for Toy Town.';
+      else msg = 'The train is ' + where(st) + '. <b>Next train ' + fmt(st.next) + '.</b>';
+    }
+    if (live._m !== msg) { live._m = msg; live.innerHTML = msg; }
+  }
+  const followBtn = document.getElementById('follow');
+  function setFollow(v) {
+    follow = v; followBtn.setAttribute('aria-pressed', v); followBtn.textContent = v ? 'Stop riding' : 'Ride along';
+    if (v && base) { const zp_ = viewer.viewport.getZoom(true); const want = base.imageToViewportZoom(.85 / (devicePixelRatio || 1)); if (zp_ < want * .7) viewer.viewport.zoomTo(want); }
+  }
+  followBtn.onclick = () => setFollow(!follow);
+  document.getElementById('card-ride').onclick = () => { closeCard(); setFollow(true); };
+  document.getElementById('again').onclick = () => { redT0 = t; parts.length = 0; if (base) fitMap(20, 60, 520, 300); };
+  document.querySelectorAll('[data-r]').forEach(b => b.onclick = () => {
+    if (!base) return; const [x, y, w, h] = b.dataset.r.split(',').map(Number);
+    const FR = S.frame || [0, 0]; viewer.viewport.fitBounds(base.imageToViewportRectangle(x * K + FR[0], y * K + FR[1], w * K, h * K));
+  });
+  }
+})();
+</script>

@@ -42,6 +42,9 @@ __pycache__/
 /usmap/viewer4_test/
 /usmap/viewer5/
 /usmap/viewer10/
+/usmap/viewer10_orig/
+/usmap/viewer_nw/
+/usmap/out5/scene5_nw.json
 /usmap/engine10/cache/
 /usmap/engine10/out/*
 !/usmap/engine10/out/*.json

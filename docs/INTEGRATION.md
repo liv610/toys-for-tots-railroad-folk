@@ -140,3 +140,53 @@ The train in this image is the one painted into the pass 5 still. In the viewer 
    - an fps measurement.
 
    Then publish a review page.
+
+## 6. Result of the Northwest test (9 November 2026)
+
+Review build: published as the artifact "Northwest Railway Test". Rebuild it with:
+
+```
+cd usmap && export PYTHONPATH=../folk2:../styles2:.:lab8:engine10
+python3 engine10/nw10.py build      # 1x and 2x tiles from the branch scene (only knoll tiles repaint)
+python3 engine10/nw10.py viewer     # viewer_nw/ (the rebuilt original prototype stays in viewer10/)
+node engine10/test_nw.js http://localhost:PORT/ OUTDIR openseadragon.min.js
+```
+
+**Artwork.** `engine10/tunnel10.py` adds two scene elements, written into `out5/scene5_nw.json` by `nw10.py`. No
+existing engine file is edited.
+- **The knoll** (`knoll10`, depth 336) is a pass-3 hill painted with `U3.paint_hill3`, the painter every other hill
+  uses.
+- **Its front** (`tunnel10`, depth 336.3) is the same hill, painted only where it stands in front of the track. It also
+  carries the knoll's trees (`tall_fir`, `layered_fir`, one autumn tree) and a stone portal in the style of the map's
+  own `portal3`: a mossy cutting, a rough-stone arch, radial joints and a deep mouth.
+
+**Depth order, not geometry.** Two lessons came from this:
+- **Depth precision.** The cache stores depth as float16. At 336 its step is 0.25, so a nearer element must be at
+  least 0.25 deeper, or it reads as the track's own depth and the occluder misses it.
+- **Painting order.** The engine records an element's depth only where it changes a pixel. The front part of the
+  knoll must therefore not be painted twice; repainting identical pixels leaves them at the back depth. The knoll
+  is split into its back part and its front part with complementary soft masks.
+
+**Tiles.** At 1×, 34 of 35 tiles are pixel-identical to the original prototype. In the 2× Toy Town layer, 18 of 20 are.
+The 3 changed tiles all contain the knoll (`engine10/out/nw_tile_check.json`). The 2× layer's rectangle starts at
+canvas x 2560 (map x ≈ 568), which is inside the knoll, so it had to be rebuilt from the branch scene too. Without
+that rebuild, a hard seam appeared when zooming in.
+
+**Viewer** (`engine10/viewer_nw_src.html`, built from `viewer10_src.html`):
+- **Station stop:** an eased stop at Northwest Harbor, about 5 s with idling steam and couplings settling, then a
+  slow pull-away whose chuffs speed up with the train.
+- **Tunnel entry:** the vehicles darken in the portal's shadow, smoke stops inside the tunnel, and a little smoke
+  drifts out of the mouth.
+- **Occluder loading:** the occluder tiles along the route are preloaded and looked up ahead of each train.
+- **Station hover and click:** hovering shows a label and a window glow; clicking opens a card that follows the
+  station as you pan and zoom. The card reports the train's live position and has "Zoom to the station" and "Ride
+  the Red Line" buttons. On small screens it docks under the map.
+- **Ride along** keeps the camera on the train.
+
+**Checks** (`engine10/out/nw_viewer_test.json`, headless Chromium):
+- no console errors on desktop or phone;
+- 60 fps at the station and while riding along;
+- the card opens at 35%, 73% and 153% zoom, and by tapping on the phone;
+- at 509% zoom the train sits on the painted rails.
+
+Frames: `docs/integration_nw_*.jpg`.
