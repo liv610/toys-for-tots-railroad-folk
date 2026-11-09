@@ -319,8 +319,9 @@ def build():
     # the tall house
     wall([(203, 760), (300, 760), (300, 520), (252, 446), (205, 520)], BLUE, fleck=.6)
     eave_shadow([(205, 522), (252, 450), (299, 522)], 8)
-    S([(203, 522), (252, 446), (301, 522)], 4.2, CREAM, a=1, dry=.15, taper=(0, 0))
-    snow_edge([(196, 523), (252, 441), (309, 523)], 11.0, drip=.35)
+    shaded([(190, 528), (252, 436), (314, 528), (308, 534), (252, 448), (196, 534)], ['#a8463c', ROOF, ROOF_D], light=(-1, -.4), wob=.2, rough=.4, edge_dark=.2)
+    S([(200, 531), (252, 449), (304, 531)], 3.6, CREAM, a=1, dry=.15, taper=(0, 0))
+    snow_edge([(186, 527), (252, 432), (318, 527)], 13.0, drip=.4)
     window(233, 485, 268, 521, True)
     window(212, 541, 236, 572, True)
     window(258, 542, 290, 580, False)
@@ -338,8 +339,12 @@ def build():
     for yy in (742, 744):
         S([(100, yy), (303, yy)], .6, BLUE_D, a=.4, dry=.4)
     eave_shadow([(102, 664), (200, 568), (300, 664)], 10)
-    S([(90, 666), (200, 562), (312, 666)], 5.0, CREAM, a=1, dry=.15, taper=(0, 0))
-    snow_edge([(84, 668), (200, 555), (318, 668)], 13.0, drip=.4)
+    # a thick roof edge with a deep overhang: the red roof slab seen end-on, its shadowed underside, the trim
+    slab = [(70, 676), (200, 548), (330, 676), (322, 684), (200, 562), (78, 684)]
+    shaded(slab, ['#a8463c', ROOF, ROOF_D], light=(-1, -.4), wob=.2, rough=.4, edge_dark=.2)
+    S([(80, 684), (200, 564), (320, 684)], 3.0, ROOF_D, a=.8, dry=.2, taper=(0, 0))
+    S([(88, 682), (200, 566), (312, 682)], 4.4, CREAM, a=1, dry=.15, taper=(0, 0))
+    snow_edge([(66, 674), (200, 544), (334, 674)], 15.0, drip=.45)
     window(177, 601, 218, 641, True)
     window(126, 655, 160, 703, True)
     window(182, 655, 215, 703, False)
