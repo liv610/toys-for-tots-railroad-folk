@@ -1,0 +1,75 @@
+<title>Toy Town Square Study</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one study sheet; the new painting first, then side-by-sides, close-ups, and an honest list of what is left */
+:root{--ocean:#14253b;--ink:#f3ead8;--muted:#aeb7c6;--rule:#2c4363;--accent:#e9a861;--card:#1b3048;--good:#9fd0a0;--mid:#e9c46a;--bad:#ef9a86;
+  --display:"Young Serif",Georgia,serif;--mono:"DM Mono",ui-monospace,Menlo,monospace;color-scheme:dark}
+body{background:var(--ocean);color:var(--ink);font:15px/1.6 var(--mono);margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding-block:32px 72px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:44px}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance;line-height:1.15}
+h1{font-size:clamp(26px,4vw,40px)} h2{font-size:22px} h3{font-size:17px}
+p{margin:0;max-width:74ch;color:var(--muted)} p b{color:var(--ink);font-weight:500}
+.eyebrow{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+figure{margin:0;display:grid;gap:8px;min-width:0}
+figure img{display:block;width:100%;height:auto;border-radius:3px}
+figcaption{font-size:12.5px;color:var(--muted)}
+section{display:grid;gap:16px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:18px}
+.three{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px}
+ul{margin:0;padding-left:18px;display:grid;gap:6px;max-width:82ch;color:var(--muted)} li b{color:var(--ink);font-weight:500}
+.verdict{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:20px 22px;display:grid;gap:12px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;padding:12px 0;border-top:1px solid var(--rule);align-items:baseline}
+.row .q{color:var(--ink)} .row .a{grid-column:1/3;color:var(--muted)}
+.pill{font:500 11px var(--mono);padding:2px 9px;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
+.good{color:var(--good)} .mid{color:var(--mid)} .bad{color:var(--bad)}
+</style>
+<div class="wrap">
+<header style="display:grid;gap:10px">
+  <span class="eyebrow">Toy Town &middot; step 1 &middot; quality study &middot; engine brushes only</span>
+  <h1>One storefront and two Marines, painted closer</h1>
+  <p>A close-up of the Toy Town square, painted only with the map's own gouache brush and stipple. It tests whether the engine can get from "looks like SVG" toward your reference. Everything has a light source: lamps, lit windows and the shop window shade every surface, and every object casts a shadow on the cobbles.</p>
+</header>
+<section>
+  <figure><img src="study.jpg" alt="Painted close-up of the Toy Town square at dusk: a yellow Toys for Tots shop between a pink and a red house, two Marines handing over a present on the cobbles"><figcaption>The study, 3000 &times; 2100, shown reduced</figcaption></figure>
+</section>
+<section>
+  <span class="eyebrow">Where it started, and where it is aiming</span>
+  <div class="two">
+    <figure><img src="today.jpg" alt="Today's Toy Town square at its sharpest zoom"><figcaption>Today: the square in the prototype, at its sharpest 2&times; zoom</figcaption></figure>
+    <figure><img src="reference.jpg" alt="Your reference image"><figcaption>Your reference: the level of detail to aim for</figcaption></figure>
+  </div>
+</section>
+<section>
+  <span class="eyebrow">At full size</span>
+  <div class="three">
+    <figure><img src="study_marines.jpg" alt="The two Marines at full resolution"><figcaption>The Marines: different builds, skin tones and leans; eyes with whites and catchlights; lit and shadowed sides; gloves, belts, shoulder boards and the blood stripe; contact and cast shadows</figcaption></figure>
+    <figure><img src="study_window.jpg" alt="The toy shop window at full resolution"><figcaption>The shop window: a rocking horse, a toy train, a teddy on a shelf, presents, string lights, glazing bars</figcaption></figure>
+    <figure><img src="study_sign.jpg" alt="The sign and lamps at full resolution"><figcaption>The sign: a painted board with brushed, slightly uneven lettering, under gooseneck lamps</figcaption></figure>
+  </div>
+</section>
+<section class="verdict">
+  <span class="eyebrow">Honest assessment</span>
+  <h2>A clear step away from "SVG", not yet at the reference</h2>
+  <div class="row"><span class="q">Does it still look like vector shapes?</span><span class="pill mid">Much less</span>
+    <span class="a">Every surface is now a field of brush marks with light falling across it, and the figures have shadows and faces. The edges of the buildings and awnings are still very straight, so the street reads as tidy illustration more than hand painting.</span></div>
+  <div class="row"><span class="q">The Marines</span><span class="pill mid">Better, not charming yet</span>
+    <span class="a">They have faces, uniform detail and weight on the ground, and they are not mirror images. The bodies are still built from stiff blocks, especially the straight legs and boxy coats, and the hands meet the present rather than holding it. They need softer, more rounded tailoring and a little gesture, such as one head tilted toward the other.</span></div>
+  <div class="row"><span class="q">Light and atmosphere</span><span class="pill good">Working</span>
+    <span class="a">The evening light is the biggest gain: warm pools under the lamps, glowing windows, and colour that cools away from the light. This is what makes the reference feel alive, and the engine can do it.</span></div>
+  <div class="row"><span class="q">Texture</span><span class="pill mid">Too even</span>
+    <span class="a">The walls use one stipple everywhere, so they read as sandpaper. The reference varies its marks: smooth stucco, visible stone blocks around the door, brick. The cobbles work, but they need clearer joints and fewer bright specks.</span></div>
+  <div class="row"><span class="q">Detail density</span><span class="pill bad">Below the reference</span>
+    <span class="a">The reference has three or four times as many small things: bow-tied garlands on every sill, a lamp at each door, poinsettias, a bench with ironwork, a nutcracker under its own lights, wreaths on the door. Much of it is now possible, since the painters exist (garland, bow, wreath, planter, lamp, present, bench). It is a matter of placing and tuning many more of them.</span></div>
+</section>
+<section>
+  <span class="eyebrow">Next, before the characters can talk</span>
+  <ul>
+    <li><b>Marines, round 2:</b> rounded tailoring, bent knees and a step, heads turned to each other, fingers on the present, and a mouth that can open, which is the hook for speech.</li>
+    <li><b>Varied materials:</b> smooth stucco with soft patches, a stone surround on the toy shop's door, real brickwork on the red house.</li>
+    <li><b>Hand-drawn edges:</b> slightly wavering cornices, awnings that sag a little, windows that are not identical.</li>
+    <li><b>More of the reference's detail:</b> garlands with bows on every sill, door lamps, the Christmas tree with its own lights, a few more people.</li>
+    <li><b>Then put it in the map:</b> this becomes Toy Town's deepest zoom, fading in like today's 2&times; layer, with the Marines as separate animated sprites.</li>
+  </ul>
+</section>
+</div>
