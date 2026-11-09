@@ -22,7 +22,7 @@ CODE = ['usmap/engine10/tunnel10.py']
 
 KNOLL = dict(cx=514.0, base=372.0, w=192.0, h=86.0, kind='moss', seed_hill=9101,
              trees=[(-16, 38, 'fir'), (12, 46, 'lfir'), (40, 34, 'fir'), (66, 28, 'orange')],
-             portal=244, cover=60.0, mouth_w=46.0, mouth_h=46.0, ring=7.0, tilt=1.5)
+             portals=[244, 292], face=0.9, cover=62.0, mouth_w=36.0, mouth_h=45.0, ring=6.5)
 
 def build_scene():
     sc = json.load(open(R.SCENE))
@@ -80,10 +80,10 @@ def finish_viewer(move=True):
     Z = C.assemble(1, None, store='f1nw', what='z')[0]
     zr = np.array([Z[int(round(y)), int(round(x))] for x, y in P])
     hid = np.nonzero(np.abs(zr - 336.25) < 1e-3)[0]
-    iL = off + KNOLL['portal']; hid = hid[hid >= iL - 4]
+    iL = off + KNOLL['portals'][0]; hid = hid[hid >= iL - 4]
     S5 = json.load(open(SCENE_NW)); Pm = np.array(S5['routes']['red']['points'])
     via = [i for i in range(len(Pm)) if 300 <= Pm[i][0] <= 410 and 100 <= i <= 230]
-    foot = Pm[KNOLL['portal']] + [0, 11.0]
+    foot = Pm[KNOLL['portals'][0]] + [0, 4.0]
     mouth = px(foot[0] + 4, foot[1] - KNOLL['mouth_h'] * .78)
     st = STATION
     nw = dict(stop_s=float(A[off + STOP_I]), dwell=DWELL, creep=CREEP, pull=PULL,
@@ -92,7 +92,7 @@ def finish_viewer(move=True):
               hit=px(st['hit'][0], st['hit'][1]) + px(st['hit'][2], st['hit'][3]), anchor=px(*st['anchor']), anchor_w=(st['hit'][2] - st['hit'][0]) * K,
               tag=px(*st['tag']), glow=px(st['glow'][0], st['glow'][1]) + [st['glow'][2] * K, st['glow'][3] * K])
     # occluder tiles along the red line from the station to past the tunnel: loaded when the page starts
-    keys = sorted({f'{int(x // 512)}_{int((y - dy) // 512)}' for x, y in P[:off + KNOLL['portal'] + 140] for dy in (0, 60 * K)})
+    keys = sorted({f'{int(x // 512)}_{int((y - dy) // 512)}' for x, y in P[:off + KNOLL['portals'][1] + 60] for dy in (0, 60 * K)})
     nw['occ_preload'] = [k_ for k_ in keys if [int(v) for v in k_.split('_')] in man['occluder']['tiles']]
     man['nw'] = nw
     print('nw', {k_: (round(v, 1) if isinstance(v, float) else v) for k_, v in nw.items() if k_ not in ('hit', 'glow')}, 'hidden points', len(hid))

@@ -24,10 +24,10 @@
  },
  "nw": {
   "portal_s": 1801.1429806148049,
-  "exit_s": 2211.607231659946,
+  "exit_s": 2095.2043783267973,
   "stop_s": 410.55498509568866
  },
- "fps_national": 45,
+ "fps_national": 43,
  "fps_station": 60,
  "hud_maxzoom": "detail 509% · Red Line heading for Mossy Knoll",
  "d14_card_far": {
@@ -40,7 +40,7 @@
  },
  "d16_card_near": {
   "visible": true,
-  "live": "The train is in the tunnel. Next train in 47 s."
+  "live": "The train is in the tunnel. Next train in 48 s."
  },
  "card_closed_by_escape": true,
  "fps_ride": 60,

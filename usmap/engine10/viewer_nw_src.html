@@ -131,7 +131,7 @@ button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);b
       <ul>
         <li><strong>The station stop.</strong> The red train creeps out of the Northwest Harbor hall, eases to a stop at the platform, idles with a little steam, chuffs, and pulls away. <strong>Watch the departure</strong> starts it again.</li>
         <li><strong>The viaduct.</strong> The train runs along the deck, and the autumn trees in front of the arches stay in front of it.</li>
-        <li><strong>The tunnel.</strong> New in this test: a small wooded knoll with a stone portal, just east of the viaduct. The train darkens as it enters, its smoke stops and drifts out of the mouth, and it comes back into view from behind the knoll's shoulder.</li>
+        <li><strong>The tunnel.</strong> New in this test: a small wooded knoll with two stone portals, just east of the viaduct, each turned to face along the line. The train runs into the west mouth, darkening in its shadow, its smoke stops and drifts back out, and it comes out of the east mouth into the light.</li>
         <li><strong>The station.</strong> Hover over the Northwest Harbor hall and click it. The card stays with the station as you pan and zoom.</li>
       </ul>
     </section>
@@ -140,7 +140,7 @@ button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);b
       <ul>
         <li>One new piece of artwork: the knoll and its portal, painted by the same engine with the map's own hill, tree and stone painters.</li>
         <li>Only the tiles that hold the knoll were repainted. At 1&times;, 34 of the 35 map tiles are pixel-identical to the original prototype; in Toy Town's 2&times; layer, 18 of 20 are. The 3 changed tiles all contain the knoll.</li>
-        <li>No heightmap. The tunnel works through the existing depth order: the knoll's face is painted just in front of the track, so the occluder hides the train inside it.</li>
+        <li>No heightmap. The tunnel works through the existing depth order: between the two portal faces the knoll is painted just in front of the track, so the occluder hides the train inside it. The split follows the line where the track meets each face.</li>
       </ul>
     </section>
     <section>
@@ -459,7 +459,8 @@ button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);b
         const flip = dx < 0, rot = flip ? Math.atan2(-dy, -dx) : Math.atan2(dy, dx);
         drawPivot(v.sprite, x, y, rot, flip ? -1 : 1, 1, 0);
         if (isRed) {                                                  // into the shadow of the portal
-          const sh = smooth(NW.portal_s - 34 * K, NW.portal_s + 4 * K, sv) * (1 - smooth(NW.portal_s + 30 * K, NW.portal_s + 60 * K, sv)) * .62;
+          const sh = Math.max(smooth(NW.portal_s - 34 * K, NW.portal_s + 4 * K, sv) * (1 - smooth(NW.portal_s + 30 * K, NW.portal_s + 60 * K, sv)),
+                              (1 - smooth(NW.exit_s - 4 * K, NW.exit_s + 34 * K, sv)) * smooth(NW.exit_s - 60 * K, NW.exit_s - 30 * K, sv)) * .62;   // into the shadow of a portal, and out of it
           if (sh > .01) { const dk = darkOf(IMG[v.sprite.file]); if (dk) { ctx.globalAlpha = sh; drawPivotImg(v.sprite, dk, x, y, rot, flip ? -1 : 1); ctx.globalAlpha = 1; } }
         }
         drawn.push([x, y]);

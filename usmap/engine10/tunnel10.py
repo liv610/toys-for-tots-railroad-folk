@@ -28,12 +28,39 @@ def _top_at(p, x):
     top = knoll_poly(p)[:40]
     return float(np.interp(x, top[:, 0], top[:, 1]))
 
+def _span_clip(c, x0, x1, ytop, ybot, feather):
+    """A soft clip mask (canvas pixels) for x0..x1, ytop..ybot in map units."""
+    import cv2
+    m = c.mask([(x0, ytop), (x1, ytop), (x1, ybot), (x0, ybot)], wob=0, rough=0)
+    if m is None: return None
+    x, y, mm = m
+    mm = cv2.GaussianBlur(mm, (0, 0), feather * c.k)
+    full = np.zeros((c.H, c.W), np.float32); h, w = mm.shape; full[y:y + h, x:x + w] = mm
+    return full
+
+def _unit(v):
+    v = np.asarray(v, float); return v / (np.hypot(*v) + 1e-9)
+
+def portal_frame(P, i, side, face):
+    """Where a portal stands and which way it faces. Its face is a vertical plane across the track at P[i], turned to
+    face along the line (toward the oncoming train at the entrance, toward the open country at the exit) and a little
+    toward the viewer, so the opening reads as a mouth the train runs into, not a doorway it runs past.
+    Returns foot (track centre at the face), d (the face's direction on the ground, pointing toward the viewer),
+    nrm (the way the face looks), t (track direction)."""
+    t = _unit(P[min(i + 4, len(P) - 1)] - P[max(i - 4, 0)])
+    nrm = _unit((-t if side == 'in' else t) + np.array([0.0, face]))
+    d = np.array([-nrm[1], nrm[0]]); d = d if d[1] > 0 else -d
+    return np.array(P[i], float), d, nrm, t
+
 def front_span(c, p, routes):
-    """The part of the knoll that stands in front of the track: from just inside the portal eastward, from above the
-    train down to the knoll's foot. A soft mask in canvas pixels."""
-    P = routes['red']['P']; iL = p['portal']
-    x0 = float(P[iL][0]) - (p['mouth_w'] / 2 + p['ring']) * .55
-    return _span_clip(c, x0, p['cx'] + p['w'] / 2 + 30, float(P[iL][1]) - p['cover'], p['base'] + 10, .6)
+    """The part of the scene in front of the hidden track: between the vertical lines where the track meets the two
+    portal faces (the train's own plane meets a vertical face along a vertical line), from above the train down to
+    the knoll's foot. A soft-edged mask in canvas pixels."""
+    P = routes['red']['P']; iL, iR = p['portals']
+    ys = P[iL:iR + 1, 1]
+    m = _span_clip(c, float(P[iL][0]), float(P[iR][0]), float(ys.min()) - p['cover'], float(ys.max()) + 16, .01)
+    # hard-edged on purpose: the two halves are painted by different elements, and a soft edge would leave a pale line
+    return None if m is None else (m > .5).astype(np.float32)
 
 def _clipped(c, mask, fn):
     """Run a painter with every clip it sets intersected with mask."""
@@ -47,15 +74,19 @@ def _clipped(c, mask, fn):
         del c.set_clip
         c.set_clip(None)
 
+def _scene(c, p, routes):
+    U3.paint_hill3(p['cx'], p['base'], p['w'], p['h'], p['kind'], p['seed_hill'])
+    P = routes['red']['P']
+    for i, side in zip(p['portals'], ('in', 'out')): portal(c, P, i, side, p)
+
 def knoll(p, routes):
-    """The knoll behind the track, everywhere except the part that stands in front of it (painted by tunnel()).
-    Splitting it this way matters: the engine records an element's depth only where it changes a pixel, so the front
-    part must not be painted twice over itself, or its pixels would keep the back depth and the occluder miss them."""
+    """Behind the track: the knoll and both portals, everywhere except the span in front of the hidden track.
+    Each pixel is painted by exactly one of the two elements: the engine records an element's depth only where it
+    changes a pixel, so painting the same thing twice would leave the front at the back depth."""
     c = B.c
     span = front_span(c, p, routes)
-    paint = lambda: U3.paint_hill3(p['cx'], p['base'], p['w'], p['h'], p['kind'], p['seed_hill'])
-    if span is None: paint()
-    else: _clipped(c, 1 - span, paint)
+    if span is None: _scene(c, p, routes)
+    else: _clipped(c, 1 - span, lambda: _scene(c, p, routes))
 
 def knoll_trees(p):
     for j, (dx, hh, kd) in enumerate(p['trees']):
@@ -65,78 +96,75 @@ def knoll_trees(p):
         elif kd == 'lfir': U2.layered_fir(x, y, hh, sd)
         else: U2.big_tree(x, y, hh, kd, sd)
 
-def _span_clip(c, x0, x1, ytop, ybot, feather):
-    """A soft clip mask (canvas pixels) for x0..x1, ytop..ybot in map units."""
-    poly = [(x0, ytop), (x1, ytop), (x1, ybot), (x0, ybot)]
-    m = c.mask(poly, wob=0, rough=0)
-    if m is None: return None
-    x, y, mm = m
-    import cv2
-    mm = cv2.GaussianBlur(mm, (0, 0), feather * c.k)
-    full = np.zeros((c.H, c.W), np.float32); h, w = mm.shape; full[y:y + h, x:x + w] = mm
-    return full
-
 def tunnel(p, routes):
-    """The knoll's face in front of the track, from the portal eastward, then the portal.
-    The train enters the portal and comes back into view from behind the knoll's eastern shoulder."""
+    """In front of the track: the same knoll and portals inside the span (so the train is hidden between the two
+    faces and goes into each mouth along the face's own line), then the trees on the knoll's crown."""
     c = B.c
-    P = routes['red']['P']; iL = p['portal']
     span = front_span(c, p, routes)
-    if span is not None:
-        _clipped(c, span, lambda: U3.paint_hill3(p['cx'], p['base'], p['w'], p['h'], p['kind'], p['seed_hill']))
+    if span is not None: _clipped(c, span, lambda: _scene(c, p, routes))
     knoll_trees(p)
-    portal(c, P, iL, p)
 
-def portal(c, P, i, p):
-    """In the map's own portal style (usmap3.portal3): a mossy cutting, a rough-stone arch, a deep mouth with a
-    lighter floor, radial joints; sized for the train, a little irregular, the track running into it."""
-    r = np.random.RandomState(p['seed_hill'] + 11)
-    x, y = float(P[i][0]) + p.get('dx', 0.0), float(P[i][1]) + U3.TW * 1.04
-    t = P[min(i + 4, len(P) - 1)] - P[max(i - 4, 0)]; t = t / (np.hypot(*t) + 1e-9)
+def portal(c, P, i, side, p):
+    """A stone portal in the map's own style (usmap3.portal3: mossy cutting, rough-stone arch, radial joints, deep
+    mouth), standing on a face turned along the track, so its arch is drawn foreshortened on that face."""
+    r = np.random.RandomState(p['seed_hill'] + (11 if side == 'in' else 29))
+    foot, d, nrm, t = portal_frame(P, i, side, p['face'])
+    foot = foot + [0, U3.TW * .35]
     iw, ih, ring = p['mouth_w'], p['mouth_h'], p['ring']
-    tilt = p.get('tilt', 1.5)                                      # the right side sits a little lower: hand-set, not drawn
-    def prof(w, h, n=26, jit=0.0, pw=.75):
-        out = []
+    def prof(w, h, n=26, jit=0.0, pw=.75, ctr=None, dy=0.0):
+        cf = foot if ctr is None else ctr; out = []
         for u in np.linspace(0, 1, n):
-            px = x - w / 2 + w * u; py = y + tilt * u - math.sin(u * math.pi) ** pw * h * (1 + .03 * math.sin(u * 5.0))
-            if jit: px += r.uniform(-jit, jit); py += r.uniform(-jit, jit)
-            out.append((px, py))
+            b = cf + d * (u - .5) * w
+            hh = math.sin(u * math.pi) ** pw * h * (1 + .03 * math.sin(u * 5.0 + (1 if side == 'in' else 3)))
+            q = b + [0, dy - hh]
+            if jit: q = q + r.uniform(-jit, jit, 2)
+            out.append((float(q[0]), float(q[1])))
         return out
-    feet = lambda w, dy=2.0: [(x + w / 2 + 2, y + tilt + dy), (x - w / 2 - 2, y + dy)]
+    def base(w, dy=2.5, ctr=None):
+        cf = foot if ctr is None else ctr
+        a, b = cf + d * w / 2 + [0, dy], cf - d * w / 2 + [0, dy]; return [(float(a[0]), float(a[1])), (float(b[0]), float(b[1]))]
     # the cutting: darker, mossy ground the portal is set into
-    cw, chh = iw + 2 * ring + 26, ih + ring + 7
-    cm = c.area(prof(cw, chh, jit=1.2, pw=.42) + feet(cw, 3), '#3a4a2a', wob=1.1, rough=1.2, edge_dark=.04, a=.78, seed=r.randint(1 << 30))
+    cw, chh = iw + 2 * ring + 22, ih + ring + 5
+    cm = c.area(prof(cw, chh, jit=1.1, pw=.5) + base(cw, 4), '#3a4a2a', wob=1.1, rough=1.2, edge_dark=.04, a=.78, seed=r.randint(1 << 30))
     if cm is not None:
         c.stip(cm, pal_fn(['#45562e', '#3a4a2a', '#56662f', '#627634']), spacing=1.5, L=3.6, w=1.8, a=.85, seed=r.randint(1 << 30), jit=1.0)
-    # the stone arch
+    # the stone arch, then the mouth with its deeper core set back into the hill
     outer = prof(iw + 2 * ring, ih + ring, jit=.6, pw=.45)
-    om = c.area(outer + feet(iw + 2 * ring), '#a89c88', wob=.3, rough=.7, edge_dark=.14, seed=r.randint(1 << 30))
+    om = c.area(outer + base(iw + 2 * ring), '#a89c88', wob=.3, rough=.7, edge_dark=.14, seed=r.randint(1 << 30))
     if om is not None:
         c.stip(om, pal_fn(['#b0a490', '#9c907c', '#c0b4a0', '#8c8270', '#a8a08c']), spacing=1.25, L=3.6, w=2.6, seed=r.randint(1 << 30), jit=1.3)
-    # the mouth, with a faint lighter floor where daylight reaches in
     inner = prof(iw, ih, n=22, pw=.5)
-    c.area(inner + feet(iw, 1.0), '#121010', wob=0, rough=.3, seed=r.randint(1 << 30))
-    c.area([(x - iw * .42, y + 1), (x + iw * .42, y + tilt + 1), (x + iw * .28, y - ih * .3), (x - iw * .28, y - ih * .3)], '#24201c', wob=0, rough=.5, a=.6)
-    # the rails run a little way into the dark
-    nrm = np.array([-t[1], t[0]]); base_pt = np.array(P[i], float)
+    c.area(inner + base(iw, 1.5), '#121010', wob=0, rough=.3, seed=r.randint(1 << 30))
+    back = foot - nrm * 5                                         # the tunnel runs back from the face
+    c.area(prof(iw * .7, ih * .82, pw=.55, ctr=back) + base(iw * .7, 1.0, ctr=back), '#070607', wob=.6, rough=.9, edge_dark=0, a=.75, seed=r.randint(1 << 30))
+    # the track runs on into the dark and fades: a few dim ties and the two rails, so it never just stops at the face
+    nr = np.array([-t[1], t[0]]); inward = t if side == 'in' else -t; P0 = np.array(P[i], float)
+    rail, tie = U3.TRACKCOL['red']
+    mm = c.mask(inner + base(iw, 1.5), wob=0, rough=0)              # only inside the mouth
+    prev = c.clipm
+    if mm is not None:
+        x_, y_, m_ = mm; full = np.zeros((c.H, c.W), np.float32); hh_, ww_ = m_.shape; full[y_:y_ + hh_, x_:x_ + ww_] = m_
+        c.clipm = full if prev is None else prev * full
+    for k_, u in enumerate((2.5, 7.5, 12.5)):
+        q = P0 + inward * u; al = .55 * (1 - u / 16)
+        c.stroke([q + nr * U3.TW * 1.05, q - nr * U3.TW * 1.05], U3.TW * .5, '#4a3a2c', a=al, dry=.15, taper=(.05, .05))
     for o in (U3.TW * .78, -U3.TW * .78):
-        a0 = base_pt + nrm * o - t * 2; a1 = a0 + t * 10
-        c.stroke([a0, a1], 1.5, '#5a3a30', a=.55, dry=.1, taper=(0, .95))
-    # radial joints between the voussoirs, and a dark line around the arch (as in portal3)
+        a0 = P0 + nr * o - inward * .5; c.stroke([a0, a0 + inward * 17], 2.2, rail, a=.62, dry=.1, taper=(0, .98))
+    c.clipm = prev
+    # radial joints, a dark line round the arch, moss over the top and at the feet
     n_in, n_out = len(inner), len(outer)
-    for u in np.linspace(.05, .95, 9) + r.uniform(-.015, .015, 9):
+    for u in np.linspace(.06, .94, 8) + r.uniform(-.015, .015, 8):
         a_ = np.array(inner[int(u * (n_in - 1))]); b_ = np.array(outer[int(u * (n_out - 1))])
-        c.stroke([a_, a_ + (b_ - a_) * .95], 1.5, '#6a6050', a=.85, dry=.1, taper=(0, 0))
-    c.stroke(outer, 1.4, '#5a5040', a=.6, dry=.2, taper=(.1, .1))
-    # moss and grass over the top of the arch and at its feet
-    for j in range(18):
+        c.stroke([a_, a_ + (b_ - a_) * .95], 1.4, '#6a6050', a=.85, dry=.1, taper=(0, 0))
+    c.stroke(outer, 1.3, '#5a5040', a=.6, dry=.2, taper=(.1, .1))
+    for j in range(16):
         q = np.array(outer[r.randint(3, n_out - 3)])
         c.stroke([q + [r.uniform(-2, 2), r.uniform(.5, 1.5)], q + [r.uniform(-1.5, 1.5), -r.uniform(1.5, 3.4)]], r.uniform(1.4, 2.3),
                  MOSS[r.randint(len(MOSS))], a=.9, dry=.3, taper=(.1, .6))
     for s_ in (-1, 1):
         for j in range(5):
-            q = (x + s_ * (iw / 2 + ring * r.uniform(.2, 1.3)), y + (tilt if s_ > 0 else 0) + r.uniform(-.5, 1.5))
-            c.stroke([q, (q[0] + r.uniform(-1.5, 1.5), q[1] - r.uniform(2, 4.5))], r.uniform(1.2, 2), MOSS[r.randint(len(MOSS))], a=.9, dry=.3, taper=(.1, .7))
+            q = foot + d * s_ * (iw / 2 + ring * r.uniform(.2, 1.2)) + [0, r.uniform(-.5, 1.5)]
+            c.stroke([q, q + [r.uniform(-1.5, 1.5), -r.uniform(2, 4.5)]], r.uniform(1.2, 2), MOSS[r.randint(len(MOSS))], a=.9, dry=.3, taper=(.1, .7))
 
 def paint(e, routes):
     if e['kind'] == 'knoll10': knoll(e['params'], routes); return True

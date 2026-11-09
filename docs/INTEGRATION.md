@@ -190,3 +190,23 @@ that rebuild, a hard seam appeared when zooming in.
 - at 509% zoom the train sits on the painted rails.
 
 Frames: `docs/integration_nw_*.jpg`.
+
+### Revision: portals that face along the track (9 November 2026)
+
+**Feedback:** the first portal faced the viewer, and the train slid past it instead of going in.
+
+**Change:** the knoll now has two portals, at route indices 244 (entry) and 292 (exit). Each stands on a vertical face
+across the track, turned to look along the line and slightly toward the viewer (`face` = 0.9), so its arch is drawn
+foreshortened on that face.
+
+**Why the split works.** The train's sprite lies in the vertical plane through the track, and a vertical face meets
+that plane in a vertical line through the point where the track crosses the face. So the scene is split at the two
+vertical lines through the portal feet:
+- **Between them** (element `tunnel10`, in front of the track): the knoll and the halves of both portals.
+- **Outside them** (element `knoll10`, behind the track): the rest of the knoll and the portals.
+
+As a result, the train goes into the west mouth and comes out of the east mouth exactly where the track meets each
+face. The two masks are hard-edged (a soft edge left a pale line inside the mouths). The rails and a few dim ties run
+on into each mouth and fade, clipped to the opening. In the viewer, the train darkens both going in and coming out.
+
+![Entering and leaving](integration_nw_tunnel_sequence.jpg)
