@@ -1,0 +1,329 @@
+<title>Toy Marines in 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the 3D scene on the painted square first, its controls, then what it is and what to judge */
+:root{--ocean:#14253b;--ink:#f3ead8;--muted:#aeb7c6;--rule:#2c4363;--accent:#e9a861;--paper:#f3ead6;--paper-ink:#36281f;
+  --display:"Young Serif",Georgia,serif;--mono:"DM Mono",ui-monospace,Menlo,monospace;color-scheme:dark}
+body{background:var(--ocean);color:var(--ink);font:15px/1.6 var(--mono);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:22px}
+h1,h2{font-family:var(--display);font-weight:400;margin:0;line-height:1.15;text-wrap:balance} h1{font-size:clamp(24px,4vw,36px)} h2{font-size:20px}
+p{margin:0;color:var(--muted);max-width:76ch} b{color:var(--ink);font-weight:500}
+.eyebrow{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.stage{position:relative;width:100%;aspect-ratio:1800/1176;border-radius:6px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.45);background:#2a2430 url(stage.jpg) center/cover}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#grain{position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;opacity:.22}
+.bubble{position:absolute;transform:translate(-50%,-100%);max-width:34%;background:var(--paper);color:var(--paper-ink);border:2px solid #6e3a2a;
+  border-radius:12px 14px 12px 16px;padding:8px 12px;font:clamp(11px,1.5vw,16px)/1.35 var(--display);box-shadow:0 8px 20px rgba(8,14,24,.45);pointer-events:none}
+.bubble::after{content:"";position:absolute;bottom:-10px;left:calc(50% - 8px);width:14px;height:14px;background:var(--paper);border-right:2px solid #6e3a2a;border-bottom:2px solid #6e3a2a;transform:rotate(45deg)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+button{font:500 12px var(--mono);color:var(--ink);background:#1d3350;border:1px solid var(--rule);border-radius:999px;padding:7px 13px;cursor:pointer}
+button:hover{border-color:var(--accent)} button[aria-pressed="true"]{background:var(--ink);color:var(--ocean)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+ul{margin:0;padding-left:18px;color:var(--muted);display:grid;gap:5px;max-width:82ch}
+.err{color:#ef9a86}
+</style>
+<div class="wrap">
+  <header style="display:grid;gap:8px">
+    <span class="eyebrow">Toy Town &middot; 3D test &middot; toy Marines built in code, painted in the map's palette</span>
+    <h1>Toy Marines in 3D</h1>
+    <p>The same scene as the 2D test, now with real depth. One Marine walks in, takes the present in both hands and turns to face you, then carries it away. The other turns to you and waves. Drag across the scene to look around them.</p>
+  </header>
+  <div class="stage" id="stage">
+    <canvas id="cv" aria-label="Two toy Marines on the Toy Town square"></canvas>
+    <canvas id="grain" aria-hidden="true"></canvas>
+    <div class="bubble" id="bub" hidden></div>
+  </div>
+  <div class="bar">
+    <button id="play" aria-pressed="true">Pause</button>
+    <button id="restart">Start again</button>
+    <button id="slow" aria-pressed="false">Slow motion</button>
+    <button id="spin" aria-pressed="false">Turn the view</button>
+    <button id="voice" aria-pressed="false">Voice: off</button>
+  </div>
+  <p class="err" id="err" hidden></p>
+  <section style="display:grid;gap:10px">
+    <h2>What to judge</h2>
+    <ul>
+      <li><b>Built as toys:</b> each Marine is made in code from simple solid shapes: a ball head, cylinder legs and body, a flared coat skirt, a wide white cap with a black peak, rounded gloves. They are rigged with real shoulders, elbows, hips and a neck, so the hands actually grip the present.</li>
+      <li><b>Painted, not plastic:</b> no smooth 3D shading. Light falls in three flat painted bands from the upper left, every surface carries a stipple texture made with the map's palette, a soft dark outline goes round each part, and a paper grain lies over the whole scene.</li>
+      <li><b>Faces and uniforms</b> are painted onto the shapes: eyes with an iris and a catchlight, brows, rosy cheeks, a mouth that opens with the words, gold buttons, a white belt with a buckle, the red stripe.</li>
+      <li><b>The honest question:</b> does this sit in the painting, or does it look like a video game in front of it?</li>
+    </ul>
+  </section>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const errEl = document.getElementById('err');
+  const fail = m => { errEl.hidden = false; errEl.textContent = m; };
+  if (!window.THREE) { fail('The 3D library did not load.'); return; }
+  const cv = document.getElementById('cv'), stage = document.getElementById('stage'), bub = document.getElementById('bub');
+  const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setClearColor(0x000000, 0);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(16, 1800 / 1176, 1, 100);
+  function size() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  new ResizeObserver(size).observe(stage); size();
+
+  // ---------- seeded randomness, so the paint is the same every time
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  // ---------- painted textures: a ground colour and thousands of dabs in nearby tones
+  function hex(c) { return '#' + c.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join(''); }
+  function rgb(h) { return [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); }
+  function stipple(g, w, h, base, n, size, varr) {
+    const b = rgb(base);
+    for (let i = 0; i < n; i++) {
+      const k = 1 + (rnd() - .5) * 2 * varr, warm = (rnd() - .5) * 10;
+      g.fillStyle = hex([b[0] * k + warm, b[1] * k, b[2] * k - warm]);
+      g.beginPath(); g.ellipse(rnd() * w, rnd() * h, size * (.6 + rnd() * .7), size * (.35 + rnd() * .35), rnd() * Math.PI, 0, 6.283); g.fill();
+    }
+  }
+  function tex(w, h, base, paint, n = 1600, sz = 6, varr = .09) {
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+    g.fillStyle = base; g.fillRect(0, 0, w, h); stipple(g, w, h, base, n, sz, varr); if (paint) paint(g, w, h);
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; t._canvas = c; return t;
+  }
+  // three flat bands of light: shadow, middle, lit (the map's painted planes)
+  const bands = new THREE.DataTexture(new Uint8Array([105, 175, 255]), 3, 1, THREE.LuminanceFormat);
+  bands.minFilter = bands.magFilter = THREE.NearestFilter; bands.generateMipmaps = false; bands.needsUpdate = true;
+  const mat = (map, extra = {}) => new THREE.MeshToonMaterial(Object.assign({ map, gradientMap: bands }, extra));
+  const INK = new THREE.MeshBasicMaterial({ color: 0x1a1520, side: THREE.BackSide });
+  function outline(mesh, t = .022) {                    // a soft painted contour: the shape pushed out along its normals, drawn from behind
+    const g = mesh.geometry.clone(); g.computeVertexNormals();
+    const p = g.attributes.position, n = g.attributes.normal;
+    for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) + n.getX(i) * t, p.getY(i) + n.getY(i) * t, p.getZ(i) + n.getZ(i) * t);
+    const o = new THREE.Mesh(g, INK); mesh.add(o); return mesh;
+  }
+  const C = { navy: '#24305a', blue: '#3a5ca0', red: '#c8302a', gold: '#e8b440', white: '#f2efe6', black: '#1c1a1e' };
+  const T = {
+    navy: tex(256, 256, C.navy, null, 1300, 13, .2), blue: null, white: tex(128, 128, C.white, null, 500, 9, .07), gold: tex(64, 64, C.gold, null, 300, 4, .08),
+    black: tex(64, 64, C.black, null, 300, 4, .2), red: tex(64, 64, C.red, null, 300, 4, .08),
+  };
+  const legTex = outer => tex(256, 256, C.blue, (g, w, h) => { g.fillStyle = C.red; g.fillRect(w * outer - 16, 0, 32, h); for (let i = 0; i < 160; i++) { g.fillStyle = hex(rgb(C.red).map(v => v * (.85 + rnd() * .3))); g.beginPath(); g.ellipse(w * outer + (rnd() - .5) * 28, rnd() * h, 7, 4, rnd() * 3, 0, 6.283); g.fill(); } }, 1300, 13, .18);
+  const torsoTex = tex(512, 256, C.navy, (g, w, h) => {
+    for (let i = 0; i < 4; i++) { const y = h * (.16 + i * .2); g.fillStyle = C.gold; g.beginPath(); g.arc(w * .5 + 14, y, 9, 0, 6.283); g.fill(); g.fillStyle = '#fff4c8'; g.beginPath(); g.arc(w * .5 + 11, y - 3, 3, 0, 6.283); g.fill(); }
+    g.strokeStyle = '#121a32'; g.lineWidth = 4; g.beginPath(); g.moveTo(w * .5, 0); g.lineTo(w * .5, h); g.stroke();
+  }, 2400, 15, .2);
+  const beltTex = tex(512, 64, C.white, (g, w, h) => { g.fillStyle = C.gold; g.fillRect(w * .5 - 24, 4, 48, h - 8); g.fillStyle = '#fff0b0'; g.fillRect(w * .5 - 18, 10, 14, 10); }, 600, 5, .05);
+  const collarTex = tex(256, 64, C.navy, (g, w, h) => { g.fillStyle = C.red; g.fillRect(0, h - 14, w, 8); }, 400, 5, .1);
+  const presentTex = tex(256, 256, '#e8b438', (g, w, h) => { g.fillStyle = C.red; g.fillRect(w * .44, 0, w * .12, h); g.fillRect(0, h * .44, w, h * .12); }, 1400, 12, .18);
+
+  // ---------- one toy Marine
+  function faceCanvas(skin, iris, brow, cheek) {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 256; const t = new THREE.CanvasTexture(c);
+    const g = c.getContext('2d');
+    function draw(mouth, blink, look) {
+      g.fillStyle = skin; g.fillRect(0, 0, 512, 256); stipple(g, 512, 256, skin, 1100, 10, .09);
+      g.fillStyle = brow; g.fillRect(0, 0, 512, 92);                                  // hair under the cap, all round
+      for (let i = 0; i < 260; i++) { g.fillStyle = brow; g.beginPath(); g.ellipse(rnd() * 512, 88 + rnd() * 10, 6, 3, rnd() * 3, 0, 6.283); g.fill(); }
+      g.fillStyle = skin; g.beginPath(); g.ellipse(128, 120, 70, 46, 0, 0, 6.283); g.fill();     // the face under the hairline
+      const cx = 128, ey = 122;
+      for (const s of [-1, 1]) {
+        const x = cx + s * 28;
+        g.fillStyle = cheek; g.globalAlpha = .45; g.beginPath(); g.ellipse(x + s * 6, ey + 30, 13, 9, 0, 0, 6.283); g.fill(); g.globalAlpha = 1;
+        g.strokeStyle = brow; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(x - 11, ey - 15); g.quadraticCurveTo(x, ey - 21, x + 11, ey - 15); g.stroke();
+        if (blink) { g.strokeStyle = '#2a1810'; g.lineWidth = 3.5; g.beginPath(); g.moveTo(x - 10, ey + 1); g.quadraticCurveTo(x, ey + 6, x + 10, ey + 1); g.stroke(); continue; }
+        g.fillStyle = '#f6f1e8'; g.beginPath(); g.ellipse(x, ey, 11, 7.5, 0, 0, 6.283); g.fill();
+        g.fillStyle = iris; g.beginPath(); g.arc(x + look * 3, ey + .5, 5.8, 0, 6.283); g.fill();
+        g.fillStyle = '#100a08'; g.beginPath(); g.arc(x + look * 3, ey + .5, 3, 0, 6.283); g.fill();
+        g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x + look * 3 - 2, ey - 2, 1.6, 0, 6.283); g.fill();
+        g.strokeStyle = '#2a1810'; g.lineWidth = 3; g.beginPath(); g.ellipse(x, ey, 11, 7.5, 0, Math.PI * 1.05, Math.PI * 1.95); g.stroke();
+      }
+      g.strokeStyle = 'rgba(80,40,30,.5)'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(cx - 2, ey + 6); g.lineTo(cx + 2, ey + 22); g.lineTo(cx - 3, ey + 24); g.stroke();   // nose
+      const my = ey + 38;
+      if (mouth < .1) { g.strokeStyle = '#7a2a22'; g.lineWidth = 3.5; g.beginPath(); g.moveTo(cx - 14, my - 3); g.quadraticCurveTo(cx, my + 7, cx + 14, my - 3); g.stroke(); }
+      else { g.fillStyle = '#5a1a16'; g.beginPath(); g.ellipse(cx, my, 11, 3 + 8 * mouth, 0, 0, 6.283); g.fill();
+        g.fillStyle = '#f2ece4'; g.fillRect(cx - 8, my - 3 - 7 * mouth, 16, 3.5); g.fillStyle = '#d06058'; g.beginPath(); g.ellipse(cx, my + 4 * mouth, 7, 3 * mouth + 1, 0, 0, 6.283); g.fill(); }
+      t.needsUpdate = true;
+    }
+    return { t, draw };
+  }
+  function marine(o) {
+    const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
+    const add = (parent, geo, m, pos, ol = .022) => { const me = outline(new THREE.Mesh(geo, m), ol); if (pos) me.position.set(...pos); parent.add(me); return me; };
+    const CY = (r0, r1, h, s = 24) => new THREE.CylinderGeometry(r0, r1, h, s, 1, false, Math.PI);
+    // legs (hinged at the hip, inside the coat)
+    const legs = [];
+    for (const s of [1, -1]) {
+      const hip = new THREE.Group(); hip.position.set(.18 * s, 1.42, 0); body.add(hip);
+      add(hip, CY(.17, .16, 1.22), mat(legTex(s > 0 ? .75 : .25)), [0, -.6, 0]);
+      const shoe = add(hip, new THREE.SphereGeometry(.2, 20, 12), mat(T.black, { color: 0xffffff }), [0, -1.28, .07]); shoe.scale.set(.85, .5, 1.25);
+      legs.push(hip);
+    }
+    // coat skirt, body, belt, collar, shoulder boards, buttons
+    add(body, CY(.42, .52, .5, 28), mat(T.navy), [0, 1.62, 0]);
+    add(body, CY(.46, .42, .82, 28), mat(torsoTex), [0, 2.24, 0]);
+    add(body, CY(.435, .435, .11, 28), mat(beltTex), [0, 1.86, 0], .012);
+    add(body, CY(.2, .23, .16, 20), mat(collarTex), [0, 2.71, 0], .015);
+    for (const s of [1, -1]) {
+      const sh = add(body, new THREE.SphereGeometry(.19, 16, 12), mat(T.navy), [.45 * s, 2.55, 0]); sh.scale.set(1, .8, 1);
+      const bd = add(body, new THREE.BoxGeometry(.2, .04, .14), mat(T.gold), [.36 * s, 2.67, 0], .01); bd.rotation.z = -.35 * s;
+    }
+    // arms: shoulder -> elbow -> glove
+    const arms = [];
+    for (const s of [1, -1]) {
+      const sh = new THREE.Group(); sh.position.set(.53 * s, 2.52, 0); body.add(sh);
+      add(sh, CY(.1, .11, .5, 16), mat(T.navy), [0, -.25, 0], .018);
+      const el = new THREE.Group(); el.position.set(0, -.5, 0); sh.add(el);
+      add(el, new THREE.SphereGeometry(.105, 14, 10), mat(T.navy), [0, 0, 0], .015);
+      add(el, CY(.1, .095, .46, 16), mat(T.navy), [0, -.23, 0], .018);
+      add(el, CY(.103, .103, .06, 16), mat(T.red), [0, -.43, 0], .01);
+      const gl = add(el, new THREE.SphereGeometry(.12, 16, 12), mat(T.white), [0, -.55, 0], .015); gl.scale.set(.9, 1.1, 1.05);
+      arms.push({ sh, el, side: s, l1: .5, l2: .55 });
+    }
+    // head (hinged at the neck): a painted ball, ears, the cap
+    const neck = new THREE.Group(); neck.position.set(0, 2.78, 0); body.add(neck);
+    const face = faceCanvas(o.skin, o.iris, o.brow, o.cheek); face.draw(0, false, 0);
+    const head = add(neck, new THREE.SphereGeometry(.36, 32, 24), mat(face.t), [0, .3, 0]);
+    const nose = add(neck, new THREE.SphereGeometry(.06, 12, 10), mat(tex(32, 32, o.skin, null, 60, 3, .06)), [0, .27, .33], .012); nose.scale.set(.9, 1.1, 1.2);
+    for (const s of [1, -1]) add(neck, new THREE.SphereGeometry(.07, 12, 8), mat(tex(32, 32, o.skin, null, 60, 3, .06)), [.33 * s, .3, -.02], .012);
+    add(neck, CY(.36, .36, .07, 28), mat(T.black), [0, .58, 0], .012);
+    const crown = add(neck, CY(.56, .4, .2, 32), mat(T.white), [0, .72, -.03], .022); crown.rotation.x = -.1;
+    const peak = add(neck, new THREE.CylinderGeometry(.38, .38, .04, 24, 1, false, 0, Math.PI), mat(T.black), [0, .56, .12], .012);
+    peak.rotation.x = .25; peak.rotation.y = -Math.PI / 2; peak.scale.set(1, 1, .55);
+    add(neck, new THREE.SphereGeometry(.055, 12, 8), mat(T.gold), [0, .7, .45], .01);
+    // a soft shadow on the cobbles
+    const sc = document.createElement('canvas'); sc.width = sc.height = 128; const sg = sc.getContext('2d');
+    const gr = sg.createRadialGradient(64, 64, 4, 64, 64, 62); gr.addColorStop(0, 'rgba(30,22,18,.55)'); gr.addColorStop(1, 'rgba(30,22,18,0)'); sg.fillStyle = gr; sg.fillRect(0, 0, 128, 128);
+    const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.0), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, depthWrite: false }));
+    shadow.rotation.x = -Math.PI / 2; shadow.position.set(.18, .01, -.05); root.add(shadow);
+    root.traverse(m => { if (m.isMesh && m.material !== INK) m.renderOrder = 1; });
+    return { root, body, legs, arms, neck, face, mouth: 0, blink: false };
+  }
+  // ---------- the scene
+  const A = marine({ skin: '#e8b48a', iris: '#4a6c98', brow: '#8a5a32', cheek: '#e06a5a' });
+  const B = marine({ skin: '#8a5634', iris: '#2a1810', brow: '#1e140e', cheek: '#c0503e' });
+  scene.add(A.root, B.root); for (const m of [A, B]) m.root.scale.setScalar(1.22);
+  const present = new THREE.Group(); scene.add(present);
+  outline(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.62, .46, .5), mat(presentTex)), {}), .02);
+  const box = present.children.length ? null : null;
+  const pbox = outline(new THREE.Mesh(new THREE.BoxGeometry(.62, .46, .5), mat(presentTex)), .02); present.add(pbox); present.scale.setScalar(1.22);
+  const lid = outline(new THREE.Mesh(new THREE.BoxGeometry(.66, .1, .54), mat(presentTex)), .015); lid.position.y = .25; present.add(lid);
+  for (const s of [1, -1]) { const loop = outline(new THREE.Mesh(new THREE.TorusGeometry(.1, .035, 8, 18), mat(T.red)), .012); loop.position.set(.09 * s, .38, 0); loop.rotation.y = .5 * s; present.add(loop); }
+  scene.add(new THREE.AmbientLight(0xfff2dc, .55));
+  const sun = new THREE.DirectionalLight(0xffe8c8, .75); sun.position.set(-4, 7, 6); scene.add(sun);
+  const lamp = new THREE.PointLight(0xffc870, .5, 12); lamp.position.set(3, 4, 3); scene.add(lamp);
+
+  // ---------- two-bone arm reach: the hand goes to a point, the elbow bends down and out
+  const DOWN = new THREE.Vector3(0, -1, 0), qi = new THREE.Quaternion();
+  function reach(arm, target /* in body space */) {
+    const S = arm.sh.position, d0 = new THREE.Vector3().subVectors(target, S);
+    const d = Math.min(Math.max(d0.length(), .25), arm.l1 + arm.l2 - .002), dir = d0.normalize();
+    const a = (arm.l1 * arm.l1 - arm.l2 * arm.l2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, arm.l1 * arm.l1 - a * a));
+    const hint = new THREE.Vector3(arm.side * .5, -1, -.4).normalize();
+    const n = hint.sub(dir.clone().multiplyScalar(hint.dot(dir))).normalize();
+    const E = S.clone().add(dir.clone().multiplyScalar(a)).add(n.multiplyScalar(h));
+    const T_ = S.clone().add(dir.clone().multiplyScalar(d));
+    arm.sh.quaternion.setFromUnitVectors(DOWN, E.clone().sub(S).normalize());
+    const ld = T_.clone().sub(E).normalize().applyQuaternion(qi.copy(arm.sh.quaternion).invert());
+    arm.el.quaternion.setFromUnitVectors(DOWN, ld);
+  }
+  const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
+  function toBody(m, world) { m.root.updateMatrixWorld(true); return m.body.worldToLocal(world.clone()); }
+
+  // ---------- the story, 26 s
+  const LINES = [
+    { who: 'a', t0: 6.6, t1: 9.4, text: 'Merry Christmas! This one is for a child here in Toy Town.' },
+    { who: 'b', t0: 11.0, t1: 13.4, text: 'Thank you! Every toy in that red box finds a home.' },
+    { who: 'a', t0: 20.4, t1: 23.6, text: 'Bring a new, unwrapped toy. We will take care of the rest!' },
+  ];
+  const DUR = 26;
+  const ease = u => u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u);
+  const seg = (t, a, b) => ease((t - a) / (b - a)), lerp = (a, b, u) => a + (b - a) * u;
+  const FACE_X = Math.PI / 2, Q = .55;                           // Q: turned a little toward you, as in the painting
+  function walkPose(m, ph, amt) {
+    m.legs[0].rotation.x = .5 * Math.sin(ph) * amt; m.legs[1].rotation.x = -.5 * Math.sin(ph) * amt;
+    m.body.position.y = .05 * Math.abs(Math.sin(ph)) * amt; m.body.rotation.z = .03 * Math.sin(ph) * amt;
+  }
+  function restHands(m, ph, amt) {
+    for (const arm of m.arms) reach(arm, v3(.55 * arm.side, 1.55, .08 + .28 * Math.sin(ph) * amt * -arm.side));
+  }
+  function update(t) {
+    // ---- where everyone stands and faces
+    const stride = t * 2 * Math.PI * 1.5;
+    A.root.position.set(-1.2, 0, 0); A.root.rotation.y = FACE_X - Q;
+    let bx = 1.2, bRot = -FACE_X + Q, bWalk = 0;
+    if (t < 5.4) { bx = lerp(8, 1.2, 1 - Math.pow(1 - seg(t, 0, 5.4), 1.4)); bRot = -FACE_X; bWalk = 1 - seg(t, 4.8, 5.4); }
+    if (t < 5.4) bRot = lerp(-FACE_X, -FACE_X + Q, seg(t, 4.8, 5.4)); if (t >= 13.6) bRot = lerp(-FACE_X + Q, 0, seg(t, 13.6, 14.4));                          // turns to face you
+    if (t >= 16.0) bRot = lerp(0, FACE_X, seg(t, 16.0, 16.7));                            // then to his walk
+    if (t >= 16.7) { bx = lerp(1.2, 9.5, Math.pow(seg(t, 16.7, 21.5), 1.15)); bWalk = seg(t, 16.7, 17.1); }
+    B.root.position.set(bx, 0, 0); B.root.rotation.y = bRot;
+    let aRot = FACE_X - Q; if (t >= 19.6) aRot = lerp(FACE_X - Q, .15, seg(t, 19.6, 20.3)); if (t >= 24) aRot = lerp(.15, FACE_X - Q, seg(t, 24, 24.8));
+    A.root.rotation.y = aRot;
+    walkPose(A, 0, 0); walkPose(B, stride, bWalk);
+    // ---- the present: held by A, lifted across, then carried by B
+    const held = v3(0, 2.05 * 1.22, .25);
+    let pw;
+    if (t < 9.8) pw = held.clone();
+    else if (t < 11) { const u = seg(t, 9.8, 11); pw = v3(lerp(0, .15, u), 2.05 * 1.22 + Math.sin(Math.PI * u) * .26, .25); }
+    else if (t < 13.6) pw = v3(.15, 2.05 * 1.22, .25);
+    else { B.root.updateMatrixWorld(true); pw = B.root.localToWorld(v3(0, 2.05, .9)); if (t < 14.4) pw.lerp(v3(.15, 2.05 * 1.22, .25), 1 - seg(t, 13.6, 14.4)); }
+    if (t > 21.5) pw.y = -5;
+    present.position.copy(pw); present.rotation.y = t >= 13.6 ? B.root.rotation.y - (-FACE_X) * 0 : 0;
+    if (t >= 13.6) present.rotation.y = B.root.rotation.y + FACE_X;
+    // ---- hands
+    const grip = (m, side, front) => {                                          // points on the present's two faces nearest the hands
+      present.updateMatrixWorld(true);
+      return toBody(m, present.localToWorld(v3(front, -.02, .28 * side)));
+    };
+    // A: holds the present with both hands until the handoff, then rests; waves at the end
+    if (t < 10.6) { const r = 1 - seg(t, 10.2, 10.6); for (const arm of A.arms) { const g = grip(A, arm.side * 1, -.24); const rest = v3(.55 * arm.side, 1.55, .1); reach(arm, rest.lerp(g, r)); } }
+    else if (t < 20.4) restHands(A, 0, 0);
+    else { const w = Math.sin((t - 20.4) * 9) * .14, up = seg(t, 20.4, 20.9) * (1 - seg(t, 23.6, 24.2));
+      reach(A.arms[1], v3(.55 * -1, 1.55, .1).lerp(v3(-.62 + w, 3.1, .3), up)); reach(A.arms[0], v3(.55, 1.55, .1)); }
+    // B: arms swing while walking in, reach for the present, carry it away
+    if (t < 5.4) restHands(B, stride, bWalk);
+    else if (t < 13.6) { const r = seg(t, 5.4, 6.4); for (const arm of B.arms) { const rest = v3(.55 * arm.side, 1.55, .1); reach(arm, rest.lerp(grip(B, -arm.side, .24), r)); } }
+    else if (t < 21.5) { for (const arm of B.arms) reach(arm, toBody(B, B.root.localToWorld(v3(.34 * arm.side, 2.03, .9)))); }
+    // ---- heads, mouths, blinks
+    for (const [m, nm] of [[A, 'a'], [B, 'b']]) {
+      const ln = LINES.find(l => l.who === nm && t >= l.t0 && t < l.t1);
+      m.neck.rotation.x = ln ? .06 * Math.sin(t * 5.2) : 0; m.neck.rotation.z = ln ? .05 * Math.sin(t * 2.3) : 0;
+      const mo = ln ? Math.max(0, Math.sin(t * 15 + (nm === 'a' ? 0 : 1)) * .7 + .35 * Math.sin(t * 37)) : 0;
+      const bl = ((t + (nm === 'a' ? 0 : 1.7)) % 3.8) < .13;
+      const key = Math.round(mo * 4) + (bl ? 10 : 0);
+      if (key !== m._k) { m._k = key; m.face.draw(Math.round(mo * 4) / 4, bl, 0); }
+    }
+  }
+  // ---------- camera: a slight look down onto the square; drag to orbit a little
+  let yaw = 0, spin = false;
+  function placeCamera(t) {
+    const y = yaw + (spin ? Math.sin(t * .35) * .5 : 0), r = 24;
+    camera.position.set(Math.sin(y) * r, 5.0, Math.cos(y) * r); camera.lookAt(0, 3.0, 0);
+  }
+  let drag = null;
+  stage.addEventListener('pointerdown', e => { drag = { x: e.clientX, y0: yaw }; stage.setPointerCapture(e.pointerId); });
+  stage.addEventListener('pointermove', e => { if (drag) yaw = Math.max(-.9, Math.min(.9, drag.y0 - (e.clientX - drag.x) / stage.clientWidth * 2)); });
+  stage.addEventListener('pointerup', () => { drag = null; });
+  // ---------- paper grain over the whole scene
+  (function () { const g = document.getElementById('grain'); g.width = 600; g.height = 392; const x = g.getContext('2d'); const d = x.createImageData(600, 392);
+    for (let i = 0; i < d.data.length; i += 4) { const v = 200 + rnd() * 55; d.data[i] = v; d.data[i + 1] = v * .97; d.data[i + 2] = v * .92; d.data[i + 3] = 255; } x.putImageData(d, 0, 0); })();
+  // ---------- loop
+  let playing = !matchMedia('(prefers-reduced-motion: reduce)').matches, rate = 1, t = 0, last = performance.now(), voice = false, spoken = -1;
+  const head = new THREE.Vector3();
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const dt = Math.min(.1, (now - last) / 1000); last = now; if (playing) t = (t + dt * rate) % DUR;
+    update(t); placeCamera(t); renderer.render(scene, camera);
+    const ln = LINES.find(l => t >= l.t0 && t < l.t1);
+    if (ln) {
+      const m = ln.who === 'a' ? A : B; m.neck.getWorldPosition(head); head.y += 1.05; head.project(camera);
+      bub.textContent = ln.text; bub.hidden = false;
+      bub.style.left = Math.max(18, Math.min(82, (head.x * .5 + .5) * 100)) + '%'; bub.style.top = Math.max(14, (1 - (head.y * .5 + .5)) * 100) + '%';
+      const i = LINES.indexOf(ln);
+      if (voice && spoken !== i && 'speechSynthesis' in window) { spoken = i; try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(ln.text); u.pitch = ln.who === 'a' ? 1 : .8; speechSynthesis.speak(u); } catch (e) {} }
+    } else { bub.hidden = true; if (t < 1) spoken = -1; }
+    stage.style.setProperty('--fade', 0);
+  }
+  requestAnimationFrame(frame);
+  const play = document.getElementById('play');
+  play.onclick = () => { playing = !playing; play.setAttribute('aria-pressed', playing); play.textContent = playing ? 'Pause' : 'Play'; };
+  document.getElementById('restart').onclick = () => { t = 0; spoken = -1; };
+  const slow = document.getElementById('slow'); slow.onclick = () => { rate = rate === 1 ? .35 : 1; slow.setAttribute('aria-pressed', rate !== 1); };
+  const sp = document.getElementById('spin'); sp.onclick = () => { spin = !spin; sp.setAttribute('aria-pressed', spin); };
+  const vb = document.getElementById('voice');
+  vb.onclick = () => { voice = !voice; vb.setAttribute('aria-pressed', voice); vb.textContent = 'Voice: ' + (voice ? 'on' : 'off'); if (!voice) try { speechSynthesis.cancel(); } catch (e) {} };
+  window.__toy = { set t(v) { t = v; }, pause: () => { playing = false; }, set yaw(v) { yaw = v; } };
+})();
+</script>
