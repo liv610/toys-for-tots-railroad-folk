@@ -1,0 +1,1 @@
+{"crop": [596, 540, 876, 834], "k": 4, "frames": {"a": {"files": ["head_a_0.png", "head_a_1.png", "head_a_2.png"], "x": 64, "y": 52, "pivot": [172, 276]}, "b": {"files": ["head_b_0.png", "head_b_1.png", "head_b_2.png"], "x": 788, "y": 52, "pivot": [116, 264]}}}

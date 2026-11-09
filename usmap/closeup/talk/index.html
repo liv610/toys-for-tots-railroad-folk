@@ -1,0 +1,108 @@
+<title>Talking Marines</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the scene first with its speech bubbles, a short how-it-works, then the trace comparison */
+:root{--ocean:#14253b;--ink:#f3ead8;--muted:#aeb7c6;--rule:#2c4363;--accent:#e9a861;--paper:#f3ead6;--paper-ink:#36281f;--red:#b8402e;
+  --display:"Young Serif",Georgia,serif;--mono:"DM Mono",ui-monospace,Menlo,monospace;color-scheme:dark}
+body{background:var(--ocean);color:var(--ink);font:15px/1.6 var(--mono);margin:0}
+.wrap{max-width:1100px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:28px}
+h1,h2{font-family:var(--display);font-weight:400;margin:0;line-height:1.15;text-wrap:balance} h1{font-size:clamp(24px,4vw,36px)} h2{font-size:20px}
+p{margin:0;color:var(--muted);max-width:72ch} b{color:var(--ink);font-weight:500}
+.eyebrow{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.stage{position:relative;width:min(100%,640px);aspect-ratio:1120/1176;margin:0 auto;border-radius:6px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.45)}
+canvas{width:100%;height:100%;display:block;cursor:pointer}
+.bubble{position:absolute;max-width:46%;background:var(--paper);color:var(--paper-ink);border:2px solid #6e3a2a;border-radius:12px 14px 12px 16px;
+  padding:9px 12px;font:15px/1.4 var(--display);box-shadow:0 8px 20px rgba(8,14,24,.45);pointer-events:none}
+.bubble::after{content:"";position:absolute;bottom:-11px;width:16px;height:16px;background:var(--paper);border-right:2px solid #6e3a2a;border-bottom:2px solid #6e3a2a;transform:rotate(45deg)}
+.bubble.a{left:3%;top:3%} .bubble.a::after{left:30%} .bubble.b{right:3%;top:3%} .bubble.b::after{right:30%}
+.bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+button{font:500 12px var(--mono);color:var(--ink);background:#1d3350;border:1px solid var(--rule);border-radius:999px;padding:7px 13px;cursor:pointer}
+button:hover{border-color:var(--accent)} button[aria-pressed="true"]{background:var(--ink);color:var(--ocean)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hint{text-align:center;font-size:12.5px}
+figure{margin:0;display:grid;gap:8px} figure img{width:100%;height:auto;border-radius:4px;display:block} figcaption{font-size:12.5px;color:var(--muted)}
+ul{margin:0;padding-left:18px;color:var(--muted);display:grid;gap:5px;max-width:78ch}
+</style>
+<div class="wrap">
+  <header style="display:grid;gap:8px">
+    <span class="eyebrow">Toy Town &middot; traced from your reference &middot; repainted with the map's brush</span>
+    <h1>The Marines can talk</h1>
+    <p>Click either Marine. He says a scripted line, with a caption and a moving mouth. The figures are traced from your reference painting and repainted dab by dab with the map's own folk brush.</p>
+  </header>
+  <div class="stage" id="stage">
+    <canvas id="cv" width="1120" height="1176" aria-label="Two Marines handing over a present; click one to hear him"></canvas>
+    <div class="bubble a" id="ba" hidden></div><div class="bubble b" id="bb" hidden></div>
+  </div>
+  <div class="bar">
+    <button id="talkA">Talk to the Marine on the left</button>
+    <button id="talkB">Talk to the Marine on the right</button>
+    <button id="voice" aria-pressed="false">Voice: off</button>
+  </div>
+  <p class="hint" id="hint">The voice uses your browser's built-in speech, a placeholder until we choose real voices. Captions always show.</p>
+  <section style="display:grid;gap:12px">
+    <h2>How it works</h2>
+    <ul>
+      <li><b>Traced:</b> the two Marines and the present were cut from your reference image as one shape, so the drawing, faces and poses are yours.</li>
+      <li><b>Repainted:</b> the shape is repainted in three passes of the map's stipple, coarse to fine. Each dab takes its colour from the reference and runs along the form, then paint ridges are lit, the same as on the map. Up close it is our brushwork, not a pasted image.</li>
+      <li><b>Speaking:</b> each head has three mouth frames (closed, half open, open), painted with the same brush. While a line plays, the mouth moves through them.</li>
+      <li><b>Next:</b> heads as separate layers, so they can nod and turn; arms that lift the present; blinking; real voices (open-source text-to-speech or recorded actors) with the mouth timed to the sound.</li>
+    </ul>
+  </section>
+  <figure><img src="compare.jpg" alt="Left: the Marines in your reference. Right: the same Marines traced and repainted with the map's brush"><figcaption>Left: your reference. Right: traced and repainted with our brush (shown on a plain ground).</figcaption></figure>
+</div>
+<script>
+(function(){
+  const M = {"a":{"files":["head_a_0.png","head_a_1.png","head_a_2.png"],"x":64,"y":52},"b":{"files":["head_b_0.png","head_b_1.png","head_b_2.png"],"x":788,"y":52}};
+  const LINES = {
+    a: ["Merry Christmas! Thank you for bringing a toy today.", "Every toy dropped in that red box goes to a child right here in our town."],
+    b: ["Toys for Tots has been giving toys to children since 1947.", "Want to help? Bring a new, unwrapped toy and we'll make sure it finds a home."]
+  };
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const load = s => Object.assign(new Image(), { src: s });
+  const bg = load('backdrop.jpg'), body = load('marines.png');
+  const heads = { a: M.a.files.map(load), b: M.b.files.map(load) };
+  const talk = { a: null, b: null }, idx = { a: 0, b: 0 };
+  const bub = { a: document.getElementById('ba'), b: document.getElementById('bb') };
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let voice = false;
+  function say(who) {
+    const other = who === 'a' ? 'b' : 'a';
+    stop(other);
+    const line = LINES[who][idx[who]++ % LINES[who].length];
+    bub[who].textContent = line; bub[who].hidden = false;
+    const dur = Math.max(2200, line.length * 62);
+    talk[who] = { t0: performance.now(), dur };
+    if (voice && 'speechSynthesis' in window) {
+      try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(line); u.rate = .98; u.pitch = who === 'a' ? 1.0 : .85;
+        u.onend = () => { if (talk[who]) talk[who].dur = performance.now() - talk[who].t0; }; speechSynthesis.speak(u); talk[who].dur = dur * 1.4; } catch (e) {}
+    }
+  }
+  function stop(who) { talk[who] = null; bub[who].hidden = true; }
+  function mouth(who, now) {
+    const tk = talk[who]; if (!tk) return 0;
+    const u = (now - tk.t0) / tk.dur; if (u > 1) { stop(who); return 0; }
+    if (reduce) return 1;
+    const s = Math.sin(now / 55 + (who === 'a' ? 0 : 1.7)) + .6 * Math.sin(now / 23);   // syllable-like rhythm
+    return s > .7 ? 2 : s > -.2 ? 1 : 0;
+  }
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (!bg.complete || !body.complete) return;
+    ctx.drawImage(bg, 0, 0, cv.width, cv.height);
+    ctx.drawImage(body, 0, 0);
+    for (const w of ['a', 'b']) {
+      const f = mouth(w, now), im = heads[w][f];
+      if (f && im.complete) ctx.drawImage(im, M[w].x, M[w].y);
+    }
+  }
+  requestAnimationFrame(frame);
+  cv.addEventListener('click', e => { const r = cv.getBoundingClientRect(); say((e.clientX - r.left) / r.width < .5 ? 'a' : 'b'); });
+  document.getElementById('talkA').onclick = () => say('a');
+  document.getElementById('talkB').onclick = () => say('b');
+  const vb = document.getElementById('voice');
+  vb.onclick = () => { voice = !voice; vb.setAttribute('aria-pressed', voice); vb.textContent = 'Voice: ' + (voice ? 'on' : 'off');
+    if (!voice && 'speechSynthesis' in window) try { speechSynthesis.cancel(); } catch (e) {} };
+  if (!('speechSynthesis' in window)) { vb.disabled = true; document.getElementById('hint').textContent = 'This browser has no built-in speech; captions show the lines.'; }
+})();
+</script>
