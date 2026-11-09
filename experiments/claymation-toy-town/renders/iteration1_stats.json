@@ -1,0 +1,17 @@
+{
+ "stage": 1,
+ "blender": "4.2.9 LTS",
+ "engine": "CYCLES (CPU)",
+ "resolution": [
+  1200,
+  900
+ ],
+ "samples": 48,
+ "build_seconds": 1.7,
+ "render_seconds": 47.1,
+ "mesh_objects": 36,
+ "triangles": 1999636,
+ "cobbles": 1486,
+ "lights": 2,
+ "materials": 20
+}

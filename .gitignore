@@ -18,6 +18,7 @@
 !/references/
 !/village_benchmark/
 !/county/
+!/experiments/
 
 # --- never ---
 __pycache__/
