@@ -152,6 +152,10 @@ def snow_lump(cx, cy, rx, ry):
     sparkle(m, .6)
 
 # ---- walls: gouache ground, then stippled stucco in three blues, flecks of snow ----
+def noise_at(px, py):
+    ix = int(np.clip((px - X0) * K, 0, c.W - 1)); iy = int(np.clip((py - Y0) * K, 0, c.H - 1))
+    return float(c.Nbig[iy, ix])
+
 def wall(pts, base, dark=False, fleck=.0):
     """Hand-modelled stucco: a gouache ground, then rounded 'stones' pressed into it, each its own blue with a
     darker rim where they meet (the cobbled plaster of the reference), a light dab texture, flecks of snow."""
@@ -162,8 +166,9 @@ def wall(pts, base, dark=False, fleck=.0):
     sp = 7.0
     for gy in np.arange(y0 / K + Y0, (y0 + h) / K + Y0, sp * .8):
         off = R.uniform(0, sp)
-        for gx in np.arange(x0 / K + X0 - off, (x0 + w) / K + X0, sp):
-            px, py = gx + R.uniform(-2.4, 2.4), gy + R.uniform(-1.8, 1.8)
+        for gx in np.arange(x0 / K + X0 - off, (x0 + w) / K + X0, sp * R.uniform(.85, 1.2)):
+            px, py = gx + R.uniform(-3, 3), gy + R.uniform(-2.4, 2.4)
+            if noise_at(px, py) > .62: continue             # a patch of smoother plaster here
             ix, iy = int((px - X0) * K) - x0, int((py - Y0) * K) - y0
             if not (0 <= ix < w and 0 <= iy < h) or mm[iy, ix] < .3: continue
             sz = R.uniform(.7, 1.35)
@@ -352,13 +357,17 @@ def build():
         Cc, Cd = hexc(col), hexc(dark); xa, xb = t0 - X0, t1 - X0
         def fold(X, Y, r, xa=xa, xb=xb, Cc=Cc, Cd=Cd):
             u = np.clip((X - xa - (Y - (ay - Y0)) * 6 / (ly - ay)) / (xb - xa), 0, 1)       # across the stripe
-            k = np.clip(np.abs(u - .4) * 1.3 + (Y - (ay - Y0)) / (ly - ay) * .25, 0, 1)[:, None]
+            k = np.clip(np.abs(u - .4) * 1.0 + (Y - (ay - Y0)) / (ly - ay) * .75 - .15, 0, 1)[:, None]
             return np.clip(Cc * (1 - k * .55) + Cd * k * .55 + (r.rand(len(X), 1) - .5) * .04, 0, 1)
         c.stip(m, fold, spacing=.85, L=2.6, w=1.1, angfn=lambda X, Y: np.full(X.shape, math.atan2(ly - ay, 6)), seed=int(R.randint(1 << 20)), jit=.4)
         sc = [(l1 - (l1 - l0) * k / 10, ly + (hem - ly) * math.sin(math.pi * k / 10)) for k in range(11)]
         mv = A([(l0, ly - .5), (l1, ly - .5)] + sc[1:-1], col, wob=.1, rough=.3, edge_dark=.18)
         stip(mv, [dark, col], spacing=.9, L=1.6, w=1.0, ang=0.0, weights=[.45, .55])
     S([(ax0 + 6, ly), (ax1 + 6, ly)], .9, GREEN_AD, a=.5, dry=.4)
+    # the awning's right end: its side panel shows the slope, shaded
+    shaded([(ax1, ay), (ax1 + 6, ly), (ax1 + 6, hem), (ax1 + 12, hem - 3), (ax1 + 9, ay + 2)], [GREEN_A, GREEN_AD, '#1d3d22'], light=(-1, -.3), wob=.1, rough=.3, edge_dark=.15)
+    # shade cast by the snow onto the top of the canvas
+    S([(ax0 + 2, ay + 5), (ax1 + 2, ay + 5)], 4.0, '#000000', a=.16, dry=.6, taper=(.2, .2))
     eave_shadow([(ax0 + 8, hem - 2), (ax1 + 6, hem - 2)], 6, WOOD_D)
     snow_edge([(ax0 - 4, ay - 1), (ax1 + 4, ay - 1)], 10.0, drip=.2)
     for _ in range(4):
@@ -381,24 +390,50 @@ def build():
     shaded([(236, 846), (246, 846), (246, 838), (236, 838)], ['#d84a3a', '#b8262a', '#7a1a1a'], wob=.05, rough=.2)
     S([(236, 839), (246, 839)], 1.2, '#f0d070', a=1, dry=.05); S([(236, 845), (246, 845)], 1.2, '#f0d070', a=1, dry=.05)
     shaded(lump(198, 873, 5, 5, amp=0), ['#5a8ad0', '#3a6aa8', '#24467a'], wob=.05, rough=.2)
-    # the bear: shaded body, raised arms, head, ears, muzzle, nose and eyes, a red bow
-    sc = 1.3; bp = lambda px, py: (213 + (px - 213) * sc, 866 + (py - 866) * sc)
-    bl = lambda px, py, rx, ry: lump(*bp(px, py), rx * sc, ry * sc, amp=.04)
-    shaded(bl(213, 857, 12, 13), BC, wob=.1, rough=.3, edge_dark=.2)
+    # the bear: one plush figure. Head, ears, body, arms and legs are united into a single silhouette first,
+    # so the parts join like a stuffed toy; it is then shaded as one form (lit upper left, darker in its creases)
+    sc = 1.3; cx0, cy0 = 213, 866
+    bp = lambda px, py: (cx0 + (px - cx0) * sc, cy0 + (py - cy0) * sc)
+    parts = [(213, 855, 12.5, 13.5), (213, 834, 11, 10), (204, 825, 4.2, 4.2), (222, 825, 4.2, 4.2),   # body, head, ears
+             (200, 852, 4.6, 8.5, -.5), (226, 852, 4.6, 8.5, .5),                                      # arms, angled out
+             (205, 868, 6.5, 5), (221, 868, 6.5, 5)]                                                   # legs
+    M_ = np.zeros((c.H, c.W), np.float32)
+    for p in parts:
+        px, py = bp(p[0], p[1]); rx, ry = p[2] * sc, p[3] * sc; ang = math.degrees(p[4]) if len(p) > 4 else 0
+        cv2.ellipse(M_, (int((px - X0) * K), int((py - Y0) * K)), (int(rx * K), int(ry * K)), ang, 0, 360, 1.0, -1, cv2.LINE_AA)
+    M_ = cv2.GaussianBlur(M_, (0, 0), 1.2 * K); M_ = np.clip((M_ - .5) * 3 + .5, 0, 1)
+    ys, xs = np.nonzero(M_ > .01); bx0, by0, bx1, by1 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
+    mb = (int(bx0), int(by0), M_[by0:by1, bx0:bx1].copy())
+    track(c.area(None, BEAR, m=mb, edge_dark=.25, var=.04))
+    # shading: distance from each part's centre (rounded forms), light from the upper left
+    inner = np.zeros((c.H, c.W), np.float32)
+    for p in parts:
+        px, py = bp(p[0], p[1]); rx, ry = p[2] * sc * K, p[3] * sc * K
+        Y, Xg = np.mgrid[by0:by1, bx0:bx1].astype(np.float32)
+        d = 1 - np.clip(np.hypot((Xg - (px - X0) * K + rx * .3) / rx, (Y - (py - Y0) * K + ry * .3) / ry), 0, 1)
+        inner[by0:by1, bx0:bx1] = np.maximum(inner[by0:by1, bx0:bx1], d)
+    Cl, Cm, Cd = hexc('#dca066'), hexc(BEAR), hexc('#7a4620')
+    def bcol(X, Y, r):
+        v = inner[np.clip((Y * K).astype(int), 0, c.H - 1), np.clip((X * K).astype(int), 0, c.W - 1)][:, None]
+        col = np.where(v > .5, Cm * (1 - (v - .5) * 2) + Cl * (v - .5) * 2, Cd * (1 - v * 2) + Cm * v * 2)
+        return np.clip(col * (1 + (r.rand(len(X), 1) - .5) * .1), 0, 1)
+    c.stip(mb, bcol, spacing=.7, L=1.4, w=.9, seed=77, jit=.6, thresh=.3)       # short dabs: plush fur
+    # creases where the arms and legs meet the body
+    for (a_, b_) in (((204, 846), (206, 860)), ((222, 846), (220, 860)), ((208, 864), (218, 864))):
+        S([bp(*a_), bp(*b_)], 1.0, '#6a3a1a', a=.55, dry=.4)
+    # inner ears, muzzle, paw pads
     for sg in (-1, 1):
-        shaded(bl(213 + sg * 12, 851, 4, 7), BC, wob=.1, rough=.3, edge_dark=.15)
-        shaded(bl(213 + sg * 8, 868, 6, 4.5), BC, wob=.1, rough=.3, edge_dark=.15)
-        A(bl(213 + sg * 8, 869, 3, 2.2), BEAR_L, wob=.05, rough=.2)
-    shaded(bl(213, 833, 10.5, 9.5), BC, wob=.1, rough=.3, edge_dark=.2)
+        A(lump(*bp(213 + sg * 9, 825), 2.2 * sc, 2.2 * sc, amp=0), '#e8b07a', wob=.05, rough=.2)
+        A(lump(*bp(213 + sg * 8, 869), 3.2 * sc, 2.4 * sc, amp=0), '#e6b07c', wob=.05, rough=.2)
+    shaded(lump(*bp(213, 838), 5.2 * sc, 4 * sc, amp=0), ['#f0c690', '#e2b07c', '#c48a56'], wob=.05, rough=.2, L=1.0, w=.8)
+    nx, ny = bp(213, 836); c.dots([(nx - X0, ny - Y0)], 2.0, ['#2a1a12'], seed=3)
     for sg in (-1, 1):
-        shaded(bl(213 + sg * 9, 824, 4, 4), BC, wob=.05, rough=.2); A(bl(213 + sg * 9, 824, 2, 2), '#e8b07a', wob=.05, rough=.2)
-    A(bl(213, 837, 5, 3.8), '#e2b07c', wob=.05, rough=.2)
-    nx, ny = bp(213, 835.5); c.dots([(nx - X0, ny - Y0)], 1.8, ['#2a1a12'], seed=3)
-    for sg in (-1, 1):
-        ex, ey = bp(213 + sg * 4, 830); c.dots([(ex - X0, ey - Y0)], 1.3, ['#1e140e'], seed=4 + sg)
-    S([bp(210.5, 839.5), bp(213, 840.5), bp(215.5, 839.5)], .8, '#3a2216', a=.9, dry=.05)
-    for sg in (-1, 1): A([bp(213, 844), bp(213 + sg * 7, 840), bp(213 + sg * 7, 848)], BERRY, wob=.05, rough=.2, edge_dark=.2)
-    A(bl(213, 844, 2, 2), '#9a1e22', wob=.05, rough=.2)
+        ex, ey = bp(213 + sg * 4.2, 830.5); c.dots([(ex - X0, ey - Y0)], 1.4, ['#1e140e'], seed=4 + sg)
+        c.dots([(ex - X0 - .4, ey - Y0 - .5)], .45, ['#ffffff'], seed=7 + sg)
+    S([bp(210.5, 840), bp(213, 841.2), bp(215.5, 840)], .9, '#3a2216', a=.9, dry=.05)
+    # the red bow at the neck
+    for sg in (-1, 1): shaded([bp(213, 845), bp(213 + sg * 7, 841), bp(213 + sg * 7.5, 849)], ['#e0504a', BERRY, '#7a1418'], wob=.05, rough=.2, edge_dark=.2, L=1.0, w=.8)
+    A(lump(*bp(213, 845), 2.2 * sc, 2.2 * sc, amp=0), '#9a1e22', wob=.05, rough=.2)
     # a little garland across the top of the display window
     for t in np.linspace(0, 1, 14):
         px = 175 + 75 * t; py = 803 + 3 * math.sin(math.pi * (t * 3 % 1))
