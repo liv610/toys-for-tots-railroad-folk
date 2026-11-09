@@ -1,0 +1,53 @@
+{
+ "scale": 2.747,
+ "offset": [
+  757.335,
+  390.105
+ ],
+ "offsets_px": {
+  "station left wall": [
+   0,
+   -1
+  ],
+  "station right wall": [
+   0,
+   -1
+  ],
+  "roof finial": [
+   3,
+   -19
+  ],
+  "star emblem": [
+   7,
+   -57
+  ],
+  "banner": [
+   13,
+   0
+  ],
+  "left corner tower": [
+   -58,
+   27
+  ],
+  "right corner tower": [
+   41,
+   27
+  ],
+  "stone bridge, top of deck": [
+   41,
+   -49
+  ],
+  "red line at the west wall": [
+   0,
+   -184
+  ],
+  "green line at the red bridge": [
+   51,
+   -164
+  ],
+  "station base (today)": [
+   -20,
+   188
+  ]
+ }
+}
