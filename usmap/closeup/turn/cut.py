@@ -37,7 +37,17 @@ def cutout(im, box, pad=14, T=14):
         xx, yy, ww, hh_, ar = st[i]
         if xx == 0 or yy == 0 or xx + ww >= a.shape[1] or yy + hh_ >= a.shape[0]: continue
         reg = l == i
-        if ar < 150 or s[reg].mean() > (6.5 if T < 20 else 12): a[reg] = 1
+        # fill only the pale paint inside the cap (top fifth of the figure) and pin-holes; an enclosed patch lower down
+        # is paper showing between an arm and the body or between the legs, and stays see-through
+        in_cap = yy + hh_ < .22 * a.shape[0]
+        if ar < 40 or (in_cap and s[reg].mean() > (6.5 if T < 20 else 12)): a[reg] = 1
+    # paper slivers in narrow gaps (arm against coat, between the legs) survive the threshold because the blur mixes
+    # in the dark coat; below the cap, any pixel that is the paper's own colour is cleared
+    raw = cv2.cvtColor(c, cv2.COLOR_BGR2LAB).astype(np.float32)
+    paperlike = (np.abs(raw[..., 0] - bg[0]) < 16) & (np.abs(raw[..., 1] - bg[1]) < 4) & (np.abs(raw[..., 2] - bg[2]) < 5)
+    paperlike = cv2.morphologyEx(paperlike.astype(np.uint8), cv2.MORPH_OPEN, np.ones((2, 2)))
+    paperlike[:int(.25 * a.shape[0])] = 0             # the cap and the face (teeth are cream too) are left alone
+    a[cv2.dilate(paperlike, np.ones((5, 5))) > 0] = 0
     a = cv2.erode(a, np.ones((3, 3)))                 # lose the one-pixel cream halo
     af = cv2.GaussianBlur(a.astype(np.float32), (0, 0), .8)
     rgba = np.dstack([c, (np.clip(af, 0, 1) * 255).astype(np.uint8)])
