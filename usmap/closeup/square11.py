@@ -521,11 +521,12 @@ def donation_box(x, ybase, seed, s=1.0):
     paint(rect(x - 22, ybase - h + 18, x + 22, ybase - h + 26), ['#2a1412', '#3a1a16'], spacing=.6, L=1.2, w=.8, seed=seed + 2, wob=.05)  # slot
     paint(rect(x - w / 2 + 6, ybase - h + 40, x + w / 2 - 6, ybase - 34), ['#f6ecd8', '#efe2c4'], spacing=.8, L=1.6, w=1.1, seed=seed + 3, wob=.1, edge=.12)
     letters('TOY', x, ybase - h + 58 * s, 12 * s, ['#b8302a', '#a82820'], seed=seed + 4)
-    letters('DONATION', x, ybase - h + 80 * s, 8.5 * s, ['#b8302a', '#a82820'], seed=seed + 5)
+    letters('DONATION', x, ybase - h + 80 * s, 6.6 * s, ['#b8302a', '#a82820'], seed=seed + 5)
     stars(x, ybase - 46 * s, 3, 13 * s, 4 * s, '#b8302a')
     paint(rect(x - w / 2 - 4, ybase - 6, x + w / 2 + 14, ybase + 2), ['#7a1814', '#8a1c18'], spacing=.7, L=1.4, w=1.0, seed=seed + 6, wob=.1)
 
 # ------------------------------------------------------------------ the square
+SPECKS = True
 def cobbles(y0, y1, x0, x1):
     """Cobbles: a mortar ground, then stones in rows growing toward the viewer, each a dab of its own size and tone,
     a lighter worn path down the middle, and the lamplight pooling on them (applied through lit())."""
@@ -546,9 +547,10 @@ def cobbles(y0, y1, x0, x1):
             cc = cc * v[:, None]; cc = cc * (1 - .45 * w[:, None]) + cc * WARM * .55 * w[:, None]
             return np.clip(cc, 0, 1)
         c.stip(m, col, spacing=sz * 1.05, L=sz * .95, w=sz * .66, angfn=lambda X, Y: np.zeros(X.shape), seed=902 + ri, jit=.18, thresh=.3)
-    for ri, (y, sz) in enumerate(rows[::2]):                                                          # tiny highlights on stone tops
-        xs = rr.uniform(x0, x1, int((x1 - x0) / (sz * 5)))
-        for xx in xs: c.dots([(xx, y - sz * .2)], sz * .12, ['#e8e2d4'], a=.5, seed=rr.randint(1 << 20))
+    if SPECKS:
+        for ri, (y, sz) in enumerate(rows[::2]):                                                      # tiny highlights on stone tops
+            xs = rr.uniform(x0, x1, int((x1 - x0) / (sz * 5)))
+            for xx in xs: c.dots([(xx, y - sz * .2)], sz * .12, ['#e8e2d4'], a=.5, seed=rr.randint(1 << 20))
 
 def kerb_and_lawn():
     """The square's kerb curving round to the lawn, the lawn stroked along its contour, and two foreground trees."""
