@@ -2,107 +2,162 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=DM+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: the scene first with its speech bubbles, a short how-it-works, then the trace comparison */
-:root{--ocean:#14253b;--ink:#f3ead8;--muted:#aeb7c6;--rule:#2c4363;--accent:#e9a861;--paper:#f3ead6;--paper-ink:#36281f;--red:#b8402e;
+/* Layout: the animated scene first, its controls, then how it works and the trace comparison */
+:root{--ocean:#14253b;--ink:#f3ead8;--muted:#aeb7c6;--rule:#2c4363;--accent:#e9a861;--paper:#f3ead6;--paper-ink:#36281f;
   --display:"Young Serif",Georgia,serif;--mono:"DM Mono",ui-monospace,Menlo,monospace;color-scheme:dark}
 body{background:var(--ocean);color:var(--ink);font:15px/1.6 var(--mono);margin:0}
-.wrap{max-width:1100px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:28px}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:24px}
 h1,h2{font-family:var(--display);font-weight:400;margin:0;line-height:1.15;text-wrap:balance} h1{font-size:clamp(24px,4vw,36px)} h2{font-size:20px}
-p{margin:0;color:var(--muted);max-width:72ch} b{color:var(--ink);font-weight:500}
+p{margin:0;color:var(--muted);max-width:74ch} b{color:var(--ink);font-weight:500}
 .eyebrow{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
-.stage{position:relative;width:min(100%,640px);aspect-ratio:1120/1176;margin:0 auto;border-radius:6px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.45)}
-canvas{width:100%;height:100%;display:block;cursor:pointer}
-.bubble{position:absolute;max-width:46%;background:var(--paper);color:var(--paper-ink);border:2px solid #6e3a2a;border-radius:12px 14px 12px 16px;
-  padding:9px 12px;font:15px/1.4 var(--display);box-shadow:0 8px 20px rgba(8,14,24,.45);pointer-events:none}
-.bubble::after{content:"";position:absolute;bottom:-11px;width:16px;height:16px;background:var(--paper);border-right:2px solid #6e3a2a;border-bottom:2px solid #6e3a2a;transform:rotate(45deg)}
-.bubble.a{left:3%;top:3%} .bubble.a::after{left:30%} .bubble.b{right:3%;top:3%} .bubble.b::after{right:30%}
+.stage{position:relative;width:100%;aspect-ratio:1800/1176;border-radius:6px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.45);background:#2a2430}
+canvas{width:100%;height:100%;display:block}
+.bubble{position:absolute;transform:translate(-50%,-100%);max-width:34%;background:var(--paper);color:var(--paper-ink);border:2px solid #6e3a2a;
+  border-radius:12px 14px 12px 16px;padding:8px 12px;font:clamp(11px,1.5vw,16px)/1.35 var(--display);box-shadow:0 8px 20px rgba(8,14,24,.45);pointer-events:none}
+.bubble::after{content:"";position:absolute;bottom:-10px;left:calc(50% - 8px);width:14px;height:14px;background:var(--paper);border-right:2px solid #6e3a2a;border-bottom:2px solid #6e3a2a;transform:rotate(45deg)}
 .bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 button{font:500 12px var(--mono);color:var(--ink);background:#1d3350;border:1px solid var(--rule);border-radius:999px;padding:7px 13px;cursor:pointer}
 button:hover{border-color:var(--accent)} button[aria-pressed="true"]{background:var(--ink);color:var(--ocean)}
 button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.hint{text-align:center;font-size:12.5px}
 figure{margin:0;display:grid;gap:8px} figure img{width:100%;height:auto;border-radius:4px;display:block} figcaption{font-size:12.5px;color:var(--muted)}
-ul{margin:0;padding-left:18px;color:var(--muted);display:grid;gap:5px;max-width:78ch}
+ul{margin:0;padding-left:18px;color:var(--muted);display:grid;gap:5px;max-width:80ch}
 </style>
 <div class="wrap">
   <header style="display:grid;gap:8px">
-    <span class="eyebrow">Toy Town &middot; traced from your reference &middot; repainted with the map's brush</span>
-    <h1>The Marines can talk</h1>
-    <p>Click either Marine. He says a scripted line, with a caption and a moving mouth. The figures are traced from your reference painting and repainted dab by dab with the map's own folk brush.</p>
+    <span class="eyebrow">Toy Town &middot; traced from your reference &middot; repainted with the map's brush &middot; rigged</span>
+    <h1>The Marines walk, hand over a present and talk</h1>
+    <p>A 24-second loop: one Marine walks in, they talk, the present is lifted and passed across, and he turns and carries it away. Heads nod and blink, mouths move with the words, and arms hinge at the elbow.</p>
   </header>
   <div class="stage" id="stage">
-    <canvas id="cv" width="1120" height="1176" aria-label="Two Marines handing over a present; click one to hear him"></canvas>
-    <div class="bubble a" id="ba" hidden></div><div class="bubble b" id="bb" hidden></div>
+    <canvas id="cv" width="1800" height="1176" aria-label="Two Marines in Toy Town square: one walks in, they talk, and the present is handed over"></canvas>
+    <div class="bubble" id="bub" hidden></div>
   </div>
   <div class="bar">
-    <button id="talkA">Talk to the Marine on the left</button>
-    <button id="talkB">Talk to the Marine on the right</button>
+    <button id="play" aria-pressed="true">Pause</button>
+    <button id="restart">Start again</button>
+    <button id="slow" aria-pressed="false">Slow motion</button>
     <button id="voice" aria-pressed="false">Voice: off</button>
   </div>
-  <p class="hint" id="hint">The voice uses your browser's built-in speech, a placeholder until we choose real voices. Captions always show.</p>
-  <section style="display:grid;gap:12px">
+  <p style="text-align:center;font-size:12.5px" id="hint">The voice uses your browser's built-in speech, a placeholder until we choose real voices. Captions always show.</p>
+  <section style="display:grid;gap:10px">
     <h2>How it works</h2>
     <ul>
-      <li><b>Traced:</b> the two Marines and the present were cut from your reference image as one shape, so the drawing, faces and poses are yours.</li>
-      <li><b>Repainted:</b> the shape is repainted in three passes of the map's stipple, coarse to fine. Each dab takes its colour from the reference and runs along the form, then paint ridges are lit, the same as on the map. Up close it is our brushwork, not a pasted image.</li>
-      <li><b>Speaking:</b> each head has three mouth frames (closed, half open, open), painted with the same brush. While a line plays, the mouth moves through them.</li>
-      <li><b>Next:</b> heads as separate layers, so they can nod and turn; arms that lift the present; blinking; real voices (open-source text-to-speech or recorded actors) with the mouth timed to the sound.</li>
+      <li><b>Traced and repainted:</b> both figures are cut from your reference and repainted dab by dab with the map's brush.</li>
+      <li><b>Cut into hinged parts:</b> each Marine is a head (hinged at the neck), a forearm (hinged at the elbow), two legs (hinged at the hip, under the coat) and a body. The present is a part of its own.</li>
+      <li><b>Hidden areas painted in:</b> the coat behind each forearm and the corners of the present behind the gloves did not exist in the picture. They were filled from the surrounding paint and brushed over, so nothing shows a hole when the arms move.</li>
+      <li><b>Eyes:</b> now an almond white with a coloured iris, pupil, catchlight, lids and brow. Each Marine looks toward the other, and they blink.</li>
+      <li><b>Walking:</b> the legs swing at the hip with a small bob. Turning around flips the figure with a quick squash, like a toy being turned.</li>
     </ul>
   </section>
-  <figure><img src="compare.jpg" alt="Left: the Marines in your reference. Right: the same Marines traced and repainted with the map's brush"><figcaption>Left: your reference. Right: traced and repainted with our brush (shown on a plain ground).</figcaption></figure>
+  <figure><img src="compare.jpg" alt="Left: the Marines in your reference. Right: traced and repainted with the map's brush"><figcaption>Left: your reference. Right: traced and repainted with our brush.</figcaption></figure>
 </div>
 <script>
 (function(){
-  const M = {"a":{"files":["head_a_0.png","head_a_1.png","head_a_2.png"],"x":64,"y":52},"b":{"files":["head_b_0.png","head_b_1.png","head_b_2.png"],"x":788,"y":52}};
-  const LINES = {
-    a: ["Merry Christmas! Thank you for bringing a toy today.", "Every toy dropped in that red box goes to a child right here in our town."],
-    b: ["Toys for Tots has been giving toys to children since 1947.", "Want to help? Bring a new, unwrapped toy and we'll make sure it finds a home."]
-  };
-  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
-  const load = s => Object.assign(new Image(), { src: s });
-  const bg = load('backdrop.jpg'), body = load('marines.png');
-  const heads = { a: M.a.files.map(load), b: M.b.files.map(load) };
-  const talk = { a: null, b: null }, idx = { a: 0, b: 0 };
-  const bub = { a: document.getElementById('ba'), b: document.getElementById('bb') };
+  const RIG = {"size": [1120, 1176], "k": 4, "marines": {"a": {"forearm": {"file": "forearm_a.png", "x": 254, "y": 434, "w": 246, "h": 154, "pivot": [272, 488]}, "head": {"frames": ["head_a_0.png", "head_a_1.png", "head_a_2.png", "head_a_3.png"], "x": 64, "y": 52, "pivot": [236, 312]}, "legs": {"back": {"file": "leg_a_back.png", "x": 77, "y": 683, "w": 121, "h": 441, "pivot": [136, 704]}, "front": {"file": "leg_a_front.png", "x": 194, "y": 683, "w": 152, "h": 444, "pivot": [260, 704]}}, "bounds": [64, 52, 344, 1176], "body": {"file": "body_a.png", "x": 75, "y": 292, "w": 325, "h": 433}}, "b": {"forearm": {"file": "forearm_b.png", "x": 624, "y": 430, "w": 243, "h": 156, "pivot": [848, 488]}, "head": {"frames": ["head_b_0.png", "head_b_1.png", "head_b_2.png", "head_b_3.png"], "x": 788, "y": 52, "pivot": [904, 304]}, "legs": {"back": {"file": "leg_b_back.png", "x": 914, "y": 659, "w": 110, "h": 444, "pivot": [968, 680]}, "front": {"file": "leg_b_front.png", "x": 802, "y": 659, "w": 116, "h": 445, "pivot": [868, 680]}}, "bounds": [804, 52, 1040, 1176], "body": {"file": "body_b.png", "x": 748, "y": 292, "w": 284, "h": 791}}}, "present": {"file": "present.png", "x": 400, "y": 264, "w": 329, "h": 328}};
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d'), bub = document.getElementById('bub');
+  const IMG = {}; const L = f => IMG[f] || (IMG[f] = Object.assign(new Image(), { src: f }));
+  const stage = L('stage.jpg');
+  for (const m of Object.values(RIG.marines)) { L(m.body.file); L(m.forearm.file); L(m.legs.back.file); L(m.legs.front.file); m.head.frames.forEach(L); }
+  L(RIG.present.file);
+  const S = .74, OX = 250, OY = 285;                        // sprite -> stage
+  const T = 24;
+  const LINES = [
+    { who: 'a', t0: 6.0, t1: 9.0, text: 'Merry Christmas! This one is for a child here in Toy Town.' },
+    { who: 'b', t0: 10.8, t1: 13.6, text: 'Thank you! Every toy in that red box finds a home.' },
+    { who: 'a', t0: 19.6, t1: 22.4, text: 'Bring a new, unwrapped toy. We will take care of the rest!' },
+  ];
+  const ease = u => u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u);
+  const seg = (t, a, b) => ease((t - a) / (b - a));
+  const lerp = (a, b, u) => a + (b - a) * u;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let voice = false;
-  function say(who) {
-    const other = who === 'a' ? 'b' : 'a';
-    stop(other);
-    const line = LINES[who][idx[who]++ % LINES[who].length];
-    bub[who].textContent = line; bub[who].hidden = false;
-    const dur = Math.max(2200, line.length * 62);
-    talk[who] = { t0: performance.now(), dur };
-    if (voice && 'speechSynthesis' in window) {
-      try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(line); u.rate = .98; u.pitch = who === 'a' ? 1.0 : .85;
-        u.onend = () => { if (talk[who]) talk[who].dur = performance.now() - talk[who].t0; }; speechSynthesis.speak(u); talk[who].dur = dur * 1.4; } catch (e) {}
+  let playing = true, rate = 1, t = 0, last = performance.now(), voice = false, spoken = -1;
+
+  function state(t) {
+    const A = { x: 0, bob: 0, legs: 0, fa: 0, ha: 0, mirror: 1, talk: false };
+    const B = { x: 0, bob: 0, legs: 0, fa: 0, ha: 0, mirror: 1, talk: false };
+    const stride = 2 * Math.PI * 1.55;
+    // B walks in (0-5 s), raises his arms (5-6)
+    if (t < 5) { const u = seg(t, 0, 5); B.x = lerp(1150, 0, 1 - Math.pow(1 - u, 1.6)); B.legs = 15 * Math.sin(t * stride) * (1 - seg(t, 4.3, 5)); B.bob = -Math.abs(Math.sin(t * stride)) * 9 * (1 - seg(t, 4.3, 5)); }
+    B.fa = t < 5 ? -38 + 5 * Math.sin(t * stride) : lerp(-38, 0, seg(t, 5, 6));
+    // the handoff (9.2-10.6): lift, pass, A's arm comes down
+    let holder = t < 9.9 ? 'a' : 'b', lift = 0;
+    if (t > 9.2 && t < 10.6) lift = -Math.sin(Math.PI * (t - 9.2) / 1.4) * 34;
+    if (t > 9.2 && t < 9.9) A.fa = -8 * seg(t, 9.2, 9.6);
+    if (t >= 9.9) A.fa = lerp(-8, 42, seg(t, 9.9, 11));
+    // B turns (13.8-14.3) and walks off (14.3-19.5)
+    if (t >= 13.8) { const u = seg(t, 13.8, 14.3); B.mirror = Math.cos(Math.PI * u); }
+    if (t >= 14.3) { const u = seg(t, 14.3, 19.5); B.x = lerp(-60, 1300, Math.pow(u, 1.2)) + 60 * seg(t, 14.3, 14.6); const w = t - 14.3;
+      B.legs = 15 * Math.sin(w * stride) * seg(t, 14.3, 14.6); B.bob = -Math.abs(Math.sin(w * stride)) * 9 * seg(t, 14.3, 14.6); }
+    // A waves goodbye (19-23)
+    if (t >= 18.8) A.fa = 42 - (42 + 55) * seg(t, 18.8, 19.4) + (t > 19.4 ? 14 * Math.sin((t - 19.4) * 9) * (1 - seg(t, 22.4, 23)) : 0);
+    if (t >= 22.6) A.fa = lerp(-55, 42, seg(t, 22.6, 23.6));
+    // heads: nod while talking, a turn of attention toward the other
+    for (const ln of LINES) {
+      const m = ln.who === 'a' ? A : B;
+      if (t >= ln.t0 && t < ln.t1) { m.talk = true; m.ha = (ln.who === 'a' ? 1 : -1) * (2.5 + 2 * Math.sin(t * 5.5)); }
     }
+    const listen = (m, other) => { if (!m.talk && other.talk) m.ha = (m === A ? 1 : -1) * 2; };
+    listen(A, B); listen(B, A);
+    return { A, B, holder, lift };
   }
-  function stop(who) { talk[who] = null; bub[who].hidden = true; }
-  function mouth(who, now) {
-    const tk = talk[who]; if (!tk) return 0;
-    const u = (now - tk.t0) / tk.dur; if (u > 1) { stop(who); return 0; }
-    if (reduce) return 1;
-    const s = Math.sin(now / 55 + (who === 'a' ? 0 : 1.7)) + .6 * Math.sin(now / 23);   // syllable-like rhythm
-    return s > .7 ? 2 : s > -.2 ? 1 : 0;
+  const isBlink = (t, ph) => ((t + ph) % 3.9) < .14;
+  const mouth = (t, who) => { const s = Math.sin(t * 17 + (who === 'a' ? 0 : 1.7)) + .6 * Math.sin(t * 41); return s > .7 ? 2 : s > -.2 ? 1 : 0; };
+
+  function rot(px, py, deg) { ctx.translate(px, py); ctx.rotate(deg * Math.PI / 180); ctx.translate(-px, -py); }
+  function img(p) { const im = IMG[p.file]; if (im.complete && im.naturalWidth) ctx.drawImage(im, p.x, p.y); }
+  function present(st, m, name) {
+    const R = RIG.marines[name], pv = R.forearm.pivot;
+    ctx.save(); rot(pv[0], pv[1], m.fa); ctx.translate(0, st.lift); img(RIG.present); ctx.restore();
+  }
+  function marine(name, m, st, t) {
+    const R = RIG.marines[name], b = R.body;
+    ctx.save(); ctx.translate(m.x, m.bob);
+    if (m.mirror !== 1) { const cx = b.x + b.w / 2; ctx.translate(cx, 0); ctx.scale(m.mirror, 1); ctx.translate(-cx, 0); }
+    for (const [side, sgn] of [['back', 1], ['front', -1]]) { const l = R.legs[side]; ctx.save(); rot(l.pivot[0], l.pivot[1], sgn * m.legs); img(l); ctx.restore(); }
+    img(b);
+    if (st.holder === name) present(st, m, name);
+    ctx.save(); rot(R.forearm.pivot[0], R.forearm.pivot[1], m.fa); img(R.forearm); ctx.restore();
+    const f = m.talk && !reduce ? mouth(t, name) : isBlink(t, name === 'a' ? 0 : 1.7) ? 3 : 0;
+    const h = R.head, him = IMG[h.frames[f]];
+    ctx.save(); rot(h.pivot[0], h.pivot[1], m.ha); if (him.complete && him.naturalWidth) ctx.drawImage(him, h.x, h.y); ctx.restore();
+    ctx.restore();
   }
   function frame(now) {
     requestAnimationFrame(frame);
-    if (!bg.complete || !body.complete) return;
-    ctx.drawImage(bg, 0, 0, cv.width, cv.height);
-    ctx.drawImage(body, 0, 0);
-    for (const w of ['a', 'b']) {
-      const f = mouth(w, now), im = heads[w][f];
-      if (f && im.complete) ctx.drawImage(im, M[w].x, M[w].y);
+    const dt = Math.min(.1, (now - last) / 1000); last = now; if (playing) t = (t + dt * rate) % T;
+    if (!stage.complete) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(stage, 0, 0, cv.width, cv.height);
+    const st = state(t);
+    ctx.setTransform(S, 0, 0, S, OX, OY);
+    // contact shadows that travel with the feet
+    for (const [name, m] of [['a', st.A], ['b', st.B]]) {
+      const b = RIG.marines[name].body, cx = b.x + b.w / 2 + m.x;
+      ctx.fillStyle = 'rgba(30,24,20,.32)'; ctx.beginPath(); ctx.ellipse(cx + 40, 1112, 170, 26, 0, 0, 6.283); ctx.fill();
     }
+    marine('a', st.A, st, t); marine('b', st.B, st, t);
+    // fade at the loop seam
+    const fade = Math.max(1 - t / .6, (t - (T - .6)) / .6, 0);
+    if (fade > 0) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = `rgba(20,37,59,${fade})`; ctx.fillRect(0, 0, cv.width, cv.height); }
+    // the caption
+    const ln = LINES.find(l => t >= l.t0 && t < l.t1);
+    if (ln) {
+      const m = ln.who === 'a' ? st.A : st.B, h = RIG.marines[ln.who].head;
+      const x = OX + S * (h.x + h.pivot[0] * .0 + 120 + m.x), y = OY + S * (h.y - 10);
+      bub.textContent = ln.text; bub.hidden = false;
+      bub.style.left = (Math.max(18, Math.min(82, x / cv.width * 100))) + '%'; bub.style.top = Math.max(18, y / cv.height * 100) + '%';
+      const i = LINES.indexOf(ln);
+      if (voice && spoken !== i && 'speechSynthesis' in window) { spoken = i; try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(ln.text); u.pitch = ln.who === 'a' ? 1 : .8; speechSynthesis.speak(u); } catch (e) {} }
+    } else { bub.hidden = true; if (t < 1) spoken = -1; }
   }
   requestAnimationFrame(frame);
-  cv.addEventListener('click', e => { const r = cv.getBoundingClientRect(); say((e.clientX - r.left) / r.width < .5 ? 'a' : 'b'); });
-  document.getElementById('talkA').onclick = () => say('a');
-  document.getElementById('talkB').onclick = () => say('b');
+  const play = document.getElementById('play');
+  play.onclick = () => { playing = !playing; play.setAttribute('aria-pressed', playing); play.textContent = playing ? 'Pause' : 'Play'; };
+  document.getElementById('restart').onclick = () => { t = 0; spoken = -1; };
+  const slow = document.getElementById('slow');
+  slow.onclick = () => { rate = rate === 1 ? .35 : 1; slow.setAttribute('aria-pressed', rate !== 1); };
   const vb = document.getElementById('voice');
-  vb.onclick = () => { voice = !voice; vb.setAttribute('aria-pressed', voice); vb.textContent = 'Voice: ' + (voice ? 'on' : 'off');
-    if (!voice && 'speechSynthesis' in window) try { speechSynthesis.cancel(); } catch (e) {} };
+  vb.onclick = () => { voice = !voice; vb.setAttribute('aria-pressed', voice); vb.textContent = 'Voice: ' + (voice ? 'on' : 'off'); if (!voice) try { speechSynthesis.cancel(); } catch (e) {} };
   if (!('speechSynthesis' in window)) { vb.disabled = true; document.getElementById('hint').textContent = 'This browser has no built-in speech; captions show the lines.'; }
+  window.__talk = { set t(v) { t = v; }, get t() { return t; }, pause: () => { playing = false; } };
 })();
 </script>

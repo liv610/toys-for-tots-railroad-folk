@@ -1,0 +1,144 @@
+{
+ "size": [
+  1120,
+  1176
+ ],
+ "k": 4,
+ "marines": {
+  "a": {
+   "forearm": {
+    "file": "forearm_a.png",
+    "x": 254,
+    "y": 434,
+    "w": 246,
+    "h": 154,
+    "pivot": [
+     272,
+     488
+    ]
+   },
+   "head": {
+    "frames": [
+     "head_a_0.png",
+     "head_a_1.png",
+     "head_a_2.png",
+     "head_a_3.png"
+    ],
+    "x": 64,
+    "y": 52,
+    "pivot": [
+     236,
+     312
+    ]
+   },
+   "legs": {
+    "back": {
+     "file": "leg_a_back.png",
+     "x": 77,
+     "y": 683,
+     "w": 121,
+     "h": 441,
+     "pivot": [
+      136,
+      704
+     ]
+    },
+    "front": {
+     "file": "leg_a_front.png",
+     "x": 194,
+     "y": 683,
+     "w": 152,
+     "h": 444,
+     "pivot": [
+      260,
+      704
+     ]
+    }
+   },
+   "bounds": [
+    64,
+    52,
+    344,
+    1176
+   ],
+   "body": {
+    "file": "body_a.png",
+    "x": 75,
+    "y": 292,
+    "w": 325,
+    "h": 433
+   }
+  },
+  "b": {
+   "forearm": {
+    "file": "forearm_b.png",
+    "x": 624,
+    "y": 430,
+    "w": 243,
+    "h": 156,
+    "pivot": [
+     848,
+     488
+    ]
+   },
+   "head": {
+    "frames": [
+     "head_b_0.png",
+     "head_b_1.png",
+     "head_b_2.png",
+     "head_b_3.png"
+    ],
+    "x": 788,
+    "y": 52,
+    "pivot": [
+     904,
+     304
+    ]
+   },
+   "legs": {
+    "back": {
+     "file": "leg_b_back.png",
+     "x": 914,
+     "y": 659,
+     "w": 110,
+     "h": 444,
+     "pivot": [
+      968,
+      680
+     ]
+    },
+    "front": {
+     "file": "leg_b_front.png",
+     "x": 802,
+     "y": 659,
+     "w": 116,
+     "h": 445,
+     "pivot": [
+      868,
+      680
+     ]
+    }
+   },
+   "bounds": [
+    804,
+    52,
+    1040,
+    1176
+   ],
+   "body": {
+    "file": "body_b.png",
+    "x": 748,
+    "y": 292,
+    "w": 284,
+    "h": 791
+   }
+  }
+ },
+ "present": {
+  "file": "present.png",
+  "x": 400,
+  "y": 264,
+  "w": 329,
+  "h": 328
+ }
+}

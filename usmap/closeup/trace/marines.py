@@ -21,8 +21,8 @@ K = 4                                          # canvas pixels per reference pix
 OUT = os.path.join(HERE, 'out'); os.makedirs(OUT, exist_ok=True)
 # per Marine, in reference pixels: mouth centre and size, head box (cut as its own layer), neck pivot
 MARINES = {
-    'a': dict(mouth=(661.5, 607.5), mw=7.0, head=(612, 553, 690, 622), pivot=(655, 622), lips='#7a2a22', inner='#4a1612'),
-    'b': dict(mouth=(813.5, 606.5), mw=5.5, head=(793, 553, 862, 619), pivot=(822, 619), lips='#4a1a14', inner='#2a0c0a'),
+    'a': dict(eye=(659.6, 595.4), face=1, skin='#e8a878', iris='#5a7aa0', brow='#9a6a3a', mouth=(661.5, 607.5), mw=7.0, head=(612, 553, 690, 622), pivot=(655, 622), lips='#7a2a22', inner='#4a1612'),
+    'b': dict(eye=(815.4, 593.8), face=-1, skin='#8a5430', iris='#3a2414', brow='#2a1a10', mouth=(813.5, 606.5), mw=5.5, head=(793, 553, 862, 619), pivot=(822, 619), lips='#4a1a14', inner='#2a0c0a'),
 }
 
 def load():
@@ -44,6 +44,7 @@ def repaint(ref, alpha, edits=None):
     c = Kanvas(W * K, H * K, K, '#000000', seed=21); c.HM = np.zeros((c.H, c.W), np.float32)
     big = cv2.resize(ref, (W * K, H * K), interpolation=cv2.INTER_CUBIC)
     if edits: big = edits(big)
+    edges_keep = big.copy()
     soft = cv2.GaussianBlur(big, (0, 0), 1.6 * K)
     c.img[:] = soft                                                   # the ground: the reference's colours, softened
     g = cv2.cvtColor(big, cv2.COLOR_RGB2GRAY)
@@ -83,19 +84,61 @@ def mouth_edit(name, amount):
         return out.astype(np.float32) / 255
     return f
 
+def _px(col): return tuple(int(v) for v in bytes.fromhex(col[1:]))
+def eye_edit(name, blink=0.0):
+    """A more lifelike eye over the traced dot: almond white, coloured iris, pupil, catchlight, upper lid and lash line,
+    lower lid, brow. blink 0..1 closes the lid."""
+    p = MARINES[name]; f_ = p['face']
+    def f(img):
+        out = (np.clip(img, 0, 1) * 255).astype(np.uint8).copy(); S4 = K * 16
+        cx, cy = (p['eye'][0] - X0) * K, (p['eye'][1] - Y0) * K
+        P = lambda pts: np.round(np.array(pts) * 16).astype(np.int32)
+        w, h = 3.9 * K, 2.1 * K                                            # half-width, half-height, canvas px
+        cv2.ellipse(out, (int(cx * 16), int(cy * 16)), (int((w + 1.6 * K) * 16), int((h + 1.3 * K) * 16)), 0, 0, 360, _px(p['skin']), -1, cv2.LINE_AA, shift=4)   # clear the traced dot
+        almond = [(cx - w, cy + .2 * K)] + [(cx - w + 2 * w * u, cy - h * math.sin(u * math.pi) ** .8 + (.4 * K * f_ * (u - .5))) for u in np.linspace(0, 1, 14)] + \
+                 [(cx + w, cy + .2 * K)] + [(cx + w - 2 * w * u, cy + h * .75 * math.sin(u * math.pi)) for u in np.linspace(0, 1, 14)]
+        if blink < .99:
+            cv2.fillPoly(out, [P(almond)], _px('#f2ebe2'), cv2.LINE_AA, shift=4)
+            ix = cx + f_ * 1.1 * K                                          # looking toward the other Marine
+            cv2.circle(out, (int(ix * 16), int(cy * 16)), int(1.75 * K * 16), _px(p['iris']), -1, cv2.LINE_AA, shift=4)
+            cv2.circle(out, (int(ix * 16), int(cy * 16)), int(.9 * K * 16), _px('#120c0a'), -1, cv2.LINE_AA, shift=4)
+            cv2.circle(out, (int((ix - .5 * K) * 16), int((cy - .55 * K) * 16)), int(.38 * K * 16), _px('#ffffff'), -1, cv2.LINE_AA, shift=4)
+        if blink > 0:                                                        # the lid comes down over the eye
+            lid = [(x, y) for x, y in almond[:16]] + [(cx + w, cy - h + 2 * h * blink), (cx - w, cy - h + 2 * h * blink)]
+            cv2.fillPoly(out, [P(lid)], _px(p['skin']), cv2.LINE_AA, shift=4)
+        top = almond[1:15] if blink < .5 else [(cx - w + 2 * w * u, cy + .3 * K + .5 * K * math.sin(u * math.pi)) for u in np.linspace(0, 1, 14)]
+        cv2.polylines(out, [P(top)], False, _px('#2a1810'), int(.75 * K), cv2.LINE_AA, shift=4)                 # upper lid and lashes
+        cv2.polylines(out, [P(almond[16:])], False, tuple(int(v * .82) for v in _px(p['skin'])), int(.35 * K), cv2.LINE_AA, shift=4)   # lower lid
+        brow = [(cx - w * 1.05, cy - h - 1.3 * K + .3 * K * f_), (cx, cy - h - 2.0 * K), (cx + w * 1.05, cy - h - 1.5 * K - .3 * K * f_)]
+        cv2.polylines(out, [P(brow)], False, _px(p['brow']), int(.9 * K), cv2.LINE_AA, shift=4)
+        return out.astype(np.float32) / 255
+    return f
+
+def chain(*fs):
+    def g(img):
+        for f in fs:
+            if f: img = f(img)
+        return img
+    return g
+
 def save_rgba(path, rgb, a):
     cv2.imwrite(path, np.dstack([np.clip(rgb[..., ::-1] * 255 + .5, 0, 255), np.clip(a * 255 + .5, 0, 255)]).astype(np.uint8))
 
 if __name__ == '__main__':
     ref, alpha = load()
-    base = repaint(ref, alpha)
+    eyes = chain(eye_edit('a'), eye_edit('b'))                         # painted after the brush pass, so they stay crisp
+    soften = lambda im: cv2.GaussianBlur(im, (0, 0), .45 * K) * .5 + im * .5
+    base = soften(eyes(repaint(ref, alpha)))
     save_rgba(os.path.join(OUT, 'marines.png'), base, alpha)
     meta = dict(crop=[X0, Y0, X1, Y1], k=K, frames={})
     for nm, p in MARINES.items():
         hx0, hy0, hx1, hy1 = [(v - o) * K for v, o in zip(p['head'], (X0, Y0, X0, Y0))]
         frames = []
-        for i, amt in enumerate((0, .5, 1.0)):
-            img = base if amt == 0 else repaint(ref, alpha, mouth_edit(nm, amt))
+        for i, (amt, bl) in enumerate(((0, 0), (.5, 0), (1.0, 0), (0, 1.0))):     # mouth closed, half, open; then a blink
+            if amt == 0 and bl == 0: img = base
+            else:
+                img = repaint(ref, alpha, mouth_edit(nm, amt) if amt else None)
+                img = soften(chain(eyes, eye_edit(nm, bl) if bl else None)(img))
             f = f'head_{nm}_{i}.png'
             save_rgba(os.path.join(OUT, f), img[hy0:hy1, hx0:hx1], alpha[hy0:hy1, hx0:hx1]); frames.append(f)
         meta['frames'][nm] = dict(files=frames, x=hx0, y=hy0, pivot=[(p['pivot'][0] - X0) * K - hx0, (p['pivot'][1] - Y0) * K - hy0])

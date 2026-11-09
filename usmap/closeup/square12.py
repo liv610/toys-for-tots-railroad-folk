@@ -316,6 +316,9 @@ def main(out, mouth=0.0):
     S.donation_box(1120, 810, 3700, s=1.5)
     S.wagon(1030, 818, 1.7, 3710)
     S.log('furniture')
+    if '--empty' in sys.argv:                                        # the square without the Marines: a stage for the rigged ones
+        impasto(c, strength=.22); S.evening_glow()
+        Image.fromarray((np.clip(c.img, 0, 1) * 255 + .5).astype(np.uint8)).save(out); S.log(f'saved {out}'); return
     # the Marines hand the present across: the present between their gloves
     s = 2.35; ya, yb = 918, 924; xa, xb = 600, 900
     gx, gy = (xa + xb) / 2, ya - 112 * s
