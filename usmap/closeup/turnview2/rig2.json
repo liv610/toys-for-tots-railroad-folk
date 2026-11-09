@@ -1,0 +1,222 @@
+{
+ "qhead": {
+  "a": {
+   "y": 20,
+   "frames": [
+    "qhead_a_smile.png",
+    "qhead_a_open.png",
+    "qhead_a_oh.png",
+    "qhead_a_teeth.png",
+    "qhead_a_closed.png"
+   ],
+   "ecc": true
+  },
+  "b": {
+   "y": 21,
+   "frames": [
+    "qhead_b_smile.png",
+    "qhead_b_open.png",
+    "qhead_b_oh.png",
+    "qhead_b_teeth.png",
+    "qhead_b_closed.png"
+   ],
+   "ecc": true
+  }
+ },
+ "ghead": {
+  "a": {
+   "y": 24,
+   "frames": [
+    "ghead_a_front.png",
+    "ghead_a_left.png",
+    "ghead_a_right.png"
+   ],
+   "ecc": true
+  },
+  "b": {
+   "y": 24,
+   "frames": [
+    "ghead_b_front.png",
+    "ghead_b_left.png",
+    "ghead_b_right.png"
+   ],
+   "ecc": true
+  }
+ },
+ "walk": {
+  "a": {
+   "frames": [
+    {
+     "file": "walk_a_0.png",
+     "cx": 43.3,
+     "bottom": 304,
+     "top": 0
+    },
+    {
+     "file": "walk_a_1.png",
+     "cx": 86.5,
+     "bottom": 302,
+     "top": 1
+    },
+    {
+     "file": "walk_a_2.png",
+     "cx": 85.7,
+     "bottom": 303,
+     "top": 1
+    },
+    {
+     "file": "walk_a_3.png",
+     "cx": 75.2,
+     "bottom": 302,
+     "top": 1
+    },
+    {
+     "file": "walk_a_4.png",
+     "cx": 80.1,
+     "bottom": 304,
+     "top": 0
+    },
+    {
+     "file": "walk_a_5.png",
+     "cx": 86.0,
+     "bottom": 304,
+     "top": 1
+    },
+    {
+     "file": "walk_a_6.png",
+     "cx": 58.8,
+     "bottom": 302,
+     "top": 1
+    },
+    {
+     "file": "walk_a_7.png",
+     "cx": 41.4,
+     "bottom": 304,
+     "top": 0
+    }
+   ],
+   "height": 304
+  },
+  "b": {
+   "frames": [
+    {
+     "file": "walk_b_0.png",
+     "cx": 44.7,
+     "bottom": 304,
+     "top": 0
+    },
+    {
+     "file": "walk_b_1.png",
+     "cx": 86.2,
+     "bottom": 302,
+     "top": 1
+    },
+    {
+     "file": "walk_b_2.png",
+     "cx": 85.2,
+     "bottom": 302,
+     "top": 1
+    },
+    {
+     "file": "walk_b_3.png",
+     "cx": 74.8,
+     "bottom": 302,
+     "top": 1
+    },
+    {
+     "file": "walk_b_4.png",
+     "cx": 85.3,
+     "bottom": 302,
+     "top": 0
+    },
+    {
+     "file": "walk_b_5.png",
+     "cx": 84.2,
+     "bottom": 302,
+     "top": 1
+    },
+    {
+     "file": "walk_b_6.png",
+     "cx": 60.2,
+     "bottom": 302,
+     "top": 1
+    },
+    {
+     "file": "walk_b_7.png",
+     "cx": 41.3,
+     "bottom": 303,
+     "top": 1
+    }
+   ],
+   "height": 304
+  }
+ },
+ "pose": {
+  "a": {
+   "views": {
+    "wave": {
+     "file": "pose_a_wave.png",
+     "cx": 64.5,
+     "bottom": 208,
+     "top": 0,
+     "arm": [
+      0,
+      0,
+      29,
+      68
+     ],
+     "elbow": [
+      18,
+      64
+     ]
+    },
+    "salute": {
+     "file": "pose_a_salute.png",
+     "cx": 66.6,
+     "bottom": 206,
+     "top": 1
+    },
+    "present": {
+     "file": "pose_a_present.png",
+     "cx": 48.0,
+     "bottom": 205,
+     "top": 1
+    }
+   },
+   "height": 204
+  },
+  "b": {
+   "views": {
+    "wave": {
+     "file": "pose_b_wave.png",
+     "cx": 68.6,
+     "bottom": 205,
+     "top": 0,
+     "arm": [
+      0,
+      0,
+      32,
+      67
+     ],
+     "elbow": [
+      19,
+      63
+     ]
+    },
+    "salute": {
+     "file": "pose_b_salute.png",
+     "cx": 71.7,
+     "bottom": 207,
+     "top": 1
+    },
+    "present": {
+     "file": "pose_b_present.png",
+     "cx": 48.9,
+     "bottom": 205,
+     "top": 1
+    }
+   },
+   "height": 204
+  }
+ }
+}

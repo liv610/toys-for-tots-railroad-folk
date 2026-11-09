@@ -1,0 +1,218 @@
+<title>Marines on Parade</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the animated scene first, its controls, then how it works and the trace comparison */
+:root{--ocean:#14253b;--ink:#f3ead8;--muted:#aeb7c6;--rule:#2c4363;--accent:#e9a861;--paper:#f3ead6;--paper-ink:#36281f;
+  --display:"Young Serif",Georgia,serif;--mono:"DM Mono",ui-monospace,Menlo,monospace;color-scheme:dark}
+body{background:var(--ocean);color:var(--ink);font:15px/1.6 var(--mono);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:24px}
+h1,h2{font-family:var(--display);font-weight:400;margin:0;line-height:1.15;text-wrap:balance} h1{font-size:clamp(24px,4vw,36px)} h2{font-size:20px}
+p{margin:0;color:var(--muted);max-width:74ch} b{color:var(--ink);font-weight:500}
+.eyebrow{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.stage{position:relative;width:100%;aspect-ratio:1800/1176;border-radius:6px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.45);background:#2a2430}
+canvas{width:100%;height:100%;display:block}
+.bubble{position:absolute;transform:translate(-50%,-100%);max-width:34%;background:var(--paper);color:var(--paper-ink);border:2px solid #6e3a2a;
+  border-radius:12px 14px 12px 16px;padding:8px 12px;font:clamp(11px,1.5vw,16px)/1.35 var(--display);box-shadow:0 8px 20px rgba(8,14,24,.45);pointer-events:none}
+.bubble::after{content:"";position:absolute;bottom:-10px;left:calc(50% - 8px);width:14px;height:14px;background:var(--paper);border-right:2px solid #6e3a2a;border-bottom:2px solid #6e3a2a;transform:rotate(45deg)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+button{font:500 12px var(--mono);color:var(--ink);background:#1d3350;border:1px solid var(--rule);border-radius:999px;padding:7px 13px;cursor:pointer}
+button:hover{border-color:var(--accent)} button[aria-pressed="true"]{background:var(--ink);color:var(--ocean)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+figure{margin:0;display:grid;gap:8px} figure img{width:100%;height:auto;border-radius:4px;display:block} figcaption{font-size:12.5px;color:var(--muted)}
+ul{margin:0;padding-left:18px;color:var(--muted);display:grid;gap:5px;max-width:80ch}
+</style>
+<div class="wrap">
+  <header style="display:grid;gap:8px">
+    <span class="eyebrow">Toy Town &middot; all four of your sheets &middot; painted frames only, nothing modelled</span>
+    <h1>The Marines walk in, talk face to face, salute and wave</h1>
+    <p>Every frame is cut from the sheets you made: the side walk cycle, the four turning views, the talking faces for the front and three-quarter views, the head turns, and the wave and salute poses.</p>
+  </header>
+  <div class="stage" id="stage">
+    <canvas id="cv" width="1800" height="1176" aria-label="Two Marines in Toy Town square: one walks in, they talk, salute, wave, and he walks away"></canvas>
+    <div class="bubble" id="bub" hidden></div>
+  </div>
+  <div class="bar">
+    <button id="play" aria-pressed="true">Pause</button>
+    <button id="restart">Start again</button>
+    <button id="slow" aria-pressed="false">Slow motion</button>
+    <button id="spin" aria-pressed="false">Turn them around</button>
+    <button id="voice" aria-pressed="false">Voice: off</button>
+  </div>
+  <p style="text-align:center;font-size:12.5px" id="hint">The voice uses your browser's built-in speech, a placeholder until we choose real voices. Captions always show.</p>
+  <section style="display:grid;gap:10px">
+    <h2>What's new</h2>
+    <ul>
+      <li><b>Real walking:</b> your side walk cycle, the steps timed to the distance covered so the feet don't slide.</li>
+      <li><b>Talking face to face:</b> your three-quarter mouth shapes, fitted onto the three-quarter body.</li>
+      <li><b>Glances:</b> your head turns let them look at each other while standing front-on.</li>
+      <li><b>Salute and wave:</b> your poses. The waving hand rocks at the elbow.</li>
+      <li><b>No white gaps:</b> your new sheets came with transparent backgrounds, so the space between arms and legs is truly empty.</li>
+    </ul>
+  </section>
+</div>
+<script>
+(function(){
+  const V = {"views":{"a_front":{"file":"body_a_front.png","cx":139.0,"bottom":764,"top":54,"w":273,"h":780},"a_q":{"file":"body_a_q.png","cx":107.7,"bottom":762,"top":50,"w":223,"h":779},"a_side":{"file":"body_a_side.png","cx":86.2,"bottom":758,"top":57,"w":176,"h":775},"a_back":{"file":"body_a_back.png","cx":137.2,"bottom":732,"top":26,"w":270,"h":745},"b_front":{"file":"body_b_front.png","cx":133.4,"bottom":765,"top":54,"w":262,"h":779},"b_q":{"file":"body_b_q.png","cx":102.8,"bottom":759,"top":51,"w":216,"h":776},"b_side":{"file":"body_b_side.png","cx":85.8,"bottom":754,"top":52,"w":171,"h":770},"b_back":{"file":"body_b_back.png","cx":134.6,"bottom":724,"top":19,"w":263,"h":739}},"heads":{"a":{"y":24,"frames":["fhead_a_smile.png","fhead_a_open.png","fhead_a_oh.png","fhead_a_teeth.png","fhead_a_closed.png"],"neck":188,"warp":[[1.1175726652145386,-0.041507672518491745,67.25790405273438],[0.001441008411347866,1.0588103532791138,51.616031646728516]]},"b":{"y":24,"frames":["fhead_b_smile.png","fhead_b_open.png","fhead_b_oh.png","fhead_b_teeth.png","fhead_b_closed.png"],"neck":185,"warp":[[1.125586986541748,-0.05574459582567215,61.9984016418457],[0.04312441498041153,1.044100284576416,49.08256530761719]]}}}, R = {"qhead":{"a":{"y":20,"frames":["qhead_a_smile.png","qhead_a_open.png","qhead_a_oh.png","qhead_a_teeth.png","qhead_a_closed.png"],"ecc":true},"b":{"y":21,"frames":["qhead_b_smile.png","qhead_b_open.png","qhead_b_oh.png","qhead_b_teeth.png","qhead_b_closed.png"],"ecc":true}},"ghead":{"a":{"y":24,"frames":["ghead_a_front.png","ghead_a_left.png","ghead_a_right.png"],"ecc":true},"b":{"y":24,"frames":["ghead_b_front.png","ghead_b_left.png","ghead_b_right.png"],"ecc":true}},"walk":{"a":{"frames":[{"file":"walk_a_0.png","cx":43.3,"bottom":304,"top":0},{"file":"walk_a_1.png","cx":86.5,"bottom":302,"top":1},{"file":"walk_a_2.png","cx":85.7,"bottom":303,"top":1},{"file":"walk_a_3.png","cx":75.2,"bottom":302,"top":1},{"file":"walk_a_4.png","cx":80.1,"bottom":304,"top":0},{"file":"walk_a_5.png","cx":86.0,"bottom":304,"top":1},{"file":"walk_a_6.png","cx":58.8,"bottom":302,"top":1},{"file":"walk_a_7.png","cx":41.4,"bottom":304,"top":0}],"height":304},"b":{"frames":[{"file":"walk_b_0.png","cx":44.7,"bottom":304,"top":0},{"file":"walk_b_1.png","cx":86.2,"bottom":302,"top":1},{"file":"walk_b_2.png","cx":85.2,"bottom":302,"top":1},{"file":"walk_b_3.png","cx":74.8,"bottom":302,"top":1},{"file":"walk_b_4.png","cx":85.3,"bottom":302,"top":0},{"file":"walk_b_5.png","cx":84.2,"bottom":302,"top":1},{"file":"walk_b_6.png","cx":60.2,"bottom":302,"top":1},{"file":"walk_b_7.png","cx":41.3,"bottom":303,"top":1}],"height":304}},"pose":{"a":{"views":{"wave":{"file":"pose_a_wave.png","cx":64.5,"bottom":208,"top":0,"arm":[0,0,29,68],"elbow":[18,64]},"salute":{"file":"pose_a_salute.png","cx":66.6,"bottom":206,"top":1},"present":{"file":"pose_a_present.png","cx":48.0,"bottom":205,"top":1}},"height":204},"b":{"views":{"wave":{"file":"pose_b_wave.png","cx":68.6,"bottom":205,"top":0,"arm":[0,0,32,67],"elbow":[19,63]},"salute":{"file":"pose_b_salute.png","cx":71.7,"bottom":207,"top":1},"present":{"file":"pose_b_present.png","cx":48.9,"bottom":205,"top":1}},"height":204}}};
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d'), bub = document.getElementById('bub');
+  const IMG = {}; const L = f => IMG[f] || (IMG[f] = Object.assign(new Image(), { src: f }));
+  const stage = L('stage.jpg');
+  for (const v of Object.values(V.views)) L(v.file);
+  for (const h of Object.values(V.heads)) h.frames.forEach(L);
+  for (const k of ['qhead', 'ghead']) for (const h of Object.values(R[k])) h.frames.forEach(L);
+  for (const w of Object.values(R.walk)) w.frames.forEach(f => L(f.file));
+  for (const p of Object.values(R.pose)) Object.values(p.views).forEach(v => L(v.file));
+  const EX = ['smile', 'open', 'oh', 'teeth', 'closed'];
+  const DIRS = [[0, 'front', 1], [45, 'q', 1], [90, 'side', 1], [180, 'back', 1], [270, 'side', -1], [315, 'q', -1], [360, 'front', 1]];
+  const FEET = 1040, H0 = 450, AX = 700, BX = 1130;
+  const buf = document.createElement('canvas'); buf.width = 420; buf.height = 560; const bx = buf.getContext('2d');
+  const BASE = buf.height - 20;
+  const scr = document.createElement('canvas'); const sx = scr.getContext('2d');
+  const sm = (a, b, x) => { x = Math.min(1, Math.max(0, (x - a) / (b - a))); return x * x * (3 - 2 * x); };
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const DUR = 28;
+  const LINES = [
+    { who: 'a', t0: 5.6, t1: 8.8, text: 'Every toy that comes through here finds its way to a child.' },
+    { who: 'b', t0: 9.0, t1: 12.0, text: "Then let's get this one on the next train." },
+    { who: 'a', t0: 15.2, t1: 17.8, text: 'Thank you for giving to Toys for Tots.' },
+    { who: 'b', t0: 18.0, t1: 20.2, text: 'Merry Christmas from Toy Town!' },
+  ];
+  // ---- what each Marine is doing at time t ----
+  function turn(t, t0, t1, a0, a1) { return lerp(a0, a1, sm(t0, t1, t)); }
+  function stateA(t) {
+    let s = { x: AX, y: FEET, mode: 'stand', ang: 0, glance: null, pose: null };
+    if (t >= 2.4 && t < 4.8) s.glance = 'right';
+    if (t >= 4.8 && t < 12.4) s.ang = turn(t, 4.8, 5.4, 0, 45);
+    if (t >= 12.4 && t < 13.2) s.ang = turn(t, 12.4, 13.0, 45, 0);
+    if (t >= 13.2 && t < 15.0) { s.mode = 'pose'; s.pose = 'salute'; }
+    if (t >= 18.0 && t < 20.2) s.glance = 'right';
+    if (t >= 20.4 && t < 22.4) { s.mode = 'pose'; s.pose = 'wave'; }
+    if (t >= 22.6 && t < 26.6) s.glance = 'right';
+    return s;
+  }
+  function stateB(t) {
+    let s = { x: BX, y: FEET, mode: 'stand', ang: 0, glance: null, pose: null };
+    if (t < 3.6) { s.mode = 'walk'; s.dir = -1; s.x = lerp(2080, BX, t / 3.6); s.dist = (2080 - s.x); return s; }
+    if (t < 4.6) { s.ang = turn(t, 4.0, 4.6, 270, 315); return s; }
+    if (t < 12.4) { s.ang = 315; return s; }
+    if (t < 13.2) { s.ang = turn(t, 12.4, 13.0, 315, 360); return s; }
+    if (t < 15.0) { s.mode = 'pose'; s.pose = 'salute'; return s; }
+    if (t < 17.8) { if (t >= 15.2) s.glance = 'left'; return s; }
+    if (t < 20.4) return s;
+    if (t < 22.4) { s.mode = 'pose'; s.pose = 'wave'; return s; }
+    if (t < 23.4) { s.ang = turn(t, 22.6, 23.4, 0, 90); return s; }
+    s.mode = 'walk'; s.dir = 1; s.x = Math.min(2200, BX + (t - 23.4) * 250); s.dist = s.x - BX; return s;
+  }
+  const keyOf = s => s.mode + ':' + (s.pose || '') + ':' + (s.glance || '');
+  function mouth(text, k) {
+    const ch = text[Math.min(text.length - 1, Math.floor(k * text.length))].toLowerCase();
+    if (ch === 'o' || ch === 'u' || ch === 'w') return 'oh';
+    if (ch === 'a') return 'open';
+    if (ch === 'e' || ch === 'i' || ch === 'y') return 'teeth';
+    if ('mbp .,!?\''.includes(ch)) return 'smile';
+    return 'open';
+  }
+  function face(who, t) {
+    const ln = LINES.find(l => l.who === who && t >= l.t0 && t < l.t1);
+    if (ln) return mouth(ln.text, (t - ln.t0) / (ln.t1 - ln.t0));
+    return ((t + (who === 'a' ? 0 : 1.7)) % 3.9) < .13 ? 'closed' : 'smile';
+  }
+  // draw one image into the buffer, feet on BASE, centre line on the middle, scaled to the standing height
+  function put(img, cx, bottom, s, mirror, alpha) {
+    if (!img || img.complete === false || alpha <= 0) return;      // canvases have no .complete
+    bx.save(); bx.globalAlpha = alpha; bx.globalCompositeOperation = 'lighter';
+    bx.translate(buf.width / 2, BASE); bx.scale(s * mirror, s); bx.translate(-cx, -bottom); bx.drawImage(img, 0, 0); bx.restore();
+  }
+  function standView(who, view, mirror, alpha, st, fc) {
+    const v = V.views[who + '_' + view], img = IMG[v.file]; if (!img.complete || alpha <= 0) return;
+    let src = img, hd = null, hy = 0;
+    if (view === 'front') {
+      if (st.glance) { const g = R.ghead[who]; hd = IMG[g.frames[['front', 'left', 'right'].indexOf(st.glance)]]; hy = g.y; }
+      else { hd = IMG[V.heads[who].frames[EX.indexOf(fc)]]; hy = V.heads[who].y; }
+    } else if (view === 'q') { const q = R.qhead[who]; hd = IMG[q.frames[EX.indexOf(fc)]]; hy = q.y; }
+    if (hd) {
+      scr.width = v.w; scr.height = v.h; sx.clearRect(0, 0, v.w, v.h); sx.drawImage(img, 0, 0);
+      if (hd.complete) sx.drawImage(hd, 0, hy); src = scr;
+      put(src, v.cx, v.bottom, H0 / (v.bottom - v.top), mirror, alpha);
+      return;
+    }
+    put(src, v.cx, v.bottom, H0 / (v.bottom - v.top), mirror, alpha);
+  }
+  function layer(who, st, t, alpha) {
+    const fc = face(who, t);
+    if (st.mode === 'walk') {
+      const W = R.walk[who], i = 1 + Math.floor(st.dist / 62) % 6, f = W.frames[i];
+      put(IMG[f.file], f.cx, f.bottom, H0 / W.height, st.dir, alpha); return;
+    }
+    if (st.mode === 'pose') {
+      const P = R.pose[who], v = P.views[st.pose], img = IMG[v.file], s = H0 * .93 / P.height;   // the pose drawings are stockier
+      if (st.pose === 'wave' && img.complete) {
+        // the raised forearm rocks at the elbow
+        const w = img.naturalWidth, h = img.naturalHeight; scr.width = w; scr.height = h;
+        sx.clearRect(0, 0, w, h); sx.drawImage(img, 0, 0);
+        const [ax, ay, aw, ah] = v.arm, [ex, ey] = v.elbow;
+        sx.clearRect(ax, ay, aw, ah);
+        sx.save(); sx.translate(ex, ey); sx.rotate(Math.sin(t * 9) * .22); sx.translate(-ex, -ey);
+        sx.drawImage(img, ax, ay, aw, ah, ax, ay, aw, ah); sx.restore();
+        put(scr, v.cx, v.bottom, s, 1, alpha); return;
+      }
+      put(img, v.cx, v.bottom, s, 1, alpha); return;
+    }
+    const ang = ((st.ang % 360) + 360) % 360;
+    let i = 0; while (i < DIRS.length - 2 && ang >= DIRS[i + 1][0]) i++;
+    const [g0, v0, m0] = DIRS[i], [g1, v1, m1] = DIRS[i + 1];
+    const k = (ang - g0) / (g1 - g0), w = sm(.4, .6, k);
+    standView(who, v0, m0, alpha * (1 - w), st, fc); standView(who, v1, m1, alpha * w, st, fc);
+    return Math.sin(Math.PI * sm(.15, .85, k));
+  }
+  const FADE = .16;
+  function drawMarine(who, t, st, stateFn) {
+    bx.clearRect(0, 0, buf.width, buf.height);
+    // a quick dissolve whenever the drawing changes (walk to stand, stand to salute, a glance)
+    let wPrev = 0, prev = null;
+    if (stateFn && t > FADE) {
+      const p = stateFn(t - FADE);
+      if (keyOf(p) !== keyOf(st)) {
+        let lo = t - FADE, hi = t; for (let n = 0; n < 8; n++) { const m = (lo + hi) / 2; if (keyOf(stateFn(m)) === keyOf(st)) hi = m; else lo = m; }
+        wPrev = 1 - (t - hi) / FADE; prev = stateFn(lo);
+      }
+    }
+    const turning = layer(who, st, t, 1 - wPrev) || 0;
+    if (prev) layer(who, prev, t, wPrev);
+    const squash = 1 - .16 * turning;
+    const bob = st.mode === 'walk' ? -Math.abs(Math.sin(st.dist / 62 / 3 * Math.PI)) * 5 : Math.sin(t * 1.7 + (who === 'a' ? 0 : 2)) * .8;
+    ctx.save(); ctx.globalAlpha = .2; ctx.fillStyle = '#2b2420'; ctx.filter = 'blur(5px)';
+    ctx.beginPath(); ctx.ellipse(st.x, st.y + 3, 78 * squash, 11, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.translate(st.x, st.y + bob); ctx.scale(squash, 1);
+    ctx.drawImage(buf, -buf.width / 2, -BASE); ctx.restore();
+    return { x: st.x, top: st.y - H0 - 26 };
+  }
+  let t = 0, last = null, playing = true, slow = false, spin = false, voice = false, spoken = -1;
+  function frame(now) {
+    if (last === null) last = now; const dt = Math.min(.1, (now - last) / 1000); last = now;
+    if (playing) t = (t + dt * (slow ? .3 : 1)) % DUR;
+    if (!stage.complete) return requestAnimationFrame(frame);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(stage, 0, 0, cv.width, cv.height);
+    let SA = stateA(t), SB = stateB(t), fa = stateA, fb = stateB;
+    if (spin) { const g = (now / 1000 * 40) % 360; SA = { x: AX, y: FEET, mode: 'stand', ang: g }; SB = { x: BX, y: FEET, mode: 'stand', ang: 360 - g }; fa = fb = null; }
+    const ra = drawMarine('a', spin ? 99 : t, SA, fa), rb = drawMarine('b', spin ? 99 : t, SB, fb);
+    const ln = spin ? null : LINES.find(l => t >= l.t0 && t < l.t1);
+    if (ln) {
+      const r = ln.who === 'a' ? ra : rb, k = cv.getBoundingClientRect().width / cv.width;
+      bub.hidden = false; bub.textContent = ln.text; bub.style.left = (r.x * k) + 'px'; bub.style.top = (r.top * k) + 'px';
+      const i = LINES.indexOf(ln);
+      if (voice && spoken !== i && 'speechSynthesis' in window) { spoken = i; try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(ln.text); u.pitch = ln.who === 'a' ? 1 : .8; speechSynthesis.speak(u); } catch (e) {} }
+    } else { bub.hidden = true; if (t < 1) spoken = -1; }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  const pb = document.getElementById('play'); pb.onclick = () => { playing = !playing; pb.setAttribute('aria-pressed', playing); pb.textContent = playing ? 'Pause' : 'Play'; };
+  document.getElementById('restart').onclick = () => { t = 0; spoken = -1; };
+  const sb = document.getElementById('slow'); sb.onclick = () => { slow = !slow; sb.setAttribute('aria-pressed', slow); };
+  const spb = document.getElementById('spin'); spb.onclick = () => { spin = !spin; spb.setAttribute('aria-pressed', spin); };
+  const vb = document.getElementById('voice');
+  vb.onclick = () => { voice = !voice; vb.setAttribute('aria-pressed', voice); vb.textContent = 'Voice: ' + (voice ? 'on' : 'off'); if (!voice) try { speechSynthesis.cancel(); } catch (e) {} };
+  if (!('speechSynthesis' in window)) { vb.disabled = true; document.getElementById('hint').textContent = 'This browser has no built-in speech; captions show the lines.'; }
+  window.__turn = { set t(v) { t = v; }, get t() { return t; }, pause: () => { playing = false; } };
+})();
+</script>
