@@ -121,6 +121,10 @@ The red line, from **Northwest Harbor station** (route index 0, the lodge at map
 The artwork changes in only one place, the knoll and its portals, and only inside this branch. Everything else is
 data and viewer behaviour.
 
+![The proposed section](integration_northwest_section.jpg)
+
+The train in this image is the one painted into the pass 5 still. In the viewer it is a moving sprite.
+
 ## 5. Plan
 
 1. **Knoll and portals.** Add the painter and scene element, plus a `tunnel` span on the red route that skips its
