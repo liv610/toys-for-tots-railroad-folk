@@ -20,9 +20,9 @@ ROOT = R.ROOT
 SCENE_NW = os.path.join(ROOT, 'out5', 'scene5_nw.json')
 CODE = ['usmap/engine10/tunnel10.py']
 
-KNOLL = dict(cx=514.0, base=372.0, w=192.0, h=86.0, kind='moss', seed_hill=9101,
-             trees=[(-16, 38, 'fir'), (12, 46, 'lfir'), (40, 34, 'fir'), (66, 28, 'orange')],
-             portals=[244, 292], face=0.9, cover=62.0, mouth_w=36.0, mouth_h=45.0, ring=6.5)
+KNOLL = dict(cx=508.0, base=378.0, w=232.0, h=96.0, kind='moss', seed_hill=9101,
+             trees=[(-30, 36, 'fir'), (-2, 46, 'lfir'), (28, 40, 'fir'), (54, 32, 'lfir'), (82, 28, 'orange')],
+             portals=[228, 310], face=1.05, cover=62.0, mouth_w=36.0, mouth_h=45.0, ring=6.5)
 
 def build_scene():
     sc = json.load(open(R.SCENE))

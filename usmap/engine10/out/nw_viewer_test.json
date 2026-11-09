@@ -7,14 +7,14 @@
   "d04_viaduct": "detail 87% · Red Line crossing the viaduct",
   "d05_tunnel_approach": "detail 87% · Red Line heading for Mossy Knoll",
   "d06_tunnel_entering": "detail 87% · Red Line in the tunnel",
-  "d07_tunnel_half": "detail 87% · Red Line coming out of the tunnel",
+  "d07_tunnel_half": "detail 87% · Red Line in the tunnel",
   "d08_tunnel_inside": "detail 87% · Red Line coming out of the tunnel",
   "d09_tunnel_emerging": "detail 87% · Red Line coming out of the tunnel",
   "d10_tunnel_out": "detail 87% · Red Line on its way to Toy Town",
   "d11_portal_closeup": "detail 153% · Red Line in the tunnel",
   "d12_shoulder_closeup": "detail 153% · Red Line coming out of the tunnel",
   "d13_viaduct_maxzoom": "detail 509% · Red Line heading for Mossy Knoll",
-  "d14_card_far": "detail 35% · Red Line heading for Mossy Knoll",
+  "d14_card_far": "detail 35% · Red Line in the tunnel",
   "d15_card_mid": "detail 73% · Red Line in the tunnel",
   "d16_card_near": "detail 153% · Red Line in the tunnel",
   "d17_card_panned": "detail 153% · Red Line in the tunnel",
@@ -23,16 +23,16 @@
   "p01_card": "detail 58% · Red Line pulling in to Northwest Harbor"
  },
  "nw": {
-  "portal_s": 1801.1429806148049,
-  "exit_s": 2095.2043783267973,
+  "portal_s": 1703.121351072858,
+  "exit_s": 2205.4805522983347,
   "stop_s": 410.55498509568866
  },
- "fps_national": 43,
+ "fps_national": 50,
  "fps_station": 60,
  "hud_maxzoom": "detail 509% · Red Line heading for Mossy Knoll",
  "d14_card_far": {
   "visible": true,
-  "live": "The train is heading for Mossy Knoll. Next train in 51 s."
+  "live": "The train is in the tunnel. Next train in 51 s."
  },
  "d15_card_mid": {
   "visible": true,
@@ -40,7 +40,7 @@
  },
  "d16_card_near": {
   "visible": true,
-  "live": "The train is in the tunnel. Next train in 48 s."
+  "live": "The train is in the tunnel. Next train in 47 s."
  },
  "card_closed_by_escape": true,
  "fps_ride": 60,

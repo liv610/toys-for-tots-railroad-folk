@@ -210,3 +210,13 @@ face. The two masks are hard-edged (a soft edge left a pale line inside the mout
 on into each mouth and fade, clipped to the opening. In the viewer, the train darkens both going in and coming out.
 
 ![Entering and leaving](integration_nw_tunnel_sequence.jpg)
+
+**Second revision: a tunnel the train passes all the way through.** The tunnel was 77 map units long and the train
+about 150, so the locomotive came out almost as soon as it went in and the train seemed to jump across.
+
+The entry portal now sits at the knoll's west flank, right where the line comes off the viaduct (route index 228).
+The exit is at index 310, on the knoll's east foot, so the tunnel is 131 units long. The knoll is a little wider
+(cx 508, w 232, h 96) to hold it. The train now disappears into the hill almost completely before the locomotive
+reappears.
+
+Tiles: 33 of 35 at 1× and 18 of 20 at 2× are pixel-identical. The wider knoll also touches tile (1, 1), by 452 pixels.
