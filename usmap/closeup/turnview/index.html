@@ -1,0 +1,175 @@
+<title>Turning Marines</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the animated scene first, its controls, then how it works and the trace comparison */
+:root{--ocean:#14253b;--ink:#f3ead8;--muted:#aeb7c6;--rule:#2c4363;--accent:#e9a861;--paper:#f3ead6;--paper-ink:#36281f;
+  --display:"Young Serif",Georgia,serif;--mono:"DM Mono",ui-monospace,Menlo,monospace;color-scheme:dark}
+body{background:var(--ocean);color:var(--ink);font:15px/1.6 var(--mono);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:24px}
+h1,h2{font-family:var(--display);font-weight:400;margin:0;line-height:1.15;text-wrap:balance} h1{font-size:clamp(24px,4vw,36px)} h2{font-size:20px}
+p{margin:0;color:var(--muted);max-width:74ch} b{color:var(--ink);font-weight:500}
+.eyebrow{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.stage{position:relative;width:100%;aspect-ratio:1800/1176;border-radius:6px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.45);background:#2a2430}
+canvas{width:100%;height:100%;display:block}
+.bubble{position:absolute;transform:translate(-50%,-100%);max-width:34%;background:var(--paper);color:var(--paper-ink);border:2px solid #6e3a2a;
+  border-radius:12px 14px 12px 16px;padding:8px 12px;font:clamp(11px,1.5vw,16px)/1.35 var(--display);box-shadow:0 8px 20px rgba(8,14,24,.45);pointer-events:none}
+.bubble::after{content:"";position:absolute;bottom:-10px;left:calc(50% - 8px);width:14px;height:14px;background:var(--paper);border-right:2px solid #6e3a2a;border-bottom:2px solid #6e3a2a;transform:rotate(45deg)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+button{font:500 12px var(--mono);color:var(--ink);background:#1d3350;border:1px solid var(--rule);border-radius:999px;padding:7px 13px;cursor:pointer}
+button:hover{border-color:var(--accent)} button[aria-pressed="true"]{background:var(--ink);color:var(--ocean)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+figure{margin:0;display:grid;gap:8px} figure img{width:100%;height:auto;border-radius:4px;display:block} figcaption{font-size:12.5px;color:var(--muted)}
+ul{margin:0;padding-left:18px;color:var(--muted);display:grid;gap:5px;max-width:80ch}
+</style>
+<div class="wrap">
+  <header style="display:grid;gap:8px">
+    <span class="eyebrow">Toy Town &middot; your turnaround sheets &middot; painted views, no 3D models</span>
+    <h1>The Marines turn, walk and talk, in your painted style</h1>
+    <p>Every view on screen is cut from the sheets you made: front, three-quarter, side and back, and five faces each for talking and blinking. When a Marine turns, the next painted view blends in with a slight squash, the way hand-painted games turn their characters.</p>
+  </header>
+  <div class="stage" id="stage">
+    <canvas id="cv" width="1800" height="1176" aria-label="Two Marines in Toy Town square: one walks in, they turn to each other and talk, then he walks into the shop"></canvas>
+    <div class="bubble" id="bub" hidden></div>
+  </div>
+  <div class="bar">
+    <button id="play" aria-pressed="true">Pause</button>
+    <button id="restart">Start again</button>
+    <button id="slow" aria-pressed="false">Slow motion</button>
+    <button id="spin" aria-pressed="false">Turn them around</button>
+    <button id="voice" aria-pressed="false">Voice: off</button>
+  </div>
+  <p style="text-align:center;font-size:12.5px" id="hint">The voice uses your browser's built-in speech, a placeholder until we choose real voices. Captions always show.</p>
+  <section style="display:grid;gap:10px">
+    <h2>How it works</h2>
+    <ul>
+      <li><b>Six directions from four drawings:</b> front, three-quarter, side and back, plus the three-quarter and side views mirrored for the other way round.</li>
+      <li><b>Talking and blinking:</b> your five faces (smile, open, &ldquo;oh&rdquo;, teeth, eyes closed) are fitted onto the front body. The mouth follows the letters of each line.</li>
+      <li><b>Walking:</b> for now a stiff toy march: a bob and a rock from foot to foot. The legs don't swing yet. That needs walk frames from you, see below.</li>
+      <li><b>Not 3D:</b> nothing is modelled. The brushwork you see is your painting at every angle.</li>
+    </ul>
+  </section>
+</div>
+<script>
+(function(){
+  const V = {"views":{"a_front":{"file":"body_a_front.png","cx":139.0,"bottom":764,"top":54,"w":273,"h":780},"a_q":{"file":"body_a_q.png","cx":106.8,"bottom":764,"top":50,"w":223,"h":779},"a_side":{"file":"body_a_side.png","cx":84.4,"bottom":759,"top":57,"w":176,"h":775},"a_back":{"file":"body_a_back.png","cx":137.8,"bottom":732,"top":26,"w":270,"h":745},"b_front":{"file":"body_b_front.png","cx":131.6,"bottom":765,"top":54,"w":262,"h":779},"b_q":{"file":"body_b_q.png","cx":102.6,"bottom":760,"top":51,"w":216,"h":776},"b_side":{"file":"body_b_side.png","cx":84.2,"bottom":755,"top":52,"w":171,"h":770},"b_back":{"file":"body_b_back.png","cx":131.8,"bottom":724,"top":19,"w":263,"h":739}},"heads":{"a":{"y":24,"frames":["fhead_a_smile.png","fhead_a_open.png","fhead_a_oh.png","fhead_a_teeth.png","fhead_a_closed.png"],"neck":188,"warp":[[1.1221001148223877,-0.03143509104847908,66.24430084228516],[0.002691000932827592,1.0568342208862305,51.80519485473633]]},"b":{"y":24,"frames":["fhead_b_smile.png","fhead_b_open.png","fhead_b_oh.png","fhead_b_teeth.png","fhead_b_closed.png"],"neck":185,"warp":[[1.1274598836898804,-0.03548138588666916,59.74799346923828],[0.011477603577077389,1.0351619720458984,52.377376556396484]]}}};
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d'), bub = document.getElementById('bub');
+  const IMG = {}; const L = f => IMG[f] || (IMG[f] = Object.assign(new Image(), { src: f }));
+  const stage = L('stage.jpg');
+  for (const v of Object.values(V.views)) L(v.file);
+  for (const h of Object.values(V.heads)) h.frames.forEach(L);
+  const EX = ['smile', 'open', 'oh', 'teeth', 'closed'];
+  // the six directions: angle (degrees, 0 = facing us, 90 = facing right), the drawing, mirrored
+  const DIRS = [[0, 'front', 1], [45, 'q', 1], [90, 'side', 1], [180, 'back', 1], [270, 'side', -1], [315, 'q', -1], [360, 'front', 1]];
+  const FEET = 1072, H0 = 700;                     // feet line and standing height on the stage, in stage px
+  const buf = document.createElement('canvas'); buf.width = 700; buf.height = 900; const bx = buf.getContext('2d');
+  const sm = (a, b, x) => { x = Math.min(1, Math.max(0, (x - a) / (b - a))); return x * x * (3 - 2 * x); };
+  const lerp = (a, b, k) => a + (b - a) * k;
+
+  // ---- timeline: positions, facing angle and lines (seconds) ----
+  const DUR = 26;
+  const LINES = [
+    { who: 'a', t0: 6.6, t1: 9.6, text: 'Every toy that comes through here finds its way to a child.' },
+    { who: 'b', t0: 10.0, t1: 13.0, text: "Then let's get this one on the next train." },
+    { who: 'a', t0: 13.4, t1: 15.4, text: 'Right behind you, Sergeant.' },
+    { who: 'a', t0: 21.6, t1: 24.6, text: 'Merry Christmas, and thank you for giving.' },
+  ];
+  // key frames per Marine: [t, x, feetY, angle]; walking is wherever x or y changes between keys
+  const KEYS = {
+    a: [[0, 640, FEET, 0], [4.6, 640, FEET, 0], [5.4, 640, FEET, 45], [6.2, 640, FEET, 0], [15.6, 640, FEET, 0], [16.4, 640, FEET, 45], [18.6, 640, FEET, 45], [19.4, 640, FEET, 0], [26, 640, FEET, 0]],
+    b: [[0, 2050, FEET, 270], [5.0, 1150, FEET, 270], [5.6, 1150, FEET, 315], [6.6, 1150, FEET, 315], [7.2, 1150, FEET, 360], [15.6, 1150, FEET, 360], [16.4, 1150, FEET, 315], [17.0, 1150, FEET, 270], [17.6, 1150, FEET, 180],
+        [21.8, 875, 372, 180], [26, 875, 372, 180]],
+  };
+  function pose(who, t) {
+    const K = KEYS[who]; let i = 0; while (i < K.length - 2 && t >= K[i + 1][0]) i++;
+    const [t0, x0, y0, a0] = K[i], [t1, x1, y1, a1] = K[i + 1];
+    const walking = x0 !== x1 || y0 !== y1, k = Math.min(1, Math.max(0, (t - t0) / (t1 - t0)));
+    const e = walking ? k : sm(0, 1, k);
+    const x = lerp(x0, x1, e), y = lerp(y0, y1, e);
+    // distance walked so far drives the step phase
+    let dist = 0; for (let j = 0; j < i; j++) dist += Math.hypot(K[j + 1][1] - K[j][1], (K[j + 1][2] - K[j][2]) * 1.6);
+    dist += Math.hypot(x - x0, (y - y0) * 1.6);
+    return { x, y, ang: lerp(a0, a1, e), walking: walking && k < 1, dist };
+  }
+  const scaleAt = y => lerp(.46, 1, (y - 372) / (FEET - 372));   // further up the square = further away
+  // mouth shape from the letters being spoken
+  function mouth(text, k) {
+    const ch = text[Math.min(text.length - 1, Math.floor(k * text.length))].toLowerCase();
+    if ('ao'.includes(ch)) return ch === 'o' ? 'oh' : 'open';
+    if ('ei'.includes(ch)) return 'teeth';
+    if ('uw'.includes(ch)) return 'oh';
+    if ('mbp .,'.includes(ch)) return 'smile';
+    return 'open';
+  }
+  function drawView(who, view, mirror, alpha, face) {
+    const v = V.views[who + '_' + view], img = IMG[v.file]; if (!img.complete || alpha <= 0) return;
+    const s = H0 / (v.bottom - v.top);
+    bx.save(); bx.globalAlpha = alpha; bx.globalCompositeOperation = 'lighter';
+    bx.translate(buf.width / 2, buf.height - 40); bx.scale(s * mirror, s); bx.translate(-v.cx, -v.bottom);
+    // the front view is body + face drawn together on a scratch layer, then added
+    if (view === 'front') {
+      const f = drawView.f || (drawView.f = document.createElement('canvas')); f.width = v.w; f.height = v.h;
+      const fx = f.getContext('2d'); fx.clearRect(0, 0, v.w, v.h); fx.drawImage(img, 0, 0);
+      const hd = IMG[V.heads[who].frames[EX.indexOf(face)]]; if (hd.complete) fx.drawImage(hd, 0, V.heads[who].y);
+      bx.drawImage(f, 0, 0);
+    } else bx.drawImage(img, 0, 0);
+    bx.restore();
+  }
+  function drawMarine(who, t, P) {
+    const ang = ((P.ang % 360) + 360) % 360;
+    let i = 0; while (i < DIRS.length - 2 && ang >= DIRS[i + 1][0]) i++;
+    const [g0, v0, m0] = DIRS[i], [g1, v1, m1] = DIRS[i + 1];
+    const w = sm(.4, .6, (ang - g0) / (g1 - g0));            // nearly a cut, hidden by the squash
+    // face: talking, else a blink now and then
+    const ln = LINES.find(l => l.who === who && t >= l.t0 && t < l.t1);
+    let face = 'smile';
+    if (ln) face = mouth(ln.text, (t - ln.t0) / (ln.t1 - ln.t0));
+    else { const bt = (t + (who === 'a' ? 0 : 1.7)) % 3.9; if (bt < .13) face = 'closed'; }
+    bx.clearRect(0, 0, buf.width, buf.height);
+    drawView(who, v0, m0, 1 - w, face); drawView(who, v1, m1, w, face);
+    const s = scaleAt(P.y);
+    const step = P.walking ? P.dist / 95 * Math.PI : 0;              // one step per ~95 px walked
+    const rock = P.walking ? Math.sin(step) * .05 : 0, bob = P.walking ? -Math.abs(Math.sin(step)) * 10 : Math.sin(t * 1.7 + (who === 'a' ? 0 : 2)) * 1.2;
+    const squash = 1 - .16 * Math.sin(Math.PI * sm(.15, .85, (ang - g0) / (g1 - g0)));                 // a little narrower mid-turn
+    // fade away into the shop door
+    const fade = who === 'b' ? 1 - sm(20.6, 21.8, t) : 1;
+    // contact shadow, tight under the feet
+    ctx.save(); ctx.globalAlpha = .22 * fade; ctx.fillStyle = '#2b2420';
+    ctx.beginPath(); ctx.ellipse(P.x, P.y + 4 * s, 120 * s * squash, 16 * s, 0, 0, Math.PI * 2); ctx.filter = 'blur(' + (6 * s).toFixed(1) + 'px)'; ctx.fill(); ctx.restore();
+    ctx.save(); ctx.globalAlpha = fade;
+    ctx.translate(P.x, P.y + bob * s); ctx.rotate(rock); ctx.scale(s * squash, s);
+    ctx.drawImage(buf, -buf.width / 2, -(buf.height - 40));
+    ctx.restore();
+    return { x: P.x, top: P.y - (H0 + 30) * s, ln, fade };
+  }
+  let t = 0, last = null, playing = true, slow = false, spin = false, voice = false, spoken = -1;
+  function frame(now) {
+    if (last === null) last = now; const dt = Math.min(.1, (now - last) / 1000); last = now;
+    if (playing) t = (t + dt * (slow ? .3 : 1)) % DUR;
+    if (!stage.complete) return requestAnimationFrame(frame);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(stage, 0, 0, cv.width, cv.height);
+    let PA = pose('a', t), PB = pose('b', t);
+    if (spin) { const g = (now / 1000 * 40) % 360; PA = { x: 640, y: FEET, ang: g, walking: false, dist: 0 }; PB = { x: 1150, y: FEET, ang: 360 - g, walking: false, dist: 0 }; }
+    const order = PB.y < PA.y ? [['b', PB], ['a', PA]] : [['a', PA], ['b', PB]];
+    let talk = null;
+    for (const [who, P] of order) { const r = drawMarine(who, spin ? 99 : t, P); if (r.ln) talk = r; }
+    if (talk && !spin) {
+      const sr = cv.getBoundingClientRect(), k = sr.width / cv.width;
+      bub.hidden = false; bub.textContent = talk.ln.text;
+      bub.style.left = (talk.x * k) + 'px'; bub.style.top = (talk.top * k) + 'px';
+      const i = LINES.indexOf(talk.ln);
+      if (voice && spoken !== i && 'speechSynthesis' in window) { spoken = i; try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(talk.ln.text); u.pitch = talk.ln.who === 'a' ? 1 : .8; speechSynthesis.speak(u); } catch (e) {} }
+    } else { bub.hidden = true; if (t < 1) spoken = -1; }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  const pb = document.getElementById('play'); pb.onclick = () => { playing = !playing; pb.setAttribute('aria-pressed', playing); pb.textContent = playing ? 'Pause' : 'Play'; };
+  document.getElementById('restart').onclick = () => { t = 0; spoken = -1; };
+  const sb = document.getElementById('slow'); sb.onclick = () => { slow = !slow; sb.setAttribute('aria-pressed', slow); };
+  const spb = document.getElementById('spin'); spb.onclick = () => { spin = !spin; spb.setAttribute('aria-pressed', spin); };
+  const vb = document.getElementById('voice');
+  vb.onclick = () => { voice = !voice; vb.setAttribute('aria-pressed', voice); vb.textContent = 'Voice: ' + (voice ? 'on' : 'off'); if (!voice) try { speechSynthesis.cancel(); } catch (e) {} };
+  if (!('speechSynthesis' in window)) { vb.disabled = true; document.getElementById('hint').textContent = 'This browser has no built-in speech; captions show the lines.'; }
+  window.__turn = { set t(v) { t = v; }, get t() { return t; }, pause: () => { playing = false; }, set spin(v) { spin = v; } };
+})();
+</script>

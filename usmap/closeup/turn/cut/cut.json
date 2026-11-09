@@ -1,0 +1,222 @@
+{
+ "body_a_front": {
+  "origin": [
+   10,
+   40
+  ],
+  "size": [
+   273,
+   780
+  ]
+ },
+ "body_a_q": {
+  "origin": [
+   265,
+   41
+  ],
+  "size": [
+   223,
+   779
+  ]
+ },
+ "body_a_side": {
+  "origin": [
+   476,
+   43
+  ],
+  "size": [
+   176,
+   775
+  ]
+ },
+ "body_a_back": {
+  "origin": [
+   631,
+   72
+  ],
+  "size": [
+   270,
+   745
+  ]
+ },
+ "body_b_front": {
+  "origin": [
+   900,
+   41
+  ],
+  "size": [
+   262,
+   779
+  ]
+ },
+ "body_b_q": {
+  "origin": [
+   1144,
+   45
+  ],
+  "size": [
+   216,
+   776
+  ]
+ },
+ "body_b_side": {
+  "origin": [
+   1348,
+   49
+  ],
+  "size": [
+   171,
+   770
+  ]
+ },
+ "body_b_back": {
+  "origin": [
+   1511,
+   80
+  ],
+  "size": [
+   263,
+   739
+  ]
+ },
+ "head_a_front": {
+  "origin": [
+   156,
+   458
+  ],
+  "size": [
+   267,
+   295
+  ]
+ },
+ "head_a_q": {
+  "origin": [
+   413,
+   462
+  ],
+  "size": [
+   230,
+   291
+  ]
+ },
+ "head_b_front": {
+  "origin": [
+   888,
+   454
+  ],
+  "size": [
+   267,
+   301
+  ]
+ },
+ "head_b_q": {
+  "origin": [
+   1136,
+   466
+  ],
+  "size": [
+   237,
+   289
+  ]
+ },
+ "face_a_smile": {
+  "origin": [
+   60,
+   772
+  ],
+  "size": [
+   134,
+   180
+  ]
+ },
+ "face_a_open": {
+  "origin": [
+   194,
+   772
+  ],
+  "size": [
+   134,
+   180
+  ]
+ },
+ "face_a_oh": {
+  "origin": [
+   329,
+   772
+  ],
+  "size": [
+   134,
+   180
+  ]
+ },
+ "face_a_teeth": {
+  "origin": [
+   464,
+   772
+  ],
+  "size": [
+   134,
+   180
+  ]
+ },
+ "face_a_closed": {
+  "origin": [
+   598,
+   772
+  ],
+  "size": [
+   134,
+   180
+  ]
+ },
+ "face_b_smile": {
+  "origin": [
+   802,
+   772
+  ],
+  "size": [
+   134,
+   180
+  ]
+ },
+ "face_b_open": {
+  "origin": [
+   936,
+   772
+  ],
+  "size": [
+   134,
+   180
+  ]
+ },
+ "face_b_oh": {
+  "origin": [
+   1071,
+   772
+  ],
+  "size": [
+   134,
+   180
+  ]
+ },
+ "face_b_teeth": {
+  "origin": [
+   1206,
+   772
+  ],
+  "size": [
+   134,
+   180
+  ]
+ },
+ "face_b_closed": {
+  "origin": [
+   1340,
+   772
+  ],
+  "size": [
+   134,
+   180
+  ]
+ }
+}
