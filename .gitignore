@@ -64,3 +64,4 @@ __pycache__/
 /references/conversation-attachments/
 /usmap/closeup/out/
 /usmap/closeup/trace/out/
+/usmap/closeup/toytown/out/*.npy
