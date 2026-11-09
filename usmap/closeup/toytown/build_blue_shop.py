@@ -310,20 +310,19 @@ def chimney(x0, x1, ytop, ybot, cap=True):
 # =========================================================================================== the shop
 def build():
     # back: the red-roofed house behind, its roof reaching down behind the side roof, its chimney
-    chimney(113, 168, 434, 500)
-    wall([(96, 572), (96, 526), (205, 526), (205, 572)], BLUE_D, dark=True)            # the back house's wall, in shade
+    chimney(118, 160, 452, 500)
+    wall([(96, 572), (96, 526), (224, 526), (224, 572)], BLUE_D, dark=True)            # the back house's wall, in shade
     roof([(82, 528), (104, 472), (212, 452), (238, 474), (214, 528)], snowy=.32, ridge=((104, 470), (212, 450)), eave=((84, 526), (214, 526)))
     snow_edge([(100, 471), (214, 450)], 6.0, drip=0)
     snow_edge([(80, 527), (216, 527)], 7.0, drip=.3)
     chimney(70, 104, 548, 610)
     # the tall house
-    wall([(203, 760), (300, 760), (300, 520), (252, 446), (205, 520)], BLUE, fleck=.6)
-    eave_shadow([(205, 522), (252, 450), (299, 522)], 8)
+    wall([(222, 760), (300, 760), (300, 520), (252, 446), (222, 495)], BLUE, fleck=.6)
+    eave_shadow([(222, 498), (252, 450), (299, 522)], 8)
     shaded([(190, 528), (252, 436), (314, 528), (308, 534), (252, 448), (196, 534)], ['#a8463c', ROOF, ROOF_D], light=(-1, -.4), wob=.2, rough=.4, edge_dark=.2)
     S([(200, 531), (252, 449), (304, 531)], 3.6, CREAM, a=1, dry=.15, taper=(0, 0))
     snow_edge([(186, 527), (252, 432), (318, 527)], 13.0, drip=.4)
     window(233, 485, 268, 521, True)
-    window(212, 541, 236, 572, True)
     window(258, 542, 290, 580, False)
     garland(254, 296, 590, sag=4, swags=1)
     # the side wing (set back, so a little darker)
@@ -353,10 +352,11 @@ def build():
     # the awning: stripes leaning a little, rounded hems, shadow toward the valance, snow on top
     ax0, ax1, ay, ly, hem = 100, 322, 744, 778, 794
     n = 10
+    EDGES = [0.0] + sorted(np.clip(np.arange(1, n) / n + R.uniform(-.018, .018, n - 1), 0, 1)) + [1.0]
     for i in range(n):
-        a, b = i / n, (i + 1) / n
+        a, b = EDGES[i], EDGES[i + 1]
         t0, t1 = ax0 + (ax1 - ax0) * a, ax0 + (ax1 - ax0) * b
-        l0, l1 = t0 + 6, t1 + 6
+        l0, l1 = t0 + 6 + R.uniform(-1.2, 1.2) * (i > 0), t1 + 6 + R.uniform(-1.2, 1.2) * (i < n - 1)
         col, dark = (GREEN_A, GREEN_AD) if i % 2 == 0 else (WHITE_A, '#cfc4ac')
         m = A([(t0, ay), (t1, ay), (l1, ly), (l0, ly)], col, wob=.15, rough=.4, edge_dark=.12)
         Cc, Cd = hexc(col), hexc(dark); xa, xb = t0 - X0, t1 - X0
