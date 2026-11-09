@@ -12,3 +12,4 @@ character. Landmarks are the blue shop with the green-and-white awning and the t
 
 All geometry lives in one place, the `EXIST`, `SQUARE`, `BUILD`, `PATHS` and `SQUARE_FEATURES` tables in
 `make_sketches.py`, in detail-layer pixels. Adjusting the proposal means editing those tables and re-running.
+- `B2_revised.jpg` (`make_revised.py`): the revised composition after review: clock on a porch over the station entrance, a smaller square with organic edges, beds, low walls and lamps, individual houses with varied roofs, light snow, and an inset of the tracks inside the station.
