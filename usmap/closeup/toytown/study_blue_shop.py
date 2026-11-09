@@ -68,7 +68,7 @@ def traced_fir(tgt):
     return crop, cv2.GaussianBlur(m.astype(np.float32), (0, 0), .6)
 FIR_SRC = (12, 100, 128, 276)
 
-def main():
+def main(prefix='blue_shop', finish=None, guide=None):
     t0 = time.time()
     tgt = cv2.imread(TARGET)[..., ::-1].astype(np.float32) / 255
     x0, y0, x1, y1 = BOX; ref = tgt[y0:y1, x0:x1].copy(); H, W = ref.shape[:2]
@@ -120,7 +120,8 @@ def main():
     alpha = np.maximum(alpha, cv2.resize(fir_alpha, (W * K, H * K), interpolation=cv2.INTER_LINEAR))
     c = Kanvas(W * K, H * K, K, '#000000', seed=31); c.HM = np.zeros((c.H, c.W), np.float32)
     big = cv2.resize(ref, (W * K, H * K), interpolation=cv2.INTER_CUBIC)
-    c.img[:] = cv2.GaussianBlur(big, (0, 0), 1.3 * K)
+    if guide: big = np.clip(guide(big, x0, y0, K), 0, 1)       # a sharpened, partly redrawn guide at canvas resolution
+    c.img[:] = cv2.GaussianBlur(big, (0, 0), (.6 if guide else 1.3) * K)
     g = cv2.cvtColor(big, cv2.COLOR_RGB2GRAY)
     gx, gy = cv2.Sobel(g, cv2.CV_32F, 1, 0, ksize=5), cv2.Sobel(g, cv2.CV_32F, 0, 1, ksize=5)
     mag = cv2.GaussianBlur(np.hypot(gx, gy), (0, 0), 1.5 * K)
@@ -133,7 +134,11 @@ def main():
                                              borderMode=cv2.BORDER_REFLECT).reshape(-1, 3)
             return out
         return at
-    at = {s: sampler(cv2.GaussianBlur(ref, (0, 0), s) if s else ref) for s in (1.4, .7, 0)}
+    if guide:       # sample the canvas-resolution guide, so the dabs can hold edges finer than the target's pixels
+        at0 = {s: sampler(cv2.GaussianBlur(big, (0, 0), s * K) if s else big) for s in (1.4, .7, 0)}
+        at = {s: (lambda X, Y, f=f: f(X * K, Y * K)) for s, f in at0.items()}
+    else:
+        at = {s: sampler(cv2.GaussianBlur(ref, (0, 0), s) if s else ref) for s in (1.4, .7, 0)}
     def angfn(X, Y):
         xi = np.clip((X * K).astype(int), 0, c.W - 1); yi = np.clip((Y * K).astype(int), 0, c.H - 1)
         return ang[yi, xi]
@@ -145,30 +150,32 @@ def main():
     # dab sizes in target px; at the map's detail scale (x2.75) the coarse dab is ~9-10 px, like the map's houses
     passes = [(3.0, 4.8, 3.0, 1.4, .06, full, 1), (1.7, 2.8, 1.8, .7, .05, full, 2), (1.0, 1.7, 1.15, 0, .04, (0, 0, detail), 3),
               (.6, 1.0, .7, 0, .03, (0, 0, detail * (detail > .6)), 4)]
+    if guide: passes.append((.4, .65, .45, 0, .02, (0, 0, detail * (detail > .75)), 5))
     for spacing, L, w, blur, var, m, seed in passes:
         c.stip(m, colfn(blur, var), spacing=spacing, L=L, w=w, angfn=angfn, seed=seed, jit=.35, thresh=.3)
+    if finish: finish(c, x0, y0, alpha)
     impasto(c, strength=.22)
     paint = np.clip(c.img, 0, 1)
     rgba = np.dstack([paint, alpha])
-    cv2.imwrite(os.path.join(OUT, 'blue_shop_study.png'), (np.dstack([paint[..., ::-1], alpha]) * 255).astype(np.uint8))
+    cv2.imwrite(os.path.join(OUT, f'{prefix}_study.png'), (np.dstack([paint[..., ::-1], alpha]) * 255).astype(np.uint8))
     # comparison sheet: target crop | repaint, both at the study scale, on a neutral ground
     tcrop = cv2.resize(tgt[y0:y1, x0:x1], (W * K, H * K), interpolation=cv2.INTER_CUBIC)
     ground = np.full_like(paint, (.93, .91, .87))
     rep = paint * alpha[..., None] + ground * (1 - alpha[..., None])
     gap = np.full((H * K, 30, 3), 1.0)
     sheet = np.concatenate([tcrop, gap, rep], 1)
-    cv2.imwrite(os.path.join(OUT, 'blue_shop_compare.jpg'), (sheet[..., ::-1] * 255).astype(np.uint8), [cv2.IMWRITE_JPEG_QUALITY, 90])
+    cv2.imwrite(os.path.join(OUT, f'{prefix}_compare.jpg'), (sheet[..., ::-1] * 255).astype(np.uint8), [cv2.IMWRITE_JPEG_QUALITY, 90])
     # 100% detail crops: the awning and display window, and the upper windows with the garland
     for nm, (cx0, cy0, cx1, cy1) in {'awning': (95, 735, 325, 905), 'windows': (95, 600, 320, 745)}.items():
         a_ = (np.array([cx0 - x0, cy0 - y0, cx1 - x0, cy1 - y0]) * K).astype(int)
         crop = np.concatenate([tcrop[a_[1]:a_[3], a_[0]:a_[2]], np.ones((a_[3] - a_[1], 20, 3)), rep[a_[1]:a_[3], a_[0]:a_[2]]], 1)
-        cv2.imwrite(os.path.join(OUT, f'blue_shop_detail_{nm}.jpg'), (crop[..., ::-1] * 255).astype(np.uint8), [cv2.IMWRITE_JPEG_QUALITY, 92])
+        cv2.imwrite(os.path.join(OUT, f'{prefix}_detail_{nm}.jpg'), (crop[..., ::-1] * 255).astype(np.uint8), [cv2.IMWRITE_JPEG_QUALITY, 92])
     # in context at the map's detail scale: on the fit-check composite (neighbours still in the target's texture)
     s = FIT / K
     small = cv2.resize(rgba, (int(W * K * s), int(H * K * s)), interpolation=cv2.INTER_AREA)
     json.dump(dict(seconds=round(time.time() - t0, 1), canvas=[W * K, H * K], at_detail_scale=list(small.shape[1::-1])),
-              open(os.path.join(OUT, 'blue_shop_study.json'), 'w'))
-    np.save(os.path.join(OUT, 'blue_shop_detail_scale.npy'), small.astype(np.float16))
+              open(os.path.join(OUT, f'{prefix}_study.json'), 'w'))
+    np.save(os.path.join(OUT, f'{prefix}_detail_scale.npy'), small.astype(np.float16))
     print('done', round(time.time() - t0, 1), 's')
 
 if __name__ == '__main__':
