@@ -30,11 +30,11 @@ R = np.random.RandomState(12)
 BLUE, BLUE_D, BLUE_L = '#4a6cb0', '#37548f', '#6c8ac6'
 CREAM, CREAM_D = '#ecdcbd', '#c9b48f'
 ROOF, ROOF_D = '#953a33', '#6e2925'
-SNOW, SNOW_S, SNOW_H = '#f1f3f7', '#c4cfe0', '#ffffff'
+SNOW, SNOW_S, SNOW_H = '#f3f1ec', '#c6cbd8', '#fffcf5'
 GOLD, GOLD_C, GOLD_E = '#f0b64e', '#fbe19a', '#d98a2e'
 BAR = '#5e3319'
 BRICK, BRICK_D = '#ad4c30', '#7e3220'
-GREEN_A, WHITE_A, GREEN_AD = '#3f7340', '#ece5d2', '#2b5530'
+GREEN_A, WHITE_A, GREEN_AD = '#3f7340', '#f2ead6', '#2b5530'
 WOOD, WOOD_D = '#86361f', '#5e2414'
 NEEDLES = ['#173a29', '#1f4a33', '#2a5e40', '#12301f']
 BERRY = '#b8262a'
@@ -96,13 +96,14 @@ def snow_edge(pts, thick=7.0, drip=.25, under=True):
         col = np.where(k < .5, S1 * (1 - k * 2) + S2 * (k * 2), S2 * (2 - k * 2) + S3 * (k * 2 - 1))
         return np.clip(col * (1 + (r.rand(len(X), 1) - .5) * .05), 0, 1)
     c.stip(m, scol, spacing=1.0, L=2.4, w=1.5, seed=int(R.randint(1 << 20)), jit=.5, thresh=.3)
+    sparkle(m, 1.0)
     if drip:
         idx = sorted(R.choice(np.arange(2, max(3, len(lo) - 2)), size=max(1, int(len(lo) * drip / 6)), replace=False))
         for q in [lo[i] for i in idx]:
             if True:
-                g = R.uniform(.6, 1.4)
-                A(lump(q[0], q[1] + thick * .25 * g, thick * .26 * g, thick * .45 * g, amp=.08), SNOW, wob=.15, rough=.4, edge_dark=.0)
-                S([(q[0], q[1] + thick * .15), (q[0], q[1] + thick * .55)], thick * .2, SNOW_S, a=.35, dry=.4)
+                g = R.uniform(.6, 1.3)          # a soft drip: a tapered tongue of snow, shaded on its right
+                tongue = [(q[0] - thick * .22 * g, q[1] - 1), (q[0] + thick * .22 * g, q[1] - 1), (q[0] + thick * .08 * g, q[1] + thick * .7 * g), (q[0] - thick * .04 * g, q[1] + thick * .75 * g)]
+                shaded(tongue, [SNOW_H, SNOW, SNOW_S], light=(-1, 0), wob=.1, rough=.3, edge_dark=.0, L=1.4, w=1.0)
     S([tuple(q + np.array([0, thick * .12])) for q in up[1:-1]], thick * .28, SNOW_H, a=.6, dry=.45, taper=(.3, .3))
 
 def eave_shadow(pts, thick=8.0, col=None):
@@ -126,16 +127,29 @@ def shaded(pts, cols, light=(-.6, -.8), a=1.0, spacing=.9, L=1.8, w=1.2, **kw):
     c.stip(m, f, spacing=spacing, L=L, w=w, seed=int(R.randint(1 << 20)), jit=.5, thresh=.3)
     return m
 
-def snow_clump(cx, cy, rx, ry, ang=0.0):
+def sparkle(m, density=1.0):
+    """Sugary snow: a scatter of tiny bright crystals and a few cool glints over a snow area."""
+    if m is None: return
+    x0, y0, mm = m; ys, xs = np.nonzero(mm > .8)
+    if len(xs) == 0: return
+    n = int(len(xs) * density / (K * K * 18))
+    for k in R.choice(len(xs), min(n, len(xs)), replace=False):
+        px, py = (xs[k] + x0) / K, (ys[k] + y0) / K
+        c.dab(px, py, R.uniform(.5, 1.1), R.uniform(.45, .75), R.uniform(0, 3), '#ffffff' if R.rand() < .8 else '#dfe8f6', a=.9, dry=0)
+
+def snow_clump(cx, cy, rx, ry, ang=0.0, shadow=None):
     """An irregular clump of snow: two or three overlapping soft heaps, never a neat oval."""
     ca, sa = math.cos(ang), math.sin(ang)
+    if shadow:                                  # the shade the heap casts on what it rests on
+        c.area(T(lump(cx + 1, cy + ry * .55, rx * .95, ry * .5, amp=.1)), hexc(shadow), wob=.2, rough=.5, edge_dark=0, a=.45, var=0, varbig=0, seed=int(R.randint(1 << 20)))
     for k in range(R.randint(2, 4)):
         u = R.uniform(-.55, .55); px, py = cx + ca * rx * u, cy + sa * rx * u - R.uniform(0, ry * .35)
         snow_lump(px, py, rx * R.uniform(.45, .7), ry * R.uniform(.7, 1.0))
 
 def snow_lump(cx, cy, rx, ry):
     """A soft heap of snow: white, lit on top, blue-grey in its lower curve."""
-    shaded(lumpy(cx, cy, rx, ry, int(R.randint(1 << 20)), n=22, bumps=6, amp=.28, flat=.3), [SNOW_H, SNOW, SNOW_S], wob=.3, rough=.6, edge_dark=.0, L=2.0, w=1.3)
+    m = shaded(lumpy(cx, cy, rx, ry, int(R.randint(1 << 20)), n=22, bumps=6, amp=.24, flat=.18), [SNOW_H, SNOW, SNOW_S], wob=.3, rough=.6, edge_dark=.0, L=2.0, w=1.3)
+    sparkle(m, .6)
 
 # ---- walls: gouache ground, then stippled stucco in three blues, flecks of snow ----
 def wall(pts, base, dark=False, fleck=.0):
@@ -149,11 +163,12 @@ def wall(pts, base, dark=False, fleck=.0):
     for gy in np.arange(y0 / K + Y0, (y0 + h) / K + Y0, sp * .8):
         off = R.uniform(0, sp)
         for gx in np.arange(x0 / K + X0 - off, (x0 + w) / K + X0, sp):
-            px, py = gx + R.uniform(-1.5, 1.5), gy + R.uniform(-1.2, 1.2)
+            px, py = gx + R.uniform(-2.4, 2.4), gy + R.uniform(-1.8, 1.8)
             ix, iy = int((px - X0) * K) - x0, int((py - Y0) * K) - y0
             if not (0 <= ix < w and 0 <= iy < h) or mm[iy, ix] < .3: continue
-            c.area(T(lump(px, py, R.uniform(2.8, 4.0), R.uniform(2.2, 3.1), amp=.18)), cols[R.randint(len(cols))], wob=.15, rough=.5,
-                   edge_dark=.38, var=.05, a=.9, seed=int(R.randint(1 << 20)))
+            sz = R.uniform(.7, 1.35)
+            c.area(T(lump(px, py, R.uniform(2.6, 3.8) * sz, R.uniform(2.0, 3.0) * sz, amp=.22)), cols[R.randint(len(cols))], wob=.2, rough=.6,
+                   edge_dark=.3, var=.05, a=.85, seed=int(R.randint(1 << 20)))
     c.clipm = prev
     if fleck:
         ys, xs = np.nonzero(mm > .6)
@@ -194,10 +209,10 @@ def roof(pts, base=ROOF, snowy=.6, ridge=None, eave=None):
         S(bot, 3.0, SNOW_H, a=.6, dry=.35, taper=(.2, .2))
         # drifts lying across the tiles below the blanket: soft, elongated along the slope's contour
         dirx = rb - ra; dirx = dirx / np.linalg.norm(dirx)
-        for _ in range(int(np.linalg.norm(rb - ra) / 14)):
+        for _ in range(int(np.linalg.norm(rb - ra) / 22)):
             t = R.uniform(.05, .95); u = R.uniform(snowy + .1, .9)
             a = ra + (rb - ra) * t; b = ea + (eb - ea) * t; p = a + (b - a) * u
-            snow_clump(p[0], p[1], R.uniform(10, 18), R.uniform(3.2, 4.8), math.atan2(dirx[1], dirx[0]))
+            snow_clump(p[0], p[1], R.uniform(10, 16), R.uniform(2.4, 3.4), math.atan2(dirx[1], dirx[0]), shadow=ROOF_D)
     return m
 
 # ---- windows: cream frame, glowing glass, bars, a sill with snow ----
@@ -210,7 +225,7 @@ def window(x0, y0, x1, y1, arched=True, bars=(1, 1), frame=4.0):
     halo = poly(x0 - frame - 6, y0 - frame - 6, x1 + frame + 6, y1 + frame + 4)
     c.area(T(halo), hexc('#f0b860'), wob=.6, rough=.8, edge_dark=0, a=.16, var=.0, varbig=.0, seed=int(R.randint(1 << 20)))
     fm = A(poly(x0 - frame, y0 - frame, x1 + frame, y1 + frame * .5), CREAM, wob=.25, rough=.5, edge_dark=.18)
-    stip(fm, [CREAM, CREAM, CREAM_D], spacing=.9, L=1.5, w=1.0)
+    shaded(poly(x0 - frame, y0 - frame, x1 + frame, y1 + frame * .5), [CREAM, CREAM, CREAM_D], wob=.25, rough=.5, edge_dark=.12, spacing=1.0, L=2.4, w=1.6)
     gm = A(poly(x0, y0, x1, y1), GOLD, wob=.15, rough=.4, edge_dark=.0)
     cx, cy = (x0 + x1) / 2 - X0, (y0 + y1) / 2 - Y0 + (y1 - y0) * .12; hw, hh = (x1 - x0) / 2, (y1 - y0) / 2
     C0, C1, C2 = hexc(GOLD_C), hexc(GOLD), hexc(GOLD_E)
@@ -237,21 +252,39 @@ def window(x0, y0, x1, y1, arched=True, bars=(1, 1), frame=4.0):
     A([(x0 - frame - 2, y1 + frame * .5), (x1 + frame + 2, y1 + frame * .5), (x1 + frame + 1, y1 + frame * .5 + 3.5), (x0 - frame - 1, y1 + frame * .5 + 3.5)], CREAM_D, wob=.1, rough=.3)
     snow_cap(x0 - frame - 2, x1 + frame + 2, y1 + frame * .5 - .5, 5.0)
 
+def glass(m, cx, cy, hw, hh):
+    """Lit glass: a warm glow, brightest a little below the middle, deeper gold toward the frame."""
+    cx -= X0; cy -= Y0; C0, C1, C2 = hexc(GOLD_C), hexc(GOLD), hexc(GOLD_E)
+    def f(X, Y, r):
+        d = np.clip(np.hypot((X - cx) / hw, (Y - cy) / hh), 0, 1.4)[:, None]
+        col = np.where(d < .6, C0 * (1 - d / .6) + C1 * (d / .6), C1 * np.clip(1.4 - d, 0, 1) / .8 + C2 * np.clip(d - .6, 0, .8) / .8)
+        return np.clip(col * (1 + (r.rand(len(X), 1) - .5) * .05), 0, 1)
+    c.stip(m, f, spacing=.75, L=1.6, w=1.1, seed=int(R.randint(1 << 20)), jit=.5)
+
 # ---- greenery: a garland of needle dabs, berries, little bows, a dusting of snow ----
 def garland(x0, x1, y, sag=6.0, swags=3, bows=True):
     pts = []
     for i in range(swags):
         a, b = x0 + (x1 - x0) * i / swags, x0 + (x1 - x0) * (i + 1) / swags
         for t in np.linspace(0, 1, 9): pts.append((a + (b - a) * t, y + sag * math.sin(math.pi * t)))
-    for (px, py) in pts:
-        for _ in range(16):
-            ang = R.uniform(0, math.pi); ln = R.uniform(5, 8)
-            c.dab(px - X0 + R.uniform(-5, 5), py - Y0 + R.uniform(-4.5, 4.5), ln, R.uniform(1.8, 2.6), ang, NEEDLES[R.randint(4)], a=1, dry=.1)
+    # a fat rope of greenery: a dark core, then layered needle sprays lighter toward the top, holly leaves
+    P0 = T(pts); c.stroke(P0, 9.5, NEEDLES[3], a=1, dry=.2, taper=(.15, .15), seed=int(R.randint(1 << 20)))
+    for layer, (col_set, n, dy) in enumerate(((NEEDLES[3:] + NEEDLES[:1], 14, 2.5), (NEEDLES[1:3], 14, 0), (['#3d7a52', '#4c8a5c'], 7, -2.5))):
+        for (px, py) in pts:
+            for _ in range(n):
+                ang = R.uniform(-.9, .9) + (math.pi / 2 if R.rand() < .5 else 0); ln = R.uniform(4.5, 7.5)
+                c.dab(px - X0 + R.uniform(-5, 5), py - Y0 + dy + R.uniform(-3.5, 3.5), ln, R.uniform(1.5, 2.2), ang, col_set[R.randint(len(col_set))], a=1, dry=.1)
+    for (px, py) in pts[1::3]:
+        for sgn in (-1, 1):
+            hx, hy = px + sgn * R.uniform(2, 4), py + R.uniform(-2, 2)
+            shaded([(hx, hy), (hx + sgn * 6, hy - 2.5), (hx + sgn * 8, hy + 1), (hx + sgn * 3, hy + 2.5)], ['#4c8a5c', '#2f6446', '#1d4430'], wob=.1, rough=.3, edge_dark=.2, L=1.6, w=1.0)
         track((int((px - X0 - 5) * K), int((py - Y0 - 5) * K), np.ones((int(10 * K), int(10 * K)), np.float32)), .0)
     P = np.array(T(pts)) * K
     cv2.polylines(ALPHA, [P.astype(np.int32)], False, 1.0, int(13 * K), cv2.LINE_AA)
     for (px, py) in pts[::2]:
-        c.dots([(px - X0 + R.uniform(-4, 4), py - Y0 + R.uniform(-2, 4))], 1.9, [BERRY], seed=int(R.randint(1 << 20)))
+        for _ in range(2):
+            bx_, by_ = px + R.uniform(-4, 4), py + R.uniform(-2, 4)
+            shaded(lump(bx_, by_, 1.9, 1.9, amp=0), ['#e0504a', BERRY, '#7a1418'], wob=0, rough=.2, edge_dark=.1, L=1.0, w=.8)
     for (px, py) in pts[::3]:
         c.dab(px - X0 + R.uniform(-3, 3), py - Y0 - 4.5, R.uniform(4, 6), 2.2, R.uniform(-.3, .3), SNOW, a=.95, dry=.2)
     if bows:
@@ -314,18 +347,23 @@ def build():
         a, b = i / n, (i + 1) / n
         t0, t1 = ax0 + (ax1 - ax0) * a, ax0 + (ax1 - ax0) * b
         l0, l1 = t0 + 6, t1 + 6
-        col, dark = (GREEN_A, GREEN_AD) if i % 2 == 0 else (WHITE_A, '#bdb6a5')
+        col, dark = (GREEN_A, GREEN_AD) if i % 2 == 0 else (WHITE_A, '#cfc4ac')
         m = A([(t0, ay), (t1, ay), (l1, ly), (l0, ly)], col, wob=.15, rough=.4, edge_dark=.12)
-        stip(m, [col, col, dark], spacing=.9, L=2.6, w=1.0, ang=math.atan2(ly - ay, 6) , weights=[.5, .3, .2])
+        Cc, Cd = hexc(col), hexc(dark); xa, xb = t0 - X0, t1 - X0
+        def fold(X, Y, r, xa=xa, xb=xb, Cc=Cc, Cd=Cd):
+            u = np.clip((X - xa - (Y - (ay - Y0)) * 6 / (ly - ay)) / (xb - xa), 0, 1)       # across the stripe
+            k = np.clip(np.abs(u - .4) * 1.3 + (Y - (ay - Y0)) / (ly - ay) * .25, 0, 1)[:, None]
+            return np.clip(Cc * (1 - k * .55) + Cd * k * .55 + (r.rand(len(X), 1) - .5) * .04, 0, 1)
+        c.stip(m, fold, spacing=.85, L=2.6, w=1.1, angfn=lambda X, Y: np.full(X.shape, math.atan2(ly - ay, 6)), seed=int(R.randint(1 << 20)), jit=.4)
         sc = [(l1 - (l1 - l0) * k / 10, ly + (hem - ly) * math.sin(math.pi * k / 10)) for k in range(11)]
         mv = A([(l0, ly - .5), (l1, ly - .5)] + sc[1:-1], col, wob=.1, rough=.3, edge_dark=.18)
         stip(mv, [dark, col], spacing=.9, L=1.6, w=1.0, ang=0.0, weights=[.45, .55])
     S([(ax0 + 6, ly), (ax1 + 6, ly)], .9, GREEN_AD, a=.5, dry=.4)
     eave_shadow([(ax0 + 8, hem - 2), (ax1 + 6, hem - 2)], 6, WOOD_D)
     snow_edge([(ax0 - 4, ay - 1), (ax1 + 4, ay - 1)], 10.0, drip=.2)
-    for _ in range(9):
-        px = R.uniform(ax0 + 10, ax1 - 4); py = R.uniform(ay + 6, ly - 4)
-        A(lump(px, py, R.uniform(3, 6), R.uniform(1.4, 2.4)), SNOW, wob=.15, rough=.4, edge_dark=.04)
+    for _ in range(4):
+        px = R.uniform(ax0 + 14, ax1 - 8); py = R.uniform(ay + 8, ay + 18)
+        snow_clump(px, py, R.uniform(5, 8), R.uniform(2.2, 3.0), math.atan2(ly - ay, 6) - math.pi / 2 + 1.4)
     # the shopfront: dark wooden posts, the display with the bear, side windows, a brick plinth
     A([(104, 902), (306, 902), (306, 796), (104, 796)], WOOD, wob=.15, rough=.4, edge_dark=.12)
     # display window
@@ -373,7 +411,7 @@ def build():
     # side windows: lit glass behind a wooden grid
     for (sx0, sy0, sx1, sy1), (nb, nh) in (((118, 800, 160, 872), (1, 2)), ((258, 800, 300, 866), (1, 1))):
         g = A([(sx0, sy1), (sx1, sy1), (sx1, sy0), (sx0, sy0)], GOLD, wob=.1, rough=.3, edge_dark=.1)
-        stip(g, [GOLD_C, GOLD, GOLD_E], spacing=.8, L=1.3, w=.95, weights=[.35, .45, .2])
+        glass(g, (sx0 + sx1) / 2, (sy0 + sy1) / 2 + 6, (sx1 - sx0) / 2, (sy1 - sy0) / 2)
         x0_, y0_, mm = g; GLOW[y0_:y0_ + mm.shape[0], x0_:x0_ + mm.shape[1]] = np.maximum(GLOW[y0_:y0_ + mm.shape[0], x0_:x0_ + mm.shape[1]], mm)
         for i in range(1, nb + 1):
             xx = sx0 + (sx1 - sx0) * i / (nb + 1); S([(xx, sy0), (xx, sy1)], 2.0, WOOD_D, a=1, dry=.05, taper=(0, 0))
@@ -396,7 +434,11 @@ def build():
     # the snowy fir in front of the side wing (in place of the blossom tree)
     fir(58, 908, 190)
     # snow on the ground along the front
-    snow_edge([(0, 906), (340, 906)], 9.0, drip=0)
+    # snow banked along the foot of the building, deeper by the fir and the corners
+    bank = [(x, 905 - 3 * math.sin(x / 23) - 4 * math.exp(-((x - 60) / 40) ** 2) - 3 * math.exp(-((x - 320) / 25) ** 2)) for x in np.linspace(0, 340, 30)]
+    snow_edge(bank, 11.0, drip=0)
+    for x in (40, 95, 300):
+        snow_clump(x, 900, R.uniform(14, 20), 6)
 
 def fir(x, y, h):
     """A fir of drooping, jagged branch tiers (dark needles, lit edges), with irregular clumps of snow lying on
@@ -414,15 +456,29 @@ def fir(x, y, h):
         for k in range(nt, 0, -1):
             u = k / nt; poly += [(x - half * u + R.uniform(-1.5, 1), yt + (yb - yt) * u + 2.5), (x - half * u * .72 + R.uniform(-1, 1), yt + (yb - yt) * u * .92 - 2)]
         shaded(poly, [NEEDLES[2], NEEDLES[1], NEEDLES[3]], wob=.5, rough=1.0, edge_dark=.22, L=3.2, w=1.3)
-        for _ in range(2 + (i < 2)):                            # snow lying on the tier
-            u = R.uniform(.35, .85); px = x + R.uniform(-1, 1) * half * u * .7; py = yt + (yb - yt) * u - 2
-            snow_clump(px, py, half * R.uniform(.4, .55), R.uniform(4.5, 6.5))
-        for sg in (-1, 1):                                      # and caught at the outer tips
-            snow_clump(x + sg * half * .8, yb - 1.5, half * .3, 4.5)
-    snow_clump(x, y - h * .97, 4, 3.5)
+        for _ in range(3 + (i < 2)):                            # snow lying on the tier, inside its silhouette
+            u = R.uniform(.4, .9); wu = half * u; rx = wu * R.uniform(.3, .42)
+            px = x + R.uniform(-1, 1) * max(0, wu - rx) * .8; py = yt + (yb - yt) * u - 2.5
+            snow_clump(px, py, rx, R.uniform(4.2, 5.6), shadow=NEEDLES[3])
+        for sg in (-1, 1):                                      # small heaps caught near the branch tips
+            snow_clump(x + sg * half * .66, yb - 3, half * .2, 4.0, shadow=NEEDLES[3])
+    snow_clump(x, y - h * .96, 5, 4.5)
+
+def light():
+    """The lighting a painter adds last: light from the upper left across the whole building, shade
+    gathering toward the ground and the right, and the warm glow of the windows spilling onto the walls."""
+    yy, xx = np.mgrid[0:c.H, 0:c.W].astype(np.float32)
+    g = 1.07 - .14 * (xx / c.W) - .16 * np.clip((yy / c.H - .35) / .65, 0, 1)
+    g -= .1 * np.clip((yy / c.H - .9) / .1, 0, 1)                         # shade near the ground
+    c.img *= g[..., None]
+    spill = cv2.GaussianBlur(GLOW, (0, 0), 7 * K)
+    warm = np.array(hexc('#ffb060'))
+    lit = np.clip(spill * 1.6, 0, 1)[..., None] * (1 - GLOW[..., None])
+    c.img[:] = c.img + (warm - c.img) * lit * .28
 
 if __name__ == '__main__':
     build()
+    light()
     impasto(c, strength=.22)
     paint = np.clip(c.img, 0, 1); al = np.clip(cv2.GaussianBlur(ALPHA, (0, 0), .5), 0, 1)
     cv2.imwrite(os.path.join(OUT, 'blue_shop_v3_study.png'), (np.dstack([paint[..., ::-1], al]) * 255).astype(np.uint8))
