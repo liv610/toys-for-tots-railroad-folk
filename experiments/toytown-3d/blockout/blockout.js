@@ -236,7 +236,11 @@ SQ.benches.forEach(([x, z, r]) => { const g = group(x, z, r); box(1.8, .1, .5, m
 
 // ---------------------------------------------------------------- the existing toy shop, for scale
 const shopReady = (async () => {
-  const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(new URL(Q.get('shop') || './toyshop_scene.glb', import.meta.url).href);
+  const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+  const src = new URL(Q.get('shop') || window.TT_SHOP || './toyshop_scene.glb', import.meta.url).href;
+  const gltf = src.endsWith('.txt')                 // the published page carries the model as base64 text
+    ? await loader.parseAsync(Uint8Array.from(atob((await (await fetch(src)).text()).trim()), c => c.charCodeAt(0)).buffer, '')
+    : await loader.loadAsync(src);
   const shop = gltf.scene, T = L.toyshop;
   const g = group(T.x, T.z, T.rot); g.add(shop); g.updateMatrixWorld(true);
   // keep only the blue shop: everything outside its footprint (its street, neighbours, hillside) is clipped away

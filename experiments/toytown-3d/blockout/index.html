@@ -35,6 +35,7 @@
   </div>
   <div class="note">Simple shapes for layout only. The blue shop is the finished model, for scale. Drag to look around.</div>
 </section>
+<script>window.TT_SHOP = location.protocol.startsWith('http') && location.hostname !== 'localhost' ? './toyshop_scene.glb.txt' : undefined;</script>
 <script type="module">
   import './blockout.js';
   document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => window.__setView(b.dataset.view));
