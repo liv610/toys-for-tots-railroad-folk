@@ -62,7 +62,7 @@ export const LAYOUT = {
 export const VIEWS = {
   overview: { name: '1  Elevated: how the town fits together', pos: [34, 46, 74], target: [0, 2, -12], fov: 40 },
   square:   { name: '2  Visitor in the square, looking at the station', pos: [4.2, 1.65, 8.2], target: [-0.6, 6.2, -18], fov: 62 },
-  toyshop:  { name: '3  Beside the toy shop, looking across the square', pos: [-12.6, 1.65, 8.4], target: [10, 3.0, -2], fov: 64 },
+  toyshop:  { name: '3  Beside the toy shop, looking across the square', pos: [-10.2, 1.65, 8.2], target: [10, 3.0, -2], fov: 64 },
   entrance: { name: '4  Approaching the station entrance', pos: [2.6, 1.65, -3.0], target: [-0.2, 5.0, -18], fov: 60 },
   rails:    { name: '5  The rails: red and blue arriving from the west', pos: [-46, 14, -8], target: [-10, 3, -34], fov: 45 },
   cutaway:  { name: '6  Cutaway: platforms inside the station', pos: [0, 62, 6], target: [0, 0, -30], fov: 45, cutaway: true },

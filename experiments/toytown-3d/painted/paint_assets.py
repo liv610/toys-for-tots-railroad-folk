@@ -16,7 +16,8 @@ SCALE = 0.024                     # metres per kit unit (the station front: 1040
 K = 2
 meta = {}
 
-def crop_save(name, opaque=False, light=True):
+def crop_save(name, opaque=False, light=True, k=None):
+    k = k or T.K
     if light: T.light()
     paint, al = T.finish(os.path.join(OUT, name + '.png'), None, opaque=opaque)
     if opaque: ys, xs = np.mgrid[0:1, 0:1]; box = (0, 0, paint.shape[1], paint.shape[0])
@@ -24,11 +25,11 @@ def crop_save(name, opaque=False, light=True):
         ys, xs = np.nonzero(al > .03); box = (xs.min(), ys.min(), xs.max() + 1, ys.max() + 1)
     im = cv2.imread(os.path.join(OUT, name + '.png'), cv2.IMREAD_UNCHANGED)[box[1]:box[3], box[0]:box[2]]
     cv2.imwrite(os.path.join(OUT, name + '.png'), im)
-    meta[name] = dict(w=im.shape[1] / K, h=im.shape[0] / K)           # in kit units
+    meta[name] = dict(w=im.shape[1] / k, h=im.shape[0] / k, x0=box[0] / k + T.X0, y0=box[1] / k + T.Y0)   # in kit units
     print(f'  {name}: {im.shape[1]}x{im.shape[0]}px', flush=True)
 
-def asset(name, box, fn, **kw):
-    T.init(*box, K); fn(); crop_save(name, **kw)
+def asset(name, box, fn, k=K, **kw):
+    T.init(*box, k); fn(); crop_save(name, k=k, **kw)
 
 def stucco(name, base, cols, w=220, h=220, stone_dark=.25):
     """A tile of a building's own wall (for its side walls), with a band of snow-shadow at the top."""
@@ -126,14 +127,17 @@ if __name__ == '__main__':
         meta.update(json.load(open(os.path.join(OUT, 'assets.json')))); backdrop(); json.dump(meta, open(os.path.join(OUT, 'assets.json'), 'w'), indent=1); sys.exit()
     if sys.argv[1:] == ['ground']:
         meta.update(json.load(open(os.path.join(OUT, 'assets.json')))); ground(); json.dump(meta, open(os.path.join(OUT, 'assets.json'), 'w'), indent=1); sys.exit()
-    asset('station', (170, 0, 1230, 680), ST.build_station)
-    asset('blue_shop', (0, 420, 345, 920), T.blue_shop)
+    # the station in layers, each painted alone so it can stand at its own depth
+    for part, box in (('vault', (400, 0, 1000, 260)), ('wings', (170, 170, 1230, 630)), ('towers', (350, 80, 1050, 630)),
+                      ('face', (350, 0, 1050, 630)), ('annex', (440, 430, 960, 630)), ('porch', (570, 370, 830, 630))):
+        asset('station_' + part, box, lambda p=part: ST.station({p}), k=3)
+    asset('blue_shop', (0, 420, 345, 920), T.blue_shop, k=3)
     asset('pink_narrow', (280, 340, 372, 735), Wt.pink_narrow)
     asset('cream_house', (330, 395, 482, 712), Wt.cream_house)
-    asset('red_house', (1040, 370, 1290, 650), E.red_house)
+    asset('red_house', (1040, 370, 1290, 650), E.red_house, k=3)
     asset('pink_house', (915, 436, 1080, 710), E.pink_house)
-    asset('donation_shop', (1000, 495, 1300, 870), E.donation_shop)
-    asset('tree', (550, 600, 760, 880), lambda: SC.christmas_tree(650, 845, 212))
+    asset('donation_shop', (1000, 495, 1300, 870), E.donation_shop, k=3)
+    asset('tree', (550, 600, 760, 880), lambda: SC.christmas_tree(650, 845, 212), k=4)
     asset('marine_a', (738, 710, 784, 822), lambda: SC.marine(760, 812))
     asset('marine_b', (780, 710, 826, 822), lambda: SC.marine(802, 812, skin='#8a5430'))
     asset('lamp', (495, 580, 560, 735), lambda: SC.lamp(527, 717, 120))

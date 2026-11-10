@@ -135,3 +135,18 @@ The blockout's 3D layout, with every surface painted by the map's folk-art kit i
   walls and roofs. Small things (the tree, people, lamps, wagons, firs) are cut-outs that turn to face
   you. Materials are unlit, so the painted light stays as painted.
 - **Run:** serve `experiments/toytown-3d` and open `/painted/`.
+
+### Pass 2: less flat
+- **The station is in depth layers.** It is painted as six layers (wings, vault, face, towers, annexes, porch). Each
+  one stands at its own depth, from 3 m behind the face to 4.2 m in front of it, with a painted stone volume
+  behind it. The hall has a real barrel vault, and there are five real stone steps down from the porch doors.
+- **The houses fold.** The painted side walls of the red house and the donation shop fold back 90 degrees onto
+  the body. The blue shop's left wing is cut from the front and set back 1.4 m.
+- **The square has real edges.**
+  - The low wall has end piers and a rounded snow cap.
+  - Snow-capped kerbs run along the street edges.
+  - Four planters with firs stand at the steps and the wall's gap.
+- **Life.**
+  - Falling snow (4,000 points; `?snow=0` turns it off).
+  - Smoke rising from the station towers' chimneys and those of the blue shop and the donation shop.
+- **Hero pieces repainted at higher detail.** The station layers and the three hero houses are painted at 3 px per unit; the tree at 4.
