@@ -150,3 +150,37 @@ The blockout's 3D layout, with every surface painted by the map's folk-art kit i
   - Falling snow (4,000 points; `?snow=0` turns it off).
   - Smoke rising from the station towers' chimneys and those of the blue shop and the donation shop.
 - **Hero pieces repainted at higher detail.** The station layers and the three hero houses are painted at 3 px per unit; the tree at 4.
+
+## Entering Toy Town from the map (`enter/`)
+
+Click Toy Town on the national map and you zoom in, the painting dissolves into the 3D village, and the camera
+comes down into the square. "Back to the map" reverses it.
+
+- **Run:**
+  1. `python3 painted/paint_landscape.py`
+  2. `python3 enter/build_enter.py`
+  3. Serve `experiments/toytown-3d` and open `/enter/out/index.html`.
+
+  Both scripts need `usmap/viewer_tt`, which `to_viewer.py` builds.
+- **The page.** `build_enter.py` copies the map viewer into `enter/out/`, which git ignores. It then adds
+  `enter.js` and `enter.css`, and puts the 3D village in `out/toytown/`.
+  - The village's textures are packed into two WebP script bundles (12 MB), so the whole page stays under the
+    artifact's file limit.
+  - The map's own tree and cloud sprites are read from the viewer's `sprites/` folder.
+  - The live map, the engine and the routes are not touched.
+- **The hand-over.**
+  1. The map zooms to the town.
+  2. The 3D waits at its `arrive` view.
+  3. The map comes in until its painted station face sits exactly where the 3D draws it: `enter.js` reads the
+     station's screen rectangle from the 3D (`__stationRect`) and fits the map to it.
+  4. The 3D fades in over 1.2 s and glides to the square.
+  
+  The 3D stays paused while the map is showing.
+- **The country around the town is the map's own paint** (`painted/paint_landscape.py`, `painted/landscape.js`):
+  - **Hills.** Rolling hills covered in patches of the map's painted grass and golden fields. They are laid
+    stamp by stamp with crisp edges, so the brushwork stays sharp.
+  - **River and snow.** The map's river, and the town's snow thinning out into drifts.
+  - **Trees.** About 500 of the map's own tree sprites. Each kind is merged into one mesh, about 40 draw calls.
+  - **Landmarks.** Cut from the painting with GrabCut: the red barn, the farmhouses, the red mesas and the
+    snowy mountains. Each stands in the direction it lies from Toy Town on the map.
+  - **Sky.** A painted sky with the map's clouds, and far hills all round.

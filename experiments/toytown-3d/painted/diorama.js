@@ -4,10 +4,14 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { LAYOUT as L, VIEWS } from './layout.js';
+import { buildLandscape } from './landscape.js';
 
 const Q = new URLSearchParams(location.search);
 const TEX = new URL('./tex/', import.meta.url).href;
-const meta = await (await fetch(TEX + 'assets.json')).json();
+// textures come from tex/, or from window.TT_BUNDLE (name -> data URL / object) when the page is packed for the map
+const B = window.TT_BUNDLE || {};
+const getJSON = async (n) => B[n] || (await fetch(TEX + n)).json();
+const meta = await getJSON('assets.json'), land = await getJSON('land.json');
 const U = meta._scale_m_per_unit;                       // metres per painted unit
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -15,9 +19,9 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(innerWid
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
-const SKY = new THREE.Color(0xcbd7dd);
-scene.background = SKY; scene.fog = new THREE.Fog(SKY, 70, 150);
-const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, .1, 400);
+const SKY = new THREE.Color(0xd6e4ea);
+scene.background = SKY; scene.fog = new THREE.Fog(0xdbe6e9, 120, 1300);
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, .1, 3000);
 const controls = new OrbitControls(camera, renderer.domElement); controls.enableDamping = true;
 controls.maxPolarAngle = THREE.MathUtils.degToRad(88);
 
@@ -25,7 +29,7 @@ const loader = new THREE.TextureLoader(); const cache = {};
 function tex(name, rep) {
   const key = name + (rep || '');
   if (!cache[key]) {
-    const t = loader.load(TEX + name); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+    const t = loader.load(B[name] || TEX + name); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
     if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...rep); }
     cache[key] = t;
   }
@@ -44,19 +48,15 @@ function shadow(parent, w, d, x = 0, z = 0) {
 }
 const place = (obj, x, z, rot = 0) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = THREE.MathUtils.degToRad(rot); g.add(obj); scene.add(g); return g; };
 
-// ---------------------------------------------------------------- ground and hills
-{ const g = new THREE.Mesh(new THREE.PlaneGeometry(meta.ground.size_m, meta.ground.size_m), new THREE.MeshBasicMaterial({ map: tex('ground.jpg') }));
-  g.rotation.x = -Math.PI / 2; scene.add(g);
-  const far = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshBasicMaterial({ map: tex('ground.jpg', [1, 1]), color: 0xffffff }));
-  // beyond the painted square, the same snow (a corner of the ground painting, repeated)
-  const snowOnly = tex('wall_cream.png'); far.material = new THREE.MeshBasicMaterial({ color: 0xedeeef });
-  far.rotation.x = -Math.PI / 2; far.position.y = -.02; scene.add(far);
-  // the painted hills: a curved panel behind the town, the painting repeated twice around the arc
-  const R = 95, arc = Math.PI * 2, h = 40;
-  const geo = new THREE.CylinderGeometry(R, R, h, 64, 1, true, Math.PI - arc / 2, arc);
-  const t = tex('backdrop.png', [3, 1]); t.wrapS = THREE.MirroredRepeatWrapping; const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: t, side: THREE.BackSide, fog: false }));
-  m.position.set(0, h / 2 - 6, -8); scene.add(m);
+// ---------------------------------------------------------------- the town's ground, then the map's country around it
+{ const fade = (() => { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+    const r = g.createRadialGradient(128, 128, 96, 128, 128, 127); r.addColorStop(0, '#fff'); r.addColorStop(1, '#000');
+    g.fillStyle = r; g.fillRect(0, 0, 256, 256); return new THREE.CanvasTexture(c); })();
+  const g = new THREE.Mesh(new THREE.PlaneGeometry(meta.ground.size_m, meta.ground.size_m),
+    new THREE.MeshBasicMaterial({ map: tex('ground.jpg'), alphaMap: fade, transparent: true }));
+  g.rotation.x = -Math.PI / 2; g.position.y = .01; g.renderOrder = -1; scene.add(g);
 }
+const LAND = buildLandscape(scene, { tex, land });
 
 // ---------------------------------------------------------------- a building: painted front card + painted volume
 const W_TILE = 220 * U, R_TILE = 240 * U;                                   // tile sizes in metres
@@ -230,7 +230,7 @@ SQ.lamps.forEach(([x, z]) => cutout('lamp', x, z, 1.15, 1.2));
 cutout('wagon_bear', SQ.wagons[0][0], SQ.wagons[0][1], .75); cutout('wagon_presents', SQ.wagons[1][0], SQ.wagons[1][1], .75);
 { const R = (s => () => (s = (s * 16807) % 2147483647) / 2147483647)(11);
   for (let i = 0; i < 70; i++) {
-    const a = R() * Math.PI * 2, d = 26 + R() * 36, x = Math.cos(a) * d, z = Math.sin(a) * d * .8 - 12;
+    const a = R() * Math.PI * 2, d = 26 + R() * 28, x = Math.cos(a) * d, z = Math.sin(a) * d * .8 - 12;
     if (z > 12 && Math.abs(x) < 10) continue;
     cutout('fir', x, z, .7 + R() * .9);
   }
@@ -276,6 +276,10 @@ function stepSmoke(t) {
 }
 
 // ---------------------------------------------------------------- views and the glide between them
+// 'arrive' frames the town the way the map paints it (from the south, high up), so the map can dissolve into it
+VIEWS.arrive = { name: 'Arriving from the map', pos: [0, 13, 15], target: [0, 6.5, -18], fov: 44 };
+VIEWS.south = { name: 'Over the wall, to the fields', pos: [0, 1.65, 6.5], target: [-8, 3.5, 80], fov: 62 };
+VIEWS.west = { name: 'Out past the toy shop', pos: [-6, 1.65, 4], target: [-90, 6, -30], fov: 62 };
 function setView(k) {
   const v = VIEWS[k]; camera.position.fromArray(v.pos); controls.target.fromArray(v.target); camera.fov = v.fov; camera.updateProjectionMatrix(); controls.update();
 }
@@ -285,16 +289,30 @@ window.__glideAt = (from, to, f) => { const a = VIEWS[from], b = VIEWS[to], e = 
   camera.position.fromArray(a.pos).lerp(new THREE.Vector3(...b.pos), e); controls.target.fromArray(a.target).lerp(new THREE.Vector3(...b.target), e);
   camera.fov = a.fov + (b.fov - a.fov) * e; camera.updateProjectionMatrix(); };
 function face() { for (const b of billboards) { const dx = camera.position.x - b.position.x, dz = camera.position.z - b.position.z; b.rotation.y = Math.atan2(dx, dz); } }
-window.__setView = setView; window.__views = Object.keys(VIEWS);
+window.__setView = setView;
+// glide from wherever the camera is now to a named view; resolves when it arrives
+window.__glideTo = (to, dur = 4) => new Promise(res => {
+  const a = { pos: camera.position.toArray(), target: controls.target.toArray(), fov: camera.fov }; glide = { a, b: VIEWS[to], t0: performance.now(), dur, res };
+});
+// where the station's painted face sits on screen (for lining the map up with the 3D at the hand-over)
+window.__stationRect = () => {
+  controls.update(); camera.updateMatrixWorld();
+  const m = meta.station_face, p = [[m.x0, m.y0], [m.x0 + m.w, m.y0 + m.h]].map(([ux, uy]) =>
+    new THREE.Vector3((ux - 700) * U, (615 - uy) * U, L.station.front).project(camera));
+  return p.map(v => [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]);
+}; window.__views = Object.keys(VIEWS);
 window.__still = () => { controls.update(); face(); stepSmoke(Number(Q.get('t') || 7)); renderer.render(scene, camera); return renderer.domElement.toDataURL('image/jpeg', .9); };
 setView(Q.get('view') || 'square');
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
-let last = performance.now();
+let last = performance.now(), paused = Q.get('paused') === '1';
+window.__pause = (v) => { paused = v; last = performance.now(); };
 if (Q.get('still') !== '1') renderer.setAnimationLoop((now) => {
+  if (paused) return;
   const dt = Math.min(.1, (now - last) / 1000); last = now; stepSnow(dt, now / 1000); stepSmoke(now / 1000);
   if (glide) { const f = Math.min(1, (now - glide.t0) / 1000 / glide.dur);     const { a, b } = glide, e = f * f * (3 - 2 * f);
     camera.position.fromArray(a.pos).lerp(new THREE.Vector3(...b.pos), e); controls.target.fromArray(a.target).lerp(new THREE.Vector3(...b.target), e);
-    camera.fov = a.fov + (b.fov - a.fov) * e; camera.updateProjectionMatrix(); if (f >= 1) glide = null; }
+    camera.fov = a.fov + (b.fov - a.fov) * e; camera.updateProjectionMatrix(); if (f >= 1) { const r = glide.res; glide = null; r && r(); } }
+  LAND.clouds.rotation.y = now / 1000 * .004;
   controls.update(); face(); renderer.render(scene, camera);
 });
 await new Promise(r => setTimeout(r, 50));

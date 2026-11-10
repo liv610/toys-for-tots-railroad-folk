@@ -1,0 +1,416 @@
+{
+ "extent_m": 600,
+ "river": [
+  [
+   60,
+   -320
+  ],
+  [
+   52,
+   -200
+  ],
+  [
+   46,
+   -110
+  ],
+  [
+   42,
+   -50
+  ],
+  [
+   41,
+   -10
+  ],
+  [
+   40,
+   20
+  ],
+  [
+   34,
+   50
+  ],
+  [
+   22,
+   90
+  ],
+  [
+   14,
+   150
+  ],
+  [
+   20,
+   220
+  ],
+  [
+   35,
+   320
+  ]
+ ],
+ "town_map_px": [
+  3900,
+  1990
+ ],
+ "landmarks": {
+  "barn": {
+   "w": 624,
+   "h": 540,
+   "h_m": 20,
+   "map": [
+    3053.0,
+    1105.0
+   ]
+  },
+  "mountains": {
+   "w": 1581,
+   "h": 735,
+   "h_m": 110,
+   "map": [
+    1795.5,
+    1010.0
+   ]
+  },
+  "mesas": {
+   "w": 940,
+   "h": 456,
+   "h_m": 34,
+   "map": [
+    1525.0,
+    2330.0
+   ]
+  },
+  "house_nw": {
+   "w": 230,
+   "h": 230,
+   "h_m": 12,
+   "map": [
+    1779.0,
+    1167.0
+   ]
+  },
+  "house_ne": {
+   "w": 145,
+   "h": 286,
+   "h_m": 13,
+   "map": [
+    5097.5,
+    1306.0
+   ]
+  },
+  "house_e": {
+   "w": 297,
+   "h": 331,
+   "h_m": 14,
+   "map": [
+    5723.5,
+    2157.0
+   ]
+  },
+  "house_s": {
+   "w": 230,
+   "h": 258,
+   "h_m": 12,
+   "map": [
+    3584.0,
+    3144.0
+   ]
+  },
+  "house_sw": {
+   "w": 429,
+   "h": 225,
+   "h_m": 13,
+   "map": [
+    2586.5,
+    2953.0
+   ]
+  },
+  "house_y": {
+   "w": 244,
+   "h": 300,
+   "h_m": 13,
+   "map": [
+    5598.0,
+    2492.0
+   ]
+  }
+ },
+ "trees": [
+  {
+   "file": "tree_decid_0.png",
+   "w": 290,
+   "h": 336,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_1.png",
+   "w": 279,
+   "h": 323,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_10.png",
+   "w": 301,
+   "h": 348,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_11.png",
+   "w": 393,
+   "h": 452,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_12.png",
+   "w": 293,
+   "h": 338,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_13.png",
+   "w": 414,
+   "h": 478,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_15.png",
+   "w": 313,
+   "h": 361,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_16.png",
+   "w": 451,
+   "h": 520,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_17.png",
+   "w": 359,
+   "h": 414,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_18.png",
+   "w": 340,
+   "h": 393,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_2.png",
+   "w": 294,
+   "h": 341,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_21.png",
+   "w": 478,
+   "h": 551,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_22.png",
+   "w": 292,
+   "h": 337,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_23.png",
+   "w": 301,
+   "h": 349,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_24.png",
+   "w": 294,
+   "h": 340,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_25.png",
+   "w": 414,
+   "h": 479,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_26.png",
+   "w": 375,
+   "h": 433,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_27.png",
+   "w": 388,
+   "h": 449,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_28.png",
+   "w": 283,
+   "h": 328,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_29.png",
+   "w": 340,
+   "h": 393,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_3.png",
+   "w": 307,
+   "h": 355,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_30.png",
+   "w": 314,
+   "h": 364,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_31.png",
+   "w": 419,
+   "h": 484,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_32.png",
+   "w": 322,
+   "h": 371,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_33.png",
+   "w": 316,
+   "h": 365,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_5.png",
+   "w": 421,
+   "h": 485,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_6.png",
+   "w": 458,
+   "h": 528,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_7.png",
+   "w": 371,
+   "h": 428,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_8.png",
+   "w": 402,
+   "h": 464,
+   "ever": false
+  },
+  {
+   "file": "tree_decid_9.png",
+   "w": 384,
+   "h": 443,
+   "ever": false
+  },
+  {
+   "file": "tree_ever_0.png",
+   "w": 340,
+   "h": 392,
+   "ever": true
+  },
+  {
+   "file": "tree_ever_1.png",
+   "w": 283,
+   "h": 327,
+   "ever": true
+  },
+  {
+   "file": "tree_ever_10.png",
+   "w": 359,
+   "h": 415,
+   "ever": true
+  },
+  {
+   "file": "tree_ever_11.png",
+   "w": 374,
+   "h": 432,
+   "ever": true
+  },
+  {
+   "file": "tree_ever_13.png",
+   "w": 367,
+   "h": 424,
+   "ever": true
+  },
+  {
+   "file": "tree_ever_14.png",
+   "w": 433,
+   "h": 500,
+   "ever": true
+  },
+  {
+   "file": "tree_ever_2.png",
+   "w": 454,
+   "h": 523,
+   "ever": true
+  },
+  {
+   "file": "tree_ever_3.png",
+   "w": 318,
+   "h": 368,
+   "ever": true
+  },
+  {
+   "file": "tree_ever_4.png",
+   "w": 364,
+   "h": 420,
+   "ever": true
+  },
+  {
+   "file": "tree_ever_6.png",
+   "w": 372,
+   "h": 430,
+   "ever": true
+  },
+  {
+   "file": "tree_ever_7.png",
+   "w": 337,
+   "h": 391,
+   "ever": true
+  },
+  {
+   "file": "tree_ever_8.png",
+   "w": 335,
+   "h": 387,
+   "ever": true
+  },
+  {
+   "file": "tree_ever_9.png",
+   "w": 358,
+   "h": 413,
+   "ever": true
+  }
+ ],
+ "clouds": [
+  {
+   "file": "cloud_0.png",
+   "w": 804,
+   "h": 247,
+   "ever": false
+  },
+  {
+   "file": "cloud_1.png",
+   "w": 858,
+   "h": 264,
+   "ever": false
+  },
+  {
+   "file": "cloud_2.png",
+   "w": 858,
+   "h": 264,
+   "ever": false
+  }
+ ]
+}
