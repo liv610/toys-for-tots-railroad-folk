@@ -11,17 +11,16 @@
   // ---- the 3D village, in a frame over the map, loaded ahead of time and kept paused until it is needed
   const shell = document.createElement('div'); shell.className = 'tt3d'; shell.setAttribute('aria-hidden', 'true');
   shell.innerHTML = '<div class="tt3d-ui" role="toolbar" aria-label="Toy Town">' +
-    '<button data-v="square">In the square</button><button data-v="toyshop">By the toy shop</button>' +
-    '<button data-v="entrance">Station entrance</button><button data-v="south">Over the wall</button>' +
-    '<button data-v="overview">From above</button><button class="tt3d-back">Back to the map</button></div>' +
-    '<div class="tt3d-note">Drag to look around.</div>';
+    C.views.map(([k, label]) => '<button data-v="' + k + '">' + label + '</button>').join('') +
+    '<button class="tt3d-back">Back to the map</button></div>' +
+    '<div class="tt3d-note">Move or drag to look around.</div>';
   const tag = document.createElement('div'); tag.className = 'tag tt-tag'; tag.hidden = true;
   tag.innerHTML = 'Toy Town<small>click to step inside</small>';
   const msg = document.createElement('div'); msg.className = 'tt-msg'; msg.hidden = true; msg.textContent = 'Opening Toy Town…';
   stage.append(shell, tag, msg);
   function load() {
     if (loadP) return loadP;
-    frame = document.createElement('iframe'); frame.title = 'Toy Town in 3D'; frame.src = 'toytown/index.html?embed=1&view=arrive&paused=1';
+    frame = document.createElement('iframe'); frame.title = 'Toy Town'; frame.src = 'toytown/index.html?embed=1&view=arrive&paused=1';
     frame.setAttribute('allow', 'fullscreen'); shell.prepend(frame);
     loadP = new Promise(res => {
       const poll = () => { try { win = frame.contentWindow; if (win && win.__ready && win.__stationRect) return res(win); } catch (e) {} setTimeout(poll, 120); };

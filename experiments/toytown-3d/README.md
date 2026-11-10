@@ -184,3 +184,29 @@ comes down into the square. "Back to the map" reverses it.
   - **Landmarks.** Cut from the painting with GrabCut: the red barn, the farmhouses, the red mesas and the
     snowy mountains. Each stands in the direction it lies from Toy Town on the map.
   - **Sky.** A painted sky with the map's clouds, and far hills all round.
+
+## The folk-art Toy Town in depth (`folk/`)
+
+This replaces the 3D village after the review "closer to the folk art style of the map". Toy Town is one composed
+painting in the map's brush, laid out after the reference: the station at the head of the square, the houses
+wrapped round it, the tree, toys and Marines in the square, autumn trees in front, and hills, the barn, the train
+and the river behind.
+
+- **Painting** (`folk/compose.py`, about 2 minutes).
+  - Every piece is painted by the kit on its own transparent card: the station in its seven layers, each house,
+    the lamps, the tree, the teddy, the rocking horse, the ring stacker, the sailboat, the planters, the steps and
+    the hills.
+  - Some pieces are the map's own painted sprites: the trees, the barn, a farmhouse and the train.
+  - Each piece is painted at its exact scale in the frame, so nothing is resampled.
+  - `folk/out/toytown_folk.png` is the flattened painting.
+- **Depth.**
+  - A piece that stands on the ground gets its depth from where its foot is. The ground is seen from a camera
+    6 m up, with the horizon at v = 330.
+  - The sky and hills are cards far behind. The square is a real ground plane carrying its painting.
+- **Viewer** (`folk/folk.js`).
+  - The camera looks level through a shifted lens, so from the home view the cards line up into exactly the painting.
+  - The stops (into the square, the tree, the toy shop, the donation shop, up to the station) move the camera
+    without turning it, so the pieces slide past each other like a pop-up book.
+  - Moving the mouse leans the view a little. Window glow, falling snow.
+- **From the map.** `python3 enter/build_enter.py` now packs this scene; `build_enter.py painted` packs the 3D
+  village instead.

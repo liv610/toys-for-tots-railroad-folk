@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Folk Toy Town</title>
+<style>
+  :root { --ink: #36281f; --card: rgba(243, 234, 214, .92); --line: #6e3a2a; --accent: #8a2e22; color-scheme: light; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #2f5a9a; font-family: Georgia, "Times New Roman", serif; color: var(--ink); }
+  canvas { display: block; touch-action: none; }
+  .ui { position: fixed; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .ui button { font: 500 12px ui-monospace, Menlo, monospace; color: var(--ink); background: var(--card); border: 1.5px solid var(--line); border-radius: 999px; padding: 7px 12px; cursor: pointer; }
+  .ui button:hover { background: #fff6e4; } .ui button:focus-visible { outline: 2px solid #e9a861; outline-offset: 2px; }
+  @media (max-width: 560px) { .ui { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; } .ui button { flex: none; font-size: 11px; padding: 6px 9px; } }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<nav class="ui" aria-label="Toy Town views">
+  <button data-v="arrive">The whole town</button><button data-v="square">Into the square</button><button data-v="tree">The tree and toys</button>
+  <button data-v="toyshop">The toy shop</button><button data-v="donation">Toy donation</button><button data-v="station">Up to the station</button>
+</nav>
+<script type="module">
+  if (new URLSearchParams(location.search).has('embed')) document.querySelector('.ui').hidden = true;
+  import('./folk.js');
+  document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => window.__glideTo(b.dataset.v, 3.5));
+</script>
+</body>
+</html>
