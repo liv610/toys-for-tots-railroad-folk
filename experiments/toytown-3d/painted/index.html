@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Painted Toy Town</title>
+<style>
+  :root { --ink: #3a2a22; --muted: #6a5a4c; --card: rgba(250, 245, 234, .88); --line: rgba(58, 42, 34, .18); --accent: #a8322a;
+          --font: Georgia, "Times New Roman", serif; color-scheme: light; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #dfe6e4; font-family: var(--font); color: var(--ink); }
+  canvas { display: block; touch-action: none; }
+  .card { position: fixed; left: max(16px, env(safe-area-inset-left)); bottom: max(16px, env(safe-area-inset-bottom)); max-width: min(380px, calc(100vw - 32px));
+          background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; }
+  h1 { margin: 0; font: 400 1.15rem/1.2 var(--font); }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; }
+  button { font: 500 .8rem/1 system-ui, sans-serif; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 7px 10px; cursor: pointer; }
+  button:hover { border-color: var(--accent); } button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .note { font: .74rem/1.4 system-ui, sans-serif; color: var(--muted); }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+               "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
+</script>
+</head>
+<body>
+<section class="card" aria-label="Views">
+  <h1>Toy Town, painted in 3D (test)</h1>
+  <div class="row" role="group" aria-label="Camera views">
+    <button data-view="square">In the square</button><button data-view="toyshop">By the toy shop</button>
+    <button data-view="entrance">Station entrance</button><button data-view="overview">From above</button>
+    <button id="walk">Walk to the station</button>
+  </div>
+  <div class="note">Every surface is painted with the map's folk-art brush. Drag to look around.</div>
+</section>
+<script type="module">
+  import './diorama.js';
+  document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => window.__setView(b.dataset.view));
+  document.getElementById('walk').onclick = () => { window.__setView('square'); window.__glide('square', 'entrance', 5); };
+</script>
+</body>
+</html>

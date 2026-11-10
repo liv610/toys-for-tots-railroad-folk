@@ -120,3 +120,18 @@ with a single custom shader that adds clay and snow surface detail. Measured by 
 - **The toy shop** comes from the real-time scene with its own snow and decorations; it is clipped
   out of its street. It sits at the square's south-west corner, angled across the square, where the
   illustration puts it.
+
+## Approach 1 test: the painted diorama (`painted/`)
+
+The blockout's 3D layout, with every surface painted by the map's folk-art kit instead of 3D materials.
+
+- **Painting:** `painted/paint_assets.py` paints the textures into `painted/tex/` (about 3 minutes):
+  - the building fronts, the tree, Marines, lamps, wagons and firs;
+  - wall and roof tiles;
+  - the ground with the square's setts under snow;
+  - the snowy hills.
+  It uses the same kit code as the map's Toy Town, copied into `painted/kit/`.
+- **3D:** `painted/diorama.js` stands each front at its place in the square and gives it painted side
+  walls and roofs. Small things (the tree, people, lamps, wagons, firs) are cut-outs that turn to face
+  you. Materials are unlit, so the painted light stays as painted.
+- **Run:** serve `experiments/toytown-3d` and open `/painted/`.
