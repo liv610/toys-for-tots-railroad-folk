@@ -169,6 +169,16 @@ def station():
         roof(pts, cols=['#a8463c', '#8a3430', '#b8564a'], snowy=.35, ridge=(pts[1], pts[2]), eave=(pts[0], pts[3]))
         snow_edge([(rx0 - 6, 266), (rx1 + 6, 266)], 11, drip=.4)
         eave_shadow([(wx0, 268), (wx1, 268)], 8, '#8a7650')
+        # a stone string course with snow on it, a darker plinth, and weathering low on the wall
+        shaded([(wx0, 446), (wx1, 446), (wx1, 456), (wx0, 456)], [STONE[3], STONE[1], STONE_D], light=(0, -1), wob=.1, rough=.3, edge_dark=.25, L=3, w=1.4)
+        snow_edge([(wx0 + 2, 445), (wx1 - 2, 445)], 5, drip=.3)
+        shaded([(wx0, 590), (wx1, 590), (wx1, 615), (wx0, 615)], ['#cbb487', '#b89f72', '#9a8258'], light=(0, -1), wob=.1, rough=.3, edge_dark=.2, L=3, w=1.4)
+        T.c.area(T.T([(wx0, 520), (wx1, 520), (wx1, 590), (wx0, 590)]), hexc('#a08a64'), wob=.6, rough=.8, edge_dark=0, a=.18, var=0, varbig=0, seed=int(wx0))
+        # garland of greenery and lights along the wing below the swags, and lit lower windows
+        garland(wx0 + 10, wx1 - 10, 470, sag=8, swags=3, bows=True)
+        for k in range(3):
+            lx = wx0 + 30 + k * (wx1 - wx0 - 60) / 2
+            window(lx - 16, 520, lx + 16, 566, True, frame=3.5)
         xs = np.linspace(wx0 + 14, (wx1 if sgn < 0 else wx1) - 14, 4)
         for a_, b_ in zip(xs, xs[1:]): swag(a_, b_, 282, 20)
         # the arched side window

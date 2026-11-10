@@ -97,29 +97,62 @@ def town_floor():
     T.sparkle(m, .5)
 
 def square():
-    """The cobbled square: rounded setts, a dusting of snow between them, worn paths kept clearer."""
+    """The square: setts laid in shallow fans (as real squares are), low in contrast, mostly under trodden snow.
+    The stones show only where feet have worn the snow away: paths to the doors, the steps and round the tree."""
     poly = [(300, 905), (290, 820), (320, 740), (380, 690), (470, 650), (560, 625), (840, 625), (930, 650), (1000, 690), (1040, 740),
             (1060, 820), (1050, 900)]
-    m = A(poly, COBBLE[1], wob=.4, rough=.6, edge_dark=.1)
+    m = A(poly, '#cdbda2', wob=1.2, rough=.8, edge_dark=.0)
+    stip(m, ['#cdbda2', '#c4b296', '#d6c8ae'], spacing=1.4, L=3.2, w=1.8)
     prev = T.c.clipm; T.c.set_clip(m)
-    for gy in np.arange(615, 915, 5.2):
-        off = T.R.uniform(0, 7)
-        for gx in np.arange(280 - off, 1070, 7.5):
-            px, py = gx + T.R.uniform(-1.2, 1.2), gy + T.R.uniform(-1, 1)
-            T.c.area(T.T(lump(px, py, T.R.uniform(3, 3.8), T.R.uniform(2, 2.6), amp=.15)), hexc(COBBLE[T.R.randint(len(COBBLE))]), wob=.1, rough=.4,
-                     edge_dark=.35, var=.05, a=.9, seed=int(T.R.randint(1 << 20)))
-    for _ in range(320):                                         # snow lying between the setts
+    # fans: arcs of stones around centres spaced across the square
+    for fx in np.arange(260, 1100, 64):
+        for k in range(1, 9):
+            fy = 960; r = k * 9.5
+            for a in np.linspace(-math.pi * .82, -math.pi * .18, int(r * .55)):
+                for row in range(0, 360, 64):
+                    px, py = fx + r * math.cos(a) + T.R.uniform(-1, 1), fy - row + r * math.sin(a) * .55 + T.R.uniform(-.8, .8)
+                    if not (600 < py < 920): continue
+                    col = '#%02x%02x%02x' % tuple(int(c * 255) for c in np.clip(hexc('#c8b69a') * T.R.uniform(.9, 1.08), 0, 1))
+                    T.c.area(T.T(lump(px, py, T.R.uniform(3.4, 4.6), T.R.uniform(2.2, 2.8), amp=.2)), hexc(col), wob=.2, rough=.5,
+                             edge_dark=.3, var=.04, a=.9, seed=int(T.R.randint(1 << 20)))
+    # trodden snow over most of it: large soft sheets, leaving worn paths clear
+    worn = [((700, 640), (700, 900), 70), ((420, 720), (700, 860), 46), ((980, 720), (700, 860), 46), ((340, 860), (560, 900), 40),
+            ((1040, 860), (900, 900), 40)]
+    def near_path(x, y):
+        for (a, b, w) in worn:
+            ax, ay = a; bx, by = b; t = np.clip(((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / ((bx - ax) ** 2 + (by - ay) ** 2), 0, 1)
+            if math.hypot(x - ax - t * (bx - ax), y - ay - t * (by - ay)) < w: return True
+        return False
+    for _ in range(120):
         x, y = T.R.uniform(290, 1060), T.R.uniform(625, 905)
-        T.c.dab(x - T.X0, y - T.Y0, T.R.uniform(3, 7), T.R.uniform(1.4, 2.4), T.R.uniform(-.3, .3), SNOWG[T.R.randint(3)], a=.85, dry=.2)
+        if near_path(x, y): continue
+        mm = A(lump(x, y, T.R.uniform(18, 40), T.R.uniform(7, 14), amp=.25), SNOWG[0], wob=.8, rough=.9, edge_dark=0, a=.92)
+        stip(mm, SNOWG + ['#ffffff'], spacing=1.4, L=3.0, w=1.8, weights=[.35, .25, .15, .25])
+    for _ in range(260):                                         # a thin dusting everywhere, catching between stones
+        x, y = T.R.uniform(290, 1060), T.R.uniform(625, 905)
+        T.c.dab(x - T.X0, y - T.Y0, T.R.uniform(3, 7), T.R.uniform(1.4, 2.4), T.R.uniform(-.3, .3), SNOWG[T.R.randint(3)], a=.75, dry=.3)
     T.c.clipm = prev
+    # the square's edge: snow heaped irregularly, wider in places, so it melts into the surrounding snow
     P = poly + [poly[0]]
     for a_, b_ in zip(P, P[1:]):
-        for t in np.linspace(0, 1, max(2, int(math.dist(a_, b_) / 30))):
-            snow_clump(a_[0] + (b_[0] - a_[0]) * t, a_[1] + (b_[1] - a_[1]) * t, T.R.uniform(12, 20), T.R.uniform(3.5, 5.5))
+        for t in np.linspace(0, 1, max(2, int(math.dist(a_, b_) / 18))):
+            snow_clump(a_[0] + (b_[0] - a_[0]) * t + T.R.uniform(-6, 6), a_[1] + (b_[1] - a_[1]) * t + T.R.uniform(-4, 4), T.R.uniform(14, 30), T.R.uniform(4, 8))
+
+def cast(x, y, rx, ry, a=.32):
+    """A soft cool shadow on the snow under an object, offset a little away from the light (upper left)."""
+    T.c.area(T.T(lump(x + rx * .15, y + ry * .3, rx, ry, amp=.08)), hexc('#7a86a0'), wob=.4, rough=.6, edge_dark=0, a=a, var=0, varbig=0, seed=int(x * 3 + y))
+
+def ground_line(x0, x1, y, depth=9, a=.3):
+    """Where a wall meets the snow: a soft blue-grey shade along its foot, and the snow banked against it."""
+    T.c.area(T.T([(x0, y - 2), (x1, y - 2), (x1 + depth * .6, y + depth), (x0 + depth * .6, y + depth)]), hexc('#7a86a0'), wob=.6, rough=.7, edge_dark=0, a=a, var=0, varbig=0, seed=int(x0))
+    for t in np.linspace(0, 1, max(2, int((x1 - x0) / 22))):
+        snow_clump(x0 + (x1 - x0) * t + T.R.uniform(-5, 5), y + T.R.uniform(-1, 2), T.R.uniform(10, 18), T.R.uniform(3, 5))
 
 def lamp(x, y, h=120):
     """A black street lamp with a glowing lantern and a red bow; its light pools on the snow."""
-    T.c.area(T.T(lump(x, y + 2, 26, 7, amp=.1)), hexc('#fff0c0'), wob=.3, rough=.5, edge_dark=0, a=.35, var=0, varbig=0, seed=int(x))
+    for rr_, aa in ((60, .12), (40, .16), (24, .2)):          # warm light pooling on the snow under the lantern
+        T.c.area(T.T(lump(x, y + 4, rr_, rr_ * .32, amp=.1)), hexc('#ffd890'), wob=.4, rough=.6, edge_dark=0, a=aa, var=0, varbig=0, seed=int(x + rr_))
+    cast(x + 8, y + 2, 10, 3.5)
     shaded([(x - 8, y + 2), (x + 8, y + 2), (x + 6, y - 10), (x - 6, y - 10)], ['#3a3a40', '#22222a', '#101014'], wob=.05, rough=.2, edge_dark=.2)
     S([(x, y - 10), (x, y - h + 26)], 4.0, '#1c1c22', a=1, dry=.05, taper=(0, 0))
     for yy in (y - 30, y - h + 34): S([(x - 4, yy), (x + 4, yy)], 2.5, '#2a2a32', a=1, dry=0)
@@ -146,6 +179,7 @@ def present(bx, by, bw, bh, col, rib):
 
 def christmas_tree(x, y, h):
     """The square's Christmas tree: tiers of needles, baubles, warm lights, a gold star, presents beneath."""
+    cast(x + 10, y + 14, 110, 14, .3)
     tiers = [(.04, .32, .44), (.22, .5, .37), (.4, .68, .29), (.56, .84, .2), (.72, 1.0, .11)]
     S([(x, y), (x, y - h * .1)], 8, '#4a3020', a=1, dry=.1)
     for i, (ta, tb, wd) in enumerate(tiers):
@@ -173,6 +207,7 @@ def christmas_tree(x, y, h):
 
 def wagon(x, y, load='bear'):
     """A red toy wagon with black wheels, a handle, and a load: a teddy bear with presents, or a stack of presents."""
+    cast(x + 8, y + 8, 56, 8)
     shaded([(x - 44, y - 30), (x + 44, y - 30), (x + 40, y - 8), (x - 40, y - 8)], ['#e0504a', '#b8262a', '#7a1418'], light=(-.5, -.8), wob=.05, rough=.2, edge_dark=.2)
     S([(x - 44, y - 30), (x + 44, y - 30)], 2.5, '#d84a40', a=1, dry=.05, taper=(0, 0))
     for wx in (x - 26, x + 26):
@@ -198,6 +233,7 @@ def wagon(x, y, load='bear'):
 def marine(x, y, h=96, skin='#e8b080'):
     """A toy Marine in dress blues standing to attention: white cap, blue coat with red trim, gold buttons."""
     NAVY, NAVY_D, NAVY_L = '#1c2a52', '#101a38', '#2e4078'
+    cast(x + 6, y + 1, 18, 4)
     for sg in (-1, 1):                                          # trousers with a red stripe, black shoes
         shaded([(x + sg * 2, y - h * .42), (x + sg * 11, y - h * .42), (x + sg * 10, y - 6), (x + sg * 2, y - 6)], [NAVY_L, NAVY, NAVY_D], wob=.05, rough=.2, edge_dark=.2)
         S([(x + sg * 9.5, y - h * .42), (x + sg * 9, y - 7)], 1.6, '#c8282a', a=1, dry=.05, taper=(0, 0))
@@ -254,10 +290,17 @@ def bridge():
     # the arch opening: dark under the bridge, its own voussoirs
     cx, cy, rx, ry = 1265, 955, 110, 90
     op = [(cx - rx, 960)] + [(cx + rx * math.cos(math.radians(a)), cy + ry * math.sin(math.radians(a))) for a in np.linspace(180, 360, 30)] + [(cx + rx, 960)]
-    m = A(op, WATER[3], wob=.1, rough=.3, edge_dark=.0)
-    stip(m, WATER, spacing=1.3, L=4.5, w=1.6, ang=1.1)
-    shaded([(cx - rx, cy)] + [(cx + rx * math.cos(math.radians(a)), cy + ry * math.sin(math.radians(a))) for a in np.linspace(180, 360, 30)] + [(cx + rx, cy), (cx + rx * .8, cy - ry * .2), (cx - rx * .8, cy - ry * .2)],
-           ['#3a5478', '#2c4466', '#1e3252'], light=(0, -1), wob=.1, rough=.3, edge_dark=.1, a=.55)
+    # through the arch: the far snowy bank, the river running through, the shade under the vault
+    m = A(op, '#c8d0dc', wob=.1, rough=.3, edge_dark=.0)
+    stip(m, ['#c8d0dc', '#b8c2d2', '#d8dee8'], spacing=1.4, L=3.0, w=1.8)
+    wat = [(cx - rx, 960), (cx - rx * .9, cy - ry * .25), (cx + rx * .9, cy - ry * .35), (cx + rx, 960)]
+    mw = A(wat, WATER[1], wob=.4, rough=.6, edge_dark=.05)
+    stip(mw, WATER, spacing=1.3, L=4.5, w=1.6, ang=.15)
+    for _ in range(26):
+        T.c.dab(cx - T.X0 + T.R.uniform(-rx * .8, rx * .8), cy - T.Y0 + T.R.uniform(-ry * .25, 4), T.R.uniform(5, 10), 1.5, .1, '#e8f0f8', a=.8, dry=.2)
+    top = [(cx + rx * math.cos(math.radians(a)), cy + ry * math.sin(math.radians(a))) for a in np.linspace(180, 360, 30)]
+    inner = [(cx + rx * .92 * math.cos(math.radians(a)), cy - ry * .2 + ry * .78 * math.sin(math.radians(a))) for a in np.linspace(360, 180, 30)]
+    T.c.area(T.T(top + inner), hexc('#1e2a40'), wob=.2, rough=.5, edge_dark=0, a=.55, var=0, varbig=0, seed=7)
     for i in range(15):
         a0, a1 = 180 + 12 * i, 180 + 12 * (i + 1)
         q = [(cx + (rx + d) * math.cos(math.radians(a)), cy + (ry + d) * math.sin(math.radians(a))) for d, a in ((0, a0 + .5), (0, a1 - .5), (14, a1 - .5), (14, a0 + .5))]
@@ -282,6 +325,8 @@ def build_scene():
     build_station(); log('station')
     build_west(); build_east(); log('houses')
     T.blue_shop(); log('blue shop')
+    for (x0, x1, y) in ((596, 804, 616), (458, 598, 616), (802, 942, 616), (344, 462, 703), (302, 350, 723), (938, 1058, 703), (1028, 1290, 852), (0, 340, 906)):
+        ground_line(x0, x1, y)
     square(); log('square')
     for (x, y) in ((527, 717), (873, 717)): lamp(x, y, 120)
     wagon(487, 847, 'bear'); wagon(875, 860, 'presents')
