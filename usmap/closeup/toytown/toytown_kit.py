@@ -516,7 +516,7 @@ def light():
     """The lighting a painter adds last: light from the upper left across the whole building, shade
     gathering toward the ground and the right, and the warm glow of the windows spilling onto the walls."""
     yy, xx = np.mgrid[0:c.H, 0:c.W].astype(np.float32)
-    g = 1.07 - .14 * (xx / c.W) - .16 * np.clip((yy / c.H - .35) / .65, 0, 1)
+    g = 1.05 - .08 * (xx / c.W) - .1 * np.clip((yy / c.H - .35) / .65, 0, 1)
     g -= .1 * np.clip((yy / c.H - .9) / .1, 0, 1)                         # shade near the ground
     c.img *= g[..., None]
     spill = cv2.GaussianBlur(GLOW, (0, 0), 7 * K)
