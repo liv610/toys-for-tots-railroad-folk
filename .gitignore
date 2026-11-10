@@ -65,3 +65,5 @@ __pycache__/
 /usmap/closeup/out/
 /usmap/closeup/trace/out/
 /usmap/closeup/toytown/out/*.npy
+/usmap/closeup/toytown/out/toytown_full.png
+/usmap/closeup/toytown/out/*_glow.png
