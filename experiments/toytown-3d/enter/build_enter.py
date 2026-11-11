@@ -32,12 +32,12 @@ def main():
     html = html.replace('<title>Toy Town Preview</title>', '<title>Step into Toy Town</title>')
     html = html.replace('<h1>Toy Town preview</h1>', '<h1>Step into Toy Town</h1>')
     html = html.replace('</style>', open(os.path.join(HERE, 'enter.css')).read() + '\n</style>', 1)
-    tail = '<script>window.TT_ENTER = ' + json.dumps(cfg) + ';</script>\n<script>\n' + open(os.path.join(HERE, 'enter.js')).read() + '\n</script>\n'
+    tail = '<script>window.TT_ENTER = ' + json.dumps(cfg) + ';</script>\n<script src="toytown/campaigns.js"></script>\n<script>\n' + open(os.path.join(HERE, 'enter.js')).read() + '\n</script>\n'
     i = html.rfind('</body>'); html = html[:i] + tail + html[i:] if i >= 0 else html + tail
     open(p, 'w').write(html)
     # the 3D village, textures packed into bundles
     d = os.path.join(OUT, 'toytown'); os.makedirs(d)
-    for n in ('diorama.js', 'landscape.js', 'folk.js'):
+    for n in ('diorama.js', 'landscape.js', 'folk.js', 'campaigns.js', 'ticket.js'):
         if os.path.exists(os.path.join(P3, n)): shutil.copy(os.path.join(P3, n), d)
     if os.path.exists(os.path.join(P3, 'layout.js')): shutil.copy(os.path.realpath(os.path.join(P3, 'layout.js')), os.path.join(d, 'layout.js'))
     tex = os.path.join(P3, 'tex'); entries = {}

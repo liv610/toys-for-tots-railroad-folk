@@ -12,6 +12,43 @@
   .ui button { font: 500 12px ui-monospace, Menlo, monospace; color: var(--ink); background: var(--card); border: 1.5px solid var(--line); border-radius: 999px; padding: 7px 12px; cursor: pointer; }
   .ui button:hover { background: #fff6e4; } .ui button:focus-visible { outline: 2px solid #e9a861; outline-offset: 2px; }
   @media (max-width: 560px) { .ui { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; } .ui button { flex: none; font-size: 11px; padding: 6px 9px; } }
+  /* the hover label over a clickable place */
+  .hot-tip { position: fixed; z-index: 5; transform: translate(-50%, -100%); pointer-events: none; background: #f3ead6; color: var(--ink); border: 1.5px solid var(--line);
+    border-radius: 5px 8px 6px 9px; padding: 4px 11px; font: 400 15px Georgia, serif; white-space: nowrap; box-shadow: 0 6px 14px rgba(8, 14, 24, .35); }
+  .hot-tip small { display: block; font: 500 10.5px ui-monospace, Menlo, monospace; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+  /* the ticket window card: painted paper */
+  .tw { position: fixed; z-index: 8; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(440px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow: auto;
+    background: #f3ead6; color: var(--ink); border: 2px solid var(--line); border-radius: 8px 12px 9px 13px; box-shadow: 0 2px 0 #c9b48e inset, 0 18px 44px rgba(8, 14, 24, .55);
+    padding: 18px 20px 14px; display: grid; gap: 10px; font: 15px/1.5 Georgia, serif; box-sizing: border-box; }
+  @media (max-height: 560px), (max-width: 480px) { .tw { inset: 6px; transform: none; width: auto; max-height: none; padding: 12px 14px; gap: 8px; align-content: start; } .tw h2 { font-size: 19px; } .tw p { font-size: 13.5px; } }
+  .tw[hidden], .hot-tip[hidden] { display: none; }
+  .tw:focus { outline: none; }
+  .tw h2 { margin: 0; font: 400 25px/1.15 Georgia, serif; color: #2a1e18; text-wrap: balance; }
+  .tw p { margin: 0; }
+  .tw-eyebrow { justify-self: start; font: 500 10.5px ui-monospace, Menlo, monospace; letter-spacing: .12em; text-transform: uppercase; background: #b8402e; color: #f8efdc;
+    padding: 3px 9px 2px; border-radius: 3px 6px 4px 5px; transform: rotate(-1.2deg); }
+  .tw-x { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--line); background: #f8f0dd; color: var(--ink); font: 400 19px/1 Georgia, serif; cursor: pointer; }
+  .tw label { font: 500 11px ui-monospace, Menlo, monospace; letter-spacing: .08em; text-transform: uppercase; color: #6a4a38; }
+  .tw-row { display: flex; gap: 8px; margin-top: 4px; }
+  .tw input { flex: 1; min-width: 0; font: 400 22px/1 ui-monospace, Menlo, monospace; letter-spacing: .18em; padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 6px; background: #fffaf0; color: var(--ink); }
+  .tw input:focus-visible, .tw button:focus-visible { outline: 2px solid #e9a861; outline-offset: 2px; }
+  .tw-go { font: 600 13px ui-monospace, Menlo, monospace; letter-spacing: .03em; background: #8a2e22; color: #f8efdc; border: 1.5px solid #5a1d16; border-radius: 999px; padding: 10px 16px; cursor: pointer; }
+  .tw-go:hover { background: #a8382a; }
+  .tw-plain { font: 500 12px ui-monospace, Menlo, monospace; background: #f8f0dd; color: var(--ink); border: 1.5px solid var(--line); border-radius: 999px; padding: 8px 13px; cursor: pointer; }
+  .tw-err { color: #a8322a; font: 500 12px ui-monospace, Menlo, monospace; margin-top: 4px !important; }
+  .tw-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tw-note { font: 400 11px/1.4 ui-monospace, Menlo, monospace; color: #8a7460; border-top: 1px dashed #c9b48e; padding-top: 8px; }
+  .tw-what { font-size: 14px; }
+  .tw-ticket { display: grid; grid-template-columns: 74px 1fr; background: #fffaf0; border: 1.5px dashed #8a2e22; border-radius: 6px; overflow: hidden; }
+  .tw-stub { background: #b8402e; color: #f8efdc; display: grid; place-content: center; text-align: center; font: 500 10px ui-monospace, Menlo, monospace; letter-spacing: .12em; text-transform: uppercase; padding: 8px 4px; border-right: 2px dotted #f3ead6; }
+  .tw-stub b { font: 400 17px/1.1 Georgia, serif; letter-spacing: 0; text-transform: none; margin-top: 3px; }
+  .tw-body { padding: 10px 12px; display: grid; gap: 4px; }
+  .tw-route { display: flex; gap: 8px; align-items: center; font: 500 11px ui-monospace, Menlo, monospace; letter-spacing: .1em; text-transform: uppercase; color: #8a2e22; }
+  .tw-body h2 { font-size: 21px; }
+  .tw-body p { font-size: 13.5px; }
+  .tw-spots, .tw-steps { margin: 0; padding-left: 20px; display: grid; gap: 7px; font-size: 14px; }
+  .tw-spots li span { display: block; font: 400 12px/1.4 ui-monospace, Menlo, monospace; color: #6a4a38; }
+  @media (max-width: 420px) { .tw-row { flex-direction: column; } .tw h2 { font-size: 21px; } }
 </style>
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
@@ -22,6 +59,8 @@
   <button data-v="arrive">The whole town</button><button data-v="square">Into the square</button><button data-v="tree">The tree and toys</button>
   <button data-v="toyshop">The toy shop</button><button data-v="donation">Toy donation</button><button data-v="station">Up to the station</button>
 </nav>
+<script src="campaigns.js"></script>
+<script src="ticket.js"></script>
 <script type="module">
   if (new URLSearchParams(location.search).has('embed')) document.querySelector('.ui').hidden = true;
   import('./folk.js');

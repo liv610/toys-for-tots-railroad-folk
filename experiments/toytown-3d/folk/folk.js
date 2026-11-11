@@ -21,7 +21,7 @@ const camera = new THREE.PerspectiveCamera(CAM.fov, innerWidth / innerHeight, .0
 
 const loader = new THREE.TextureLoader(), manager = THREE.DefaultLoadingManager;
 const tex = n => { const t = loader.load(B[n] || TEX + n); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
-const glows = [];
+const glows = [], byName = {};
 for (const p of scene_.pieces) {
   const mat = new THREE.MeshBasicMaterial({ map: tex(p.file), transparent: true, depthWrite: false, depthTest: false });
   let mesh;
@@ -49,7 +49,45 @@ for (const p of scene_.pieces) {
       gm.position.copy(mesh.position); gm.renderOrder = mesh.renderOrder + .5; scene.add(gm); glows.push(gm);
     }
   }
-  mesh.userData.piece = p; scene.add(mesh);
+  mesh.userData.piece = p; scene.add(mesh); byName[p.name] = mesh;
+}
+
+// ---- the places you can click: the ticket window, the toy donation shop, the Marines. Each has a soft warm
+// highlight (the piece's own painting added over itself) that breathes gently to invite a click, and brightens on hover.
+const HOT = [
+  { kind: 'ticket', label: 'Ticket window', sub: 'find a toy drop-off near you', pieces: ['station_porch'], box: [.06, .5, .94, 1] },
+  { kind: 'donate', label: 'Toy donation', sub: 'drop off a new toy', pieces: ['donation_shop'], box: [.05, .2, .95, 1] },
+  { kind: 'marines', label: 'The Marines', sub: 'how a toy reaches a child', pieces: ['marine_a', 'marine_b'], box: [0, 0, 1, 1] },
+];
+for (const h of HOT) h.lit = h.pieces.map(n => {
+  const m = byName[n], g = new THREE.Mesh(m.geometry, new THREE.MeshBasicMaterial({ map: m.material.map, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, opacity: 0, color: 0xffd9a0 }));
+  g.position.copy(m.position); g.renderOrder = m.renderOrder + .6; scene.add(g); return g;
+});
+function hotRect(h) {                                  // the hotspot on screen, from its pieces' painted boxes
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const n of h.pieces) { const p = P(n);
+    for (const [fu, fv] of [[h.box[0], h.box[1]], [h.box[2], h.box[3]]]) {
+      const w = world(p.x + p.w * fu, p.y + p.h * fv, p.depth).project(camera), sx = (w.x + 1) / 2 * innerWidth, sy = (1 - w.y) / 2 * innerHeight;
+      x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy); } }
+  return [x0, y0, x1, y1];
+}
+let hover = null, down = null;
+const tip = document.createElement('div'); tip.className = 'hot-tip'; tip.hidden = true; document.body.appendChild(tip);
+const hit = (x, y) => HOT.find(h => { const [a, b, c, d] = hotRect(h); return x >= a && x <= c && y >= b && y <= d; }) || null;
+function setHover(h, x, y) {
+  hover = h; renderer.domElement.style.cursor = h ? 'pointer' : '';
+  tip.hidden = !h; if (h) { tip.innerHTML = h.label + '<small>' + h.sub + '</small>'; const [a, b, c] = hotRect(h); tip.style.left = ((a + c) / 2) + 'px'; tip.style.top = Math.max(40, b - 8) + 'px'; }
+}
+renderer.domElement.addEventListener('pointermove', e => { if (window.__busy) return; setHover(hit(e.clientX, e.clientY), e.clientX, e.clientY); });
+renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 8 || window.__busy) return;
+  const h = hit(e.clientX, e.clientY); if (h) { setHover(null); dispatchEvent(new CustomEvent('tt-hotspot', { detail: h.kind })); }
+});
+window.__hotspots = () => HOT.map(h => ({ kind: h.kind, rect: hotRect(h) }));
+function stepHot(t) {
+  for (const [i, h] of HOT.entries()) { const o = hover === h ? .34 : .06 + .05 * Math.max(0, Math.sin(t * 1.6 + i * 2.1));
+    for (const g of h.lit) g.material.opacity += (o - g.material.opacity) * .12; }
 }
 
 // ---- falling snow, in the space between you and the station
@@ -117,7 +155,7 @@ renderer.setAnimationLoop(now => {
   if (glide) { const f = Math.min(1, (now - glide.t0) / 1000 / glide.dur), e = f * f * (3 - 2 * f);
     cur.pos.copy(glide.p0).lerp(glide.p1, e); cur.look.copy(glide.l0).lerp(glide.l1, e); if (f >= 1) { const r = glide.res; glide = null; r && r(); } }
   look.x += (lookT.x - look.x) * .05; look.y += (lookT.y - look.y) * .05;
-  stepSnow(dt, now / 1000);
+  stepSnow(dt, now / 1000); stepHot(now / 1000);
   for (const [i, g] of glows.entries()) g.material.opacity = .28 + .06 * Math.sin(now / 900 + i * 1.7);
   apply(); renderer.render(scene, camera);
 });

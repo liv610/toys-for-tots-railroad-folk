@@ -210,3 +210,25 @@ and the river behind.
   - Moving the mouse leans the view a little. Window glow, falling snow.
 - **From the map.** `python3 enter/build_enter.py` now packs this scene; `build_enter.py painted` packs the 3D
   village instead.
+
+## The toy drop-off journey (`folk/ticket.js`, `folk/campaigns.js`, `enter/enter.js`)
+
+The first action path: from Toy Town to your local toy drive's drop-off spots. **Every toy drive, place, address and
+date is invented for the demo**, and the cards say so.
+
+1. **In Toy Town, three places invite a click.** Each has a soft breathing highlight and a label on hover:
+   - **The station's ticket window.** "Drop off a toy near you": you type a ZIP code and get a printed train
+     ticket to your toy drive, with its deadline and nearest spot.
+   - **The toy donation shop.** It opens the same ticket card.
+   - **The Marines.** "How a toy reaches a child", in three steps, then "Find a drop-off near me".
+2. **"Ride the train to …"** Toy Town fades back into the map. A train leaves the station and runs out along the
+   painted rails (red, blue or green line) to the toy drive's stop, which is marked with a warm ring.
+3. **The arrival card.** It lists the drive's three drop-off spots with addresses and hours. "I'll bring a toy here"
+   records the choice and thanks you with the spot, the address and the deadline. "Back to Toy Town" or "Back to the map".
+4. **Demo funnel.** A toolbar button (or `?funnel=1`) shows how many times each step happened, from stepping into
+   Toy Town to choosing a spot. This is this browser only (localStorage), with no outside services.
+
+- **Matching.** ZIP codes match on their first digit (the US ZIP regions), then on the second digit where a region
+  has two drives. Each drive sits at a fraction along one line, from its far station (0) to Toy Town (1).
+- **Tests.** `journey.js` (in the session scratchpad) runs the whole path on desktop and on an iPhone 13 profile.
+  Renders are in `renders/journey/`.
